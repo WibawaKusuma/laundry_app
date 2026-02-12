@@ -77,7 +77,7 @@
                                 <i class="fas fa-arrow-left me-1"></i> Kembali
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-1"></i> Simpan Data
+                                <i class="fas fa-save me-1"></i> Simpan
                             </button>
                         </div>
 

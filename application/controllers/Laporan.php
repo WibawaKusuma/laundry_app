@@ -17,7 +17,8 @@ class Laporan extends Admin_Controller
 
         // Default tanggal: Awal bulan ini s/d Hari ini
         if (empty($tgl_awal)) {
-            $tgl_awal = date('Y-m-01');
+            // $tgl_awal = date('Y-m-01');
+            $tgl_awal = date('Y-m-d');
         }
         if (empty($tgl_akhir)) {
             $tgl_akhir = date('Y-m-d');

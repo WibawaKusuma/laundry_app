@@ -21,14 +21,18 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Pilih Pelanggan</label>
-                            <select name="id_pelanggan" class="form-select" required>
-                                <option value="">-- Pilih Pelanggan --</option>
+
+                            <select name="id_pelanggan" id="select_pelanggan" class="form-select" required>
+                                <option value="">-- Ketik Nama Pelanggan --</option>
                                 <?php foreach ($pelanggan as $p) : ?>
                                     <option value="<?= $p->id; ?>"><?= $p->nama; ?> (<?= $p->no_hp; ?>)</option>
                                 <?php endforeach; ?>
                             </select>
-                            <div class="form-text">
-                                Belum ada? <a href="<?= base_url('pelanggan/tambah'); ?>">Tambah Pelanggan Baru</a>
+
+                            <div class="form-text mt-2">
+                                Belum ada? <a href="<?= base_url('pelanggan/tambah'); ?>" class="text-decoration-none">
+                                    <i class="fas fa-plus-circle"></i> Tambah Pelanggan Baru
+                                </a>
                             </div>
                         </div>
 
@@ -48,10 +52,10 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Jumlah (Qty / Kg)</label>
-                            <input type="number" id="qty" class="form-control" value="1" min="1">
+                            <input type="number" id="qty" class="form-control" value="1" min="0.1" step="0.01">
                         </div>
 
-                        <button type="button" class="btn btn-success w-100" id="btn-tambah-cart">
+                        <button type="button" class="btn btn-sm btn-success" id="btn-tambah-cart">
                             <i class="fas fa-cart-plus me-2"></i> Masukkan Keranjang
                         </button>
 
@@ -81,8 +85,8 @@
                                 </tbody>
                                 <tfoot class="bg-light">
                                     <tr>
-                                        <td colspan="4" class="text-end fw-bold">GRAND TOTAL :</td>
-                                        <td class="text-end fw-bold text-primary fs-5">Rp <span id="total-bayar">0</span></td>
+                                        <td colspan="4" class="text-end">GRAND TOTAL :</td>
+                                        <td class="text-end text-primary">Rp <span id="total-bayar">0</span></td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
@@ -90,8 +94,8 @@
                         </div>
                     </div>
                     <div class="card-footer bg-white p-3 text-end">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-save me-2"></i> Simpan Transaksi
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-save me-2"></i> Simpan
                         </button>
                     </div>
                 </div>
@@ -176,5 +180,17 @@
             });
         });
 
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Inisialisasi Select2 pada elemen dengan id="select_pelanggan"
+        $('#select_pelanggan').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Cari nama atau nomor HP...',
+            allowClear: true,
+            width: '100%' // Memastikan lebar menyesuaikan container
+        });
     });
 </script>

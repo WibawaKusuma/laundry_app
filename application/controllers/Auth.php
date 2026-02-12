@@ -10,6 +10,13 @@ class Auth extends CI_Controller
         $this->load->model('M_auth');
     }
 
+    public function index()
+    {
+        // Fungsi index otomatis dipanggil saat buka controller Auth
+        // Kita arahkan langsung ke fungsi login
+        $this->login();
+    }
+
     public function login()
     {
         if ($this->session->userdata('status') == 'login') {

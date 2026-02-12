@@ -1,5 +1,3 @@
-<?php $this->load->view('templates/header'); ?>
-
 <?php if (validation_errors()) : ?>
     <div class="flash-data-error" data-flashdata="<?= str_replace(array("\r", "\n"), '', nl2br(validation_errors())); ?>"></div>
 <?php endif; ?>
@@ -10,7 +8,7 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 text-primary fw-bold">
+                    <h5 class="mb-0 text-primary">
                         <i class="fas fa-edit me-2"></i> <?= $title; ?>
                     </h5>
                 </div>
@@ -22,7 +20,7 @@
                     $url_action = $is_edit ? base_url('paket/update') : base_url('paket/simpan');
                     ?>
 
-                    <form action="<?= $url_action; ?>" method="post">
+                    <form id="formPaket" action="<?= $url_action; ?>" method="post">
 
                         <?= form_hidden('id', $paket->id ?? ''); ?>
 
@@ -68,11 +66,11 @@
                         <hr>
 
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="<?= base_url('paket'); ?>" class="btn btn-secondary">
+                            <a href="<?= base_url('paket'); ?>" class="btn btn-sm btn-secondary">
                                 <i class="fas fa-arrow-left me-1"></i> Kembali
                             </a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i> Simpan Data
+                            <button type="submit" class="btn btn-sm btn-success btn-simpan">
+                                <i class="fas fa-save me-1"></i> Simpan
                             </button>
                         </div>
 
@@ -84,4 +82,42 @@
     </div>
 </div>
 
-<?php $this->load->view('templates/footer'); ?>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    $(document).ready(function() {
+
+        // 1. Script untuk Konfirmasi Simpan (Edit/Baru)
+        $('.btn-simpan').on('click', function(e) {
+            e.preventDefault(); // Mencegah form submit langsung
+
+            Swal.fire({
+                title: 'Simpan Data?',
+                text: "Pastikan data yang diinput sudah benar.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754', // Warna hijau success
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Simpan!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Jika user klik Ya, baru form di-submit secara manual
+                    $('#formPaket').submit();
+                }
+            });
+        });
+
+        // 2. Script untuk Menampilkan Error Validasi (Jika ada error dari Controller)
+        const flashError = $('.flash-data-error').data('flashdata');
+        if (flashError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                html: flashError, // Pakai html biar <br> terbaca
+            });
+        }
+
+    });
+</script>

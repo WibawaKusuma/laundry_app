@@ -1,10 +1,6 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">
-            <?= isset($title) ? $title : 'Manajemen Karyawan'; ?>
-        </h1>
-    </div>
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
 
@@ -77,11 +73,11 @@
                         <hr>
 
                         <div class="d-flex justify-content-between">
-                            <a href="<?= base_url('karyawan'); ?>" class="btn btn-secondary">
+                            <a href="<?= base_url('karyawan'); ?>" class="btn btn-sm btn-secondary">
                                 <i class="fas fa-arrow-left me-1"></i> Kembali
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-1"></i> Simpan Data
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="fas fa-save me-1"></i> Simpan
                             </button>
                         </div>
 

@@ -1,13 +1,40 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-        <h1 class="h2">Dashboard Overview</h1>
-        <div class="btn-toolbar mb-2 mb-md-0">
-            <div class="btn-group me-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
-            </div>
+    <div class="row align-items-center pt-3 pb-2 mb-4 border-bottom">
+
+        <div class="col-12 col-md mb-3 mb-md-0">
+            <h5 class="text-primary mb-0">Dashboard Overview</h5>
+            <small class="text-muted text-nowrap">
+                Periode: <?= date('d M Y', strtotime($tgl_awal)); ?> s/d <?= date('d M Y', strtotime($tgl_akhir)); ?>
+            </small>
         </div>
+
+        <div class="col-12 col-md-auto">
+            <form action="" method="get" class="row g-2 align-items-center">
+
+                <div class="col-6 col-md-auto">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" name="tgl_awal" class="form-control" value="<?= $tgl_awal; ?>">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-auto">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-arrow-right"></i></span>
+                        <input type="date" name="tgl_akhir" class="form-control" value="<?= $tgl_akhir; ?>">
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-auto d-grid d-md-block">
+                    <button type="submit" class="btn btn-sm btn-success px-3">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
     </div>
 
     <div class="row g-4 mb-4">
@@ -78,12 +105,12 @@
 
     </div>
 
-    <div class="row">
+    <div class="row mb-5">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold text-dark">5 Transaksi Terakhir</h5>
-                    <a href="<?= base_url('transaksi'); ?>" class="btn btn-sm btn-primary">Lihat Semua</a>
+                    <h5 class="mb-0 fw-bold text-dark">&nbsp;</h5>
+                    <a href="<?= base_url('transaksi'); ?>" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -92,7 +119,7 @@
                                 <tr>
                                     <th class="ps-4">Invoice</th>
                                     <th>Pelanggan</th>
-                                    <th>Tanggal Masuk</th>
+                                    <th>Masuk</th>
                                     <th>Status</th>
                                     <th class="text-end pe-4">Aksi</th>
                                 </tr>
@@ -105,7 +132,7 @@
                                 <?php else : ?>
                                     <?php foreach ($terbaru as $row) : ?>
                                         <tr>
-                                            <td class="ps-4 fw-bold text-primary"><?= $row->kode_invoice ?></td>
+                                            <td class="ps-4 text-primary"><?= $row->kode_invoice ?></td>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="avatar bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:35px; height:35px">

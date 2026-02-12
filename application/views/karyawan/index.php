@@ -1,8 +1,6 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Manajemen Karyawan</h1>
-    </div>
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
 
@@ -18,11 +16,11 @@
             <div class="card border-0 shadow-sm">
 
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary fw-bold">
+                    <h5 class="mb-0 text-primary">
                         <i class="fas fa-users-cog me-2"></i> Daftar Pengguna
                     </h5>
                     <a href="<?= base_url('karyawan/tambah'); ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i> Tambah Karyawan
+                        <i class="fas fa-plus me-1"></i> Baru
                     </a>
                 </div>
 
@@ -32,7 +30,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th>Nama Lengkap</th>
+                                    <th>Nama</th>
                                     <th>Username</th>
                                     <th>Jabatan</th>
                                     <th width="15%" class="text-center">Aksi</th>
@@ -50,7 +48,7 @@
                                     <?php foreach ($karyawan as $index => $row) : ?>
                                         <tr>
                                             <td><?= $index + 1 ?></td>
-                                            <td class="fw-bold"><?= $row->name ?></td>
+                                            <td class=""><?= $row->name ?></td>
                                             <td><span class="text-muted">@</span><?= $row->username ?></td>
                                             <td>
                                                 <?php if ($row->role == 'admin') : ?>

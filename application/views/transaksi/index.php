@@ -1,8 +1,6 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-    <!-- <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Riwayat Transaksi</h1>
-    </div> -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
 
@@ -10,13 +8,50 @@
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
 
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary fw-bold">
-                        <i class="fas fa-file-invoice-dollar me-2"></i> Transaksi
-                    </h5>
-                    <a href="<?= base_url('transaksi/baru'); ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>
-                    </a>
+                <div class="card-header bg-white py-3">
+                    <div class="row align-items-center g-3">
+
+                        <div class="col-12 col-lg me-auto">
+                            <h5 class="mb-0 text-primary">
+                                <i class="fas fa-file-invoice-dollar me-2"></i> Data Transaksi
+                            </h5>
+                        </div>
+
+                        <div class="col-12 col-lg-auto">
+                            <form action="" method="get">
+                                <div class="row g-2">
+
+                                    <div class="col-6 col-lg-auto">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-calendar"></i></span>
+                                            <input type="date" name="tgl_awal" class="form-control" value="<?= $tgl_awal; ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6 col-lg-auto">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-arrow-right"></i></span>
+                                            <input type="date" name="tgl_akhir" class="form-control" value="<?= $tgl_akhir; ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6 col-lg-auto d-grid">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Filter Data">
+                                            <i class="fas fa-filter me-1"></i> Filter
+                                        </button>
+                                    </div>
+
+                                    <div class="col-6 col-lg-auto d-grid">
+                                        <a href="<?= base_url('transaksi/baru'); ?>" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-plus me-1"></i> Baru
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
 
                 <div class="card-body">
@@ -28,7 +63,7 @@
                                     <th>Invoice</th>
                                     <th>Tanggal</th>
                                     <th>Pelanggan</th>
-                                    <th>Status Laundry</th>
+                                    <th>Status</th>
                                     <th>Pembayaran</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -46,7 +81,7 @@
                                     foreach ($transaksi as $row) : ?>
                                         <tr>
                                             <td><?= $no++; ?></td>
-                                            <td class="fw-bold text-primary"><?= $row->kode_invoice; ?></td>
+                                            <td class="text-primary"><?= $row->kode_invoice; ?></td>
                                             <td><?= date('d/m/Y', strtotime($row->tgl_masuk)); ?></td>
                                             <td><?= $row->nama_pelanggan; ?></td>
 

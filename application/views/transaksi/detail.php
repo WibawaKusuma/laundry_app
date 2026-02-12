@@ -6,7 +6,7 @@
             <a href="<?= base_url('transaksi'); ?>" class="btn btn-secondary btn-sm me-2">
                 <i class="fas fa-arrow-left me-1"></i> Kembali
             </a>
-            <a href="<?= base_url('transaksi/cetak/' . $transaksi->kode_invoice); ?>" target="_blank" class="btn btn-warning btn-sm">
+            <a href="<?= base_url('transaksi/cetak/' . $transaksi->kode_invoice); ?>" target="_blank" class="btn btn-success btn-sm">
                 <i class="fas fa-print me-1"></i> Cetak Invoice
             </a>
         </div>
@@ -122,8 +122,8 @@
                         </a>
 
                     <?php else : ?>
-                        <div class="alert alert-success mb-3">
-                            <i class="fas fa-check-circle fa-2x mb-2 d-block"></i>
+                        <div class="alert alert-success mb-3 text-center">
+                            <!-- <i class="fas fa-check-circle fa-2x mb-2 d-block"></i> -->
                             Status: <strong>LUNAS</strong>
                         </div>
                         <small class="text-muted d-block">Dibayar pada:</small>

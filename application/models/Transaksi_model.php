@@ -5,19 +5,30 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Transaksi_model extends CI_Model
 {
 
-    public function count_by_status($status)
+    // Hitung jumlah berdasarkan status DAN rentang tanggal
+    public function count_by_status($status, $tgl_awal, $tgl_akhir)
     {
         $this->db->where('status', $status);
+        $this->db->where('DATE(tgl_masuk) >=', $tgl_awal);
+        $this->db->where('DATE(tgl_masuk) <=', $tgl_akhir);
         return $this->db->count_all_results('transaksi');
     }
 
-    public function get_terbaru()
+    // Ambil daftar transaksi berdasarkan rentang tanggal
+    public function get_terbaru($tgl_awal = null, $tgl_akhir = null)
     {
         $this->db->select('t.*, p.nama');
         $this->db->from('transaksi t');
         $this->db->join('pelanggan p', 't.id_pelanggan = p.id');
+
+        // Filter Tanggal
+        if ($tgl_awal && $tgl_akhir) {
+            $this->db->where('DATE(t.tgl_masuk) >=', $tgl_awal);
+            $this->db->where('DATE(t.tgl_masuk) <=', $tgl_akhir);
+        }
+
         $this->db->order_by('t.id', 'DESC');
-        $this->db->limit(5);
+        // Limit dihapus agar semua data dalam range tanggal tersebut muncul
         return $this->db->get()->result();
     }
 

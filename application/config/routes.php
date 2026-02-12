@@ -50,6 +50,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 |		my-controller/my-method	-> my_controller/my_method
 */
 // Arahkan ke Dashboard yang baru kita buat
-$route['default_controller'] = 'Dashboard';
+// Pastikan default controller mengarah ke 'auth'
+$route['default_controller'] = 'auth';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;

@@ -2,9 +2,10 @@
     Halaman saat ini: <strong><?= $this->uri->segment(1); ?></strong>
 </div> -->
 
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+<!-- <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"> -->
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-white sidebar collapse shadow-sm">
     <div class="position-sticky pt-3">
-        <ul class="nav flex-column nav-pills">
+        <ul class="nav flex-column nav-pills mb-4">
 
             <?php $uri = $this->uri->segment(1); ?>
 
@@ -28,13 +29,19 @@
 
             <?php if ($this->session->userdata('role') === 'admin') : ?>
 
-                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <!-- <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                     <span>Admin Area</span>
-                </h6>
+                </h6> -->
 
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'paket' ? 'active' : '' ?>" href="<?= base_url('paket') ?>">
                         <i class="fas fa-tshirt me-2"></i> Paket Laundry
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link <?= $uri == 'karyawan' ? 'active' : '' ?>" href="<?= base_url('karyawan') ?>">
+                        <i class="fas fa-user-tie me-2"></i> Data Karyawan
                     </a>
                 </li>
 
@@ -48,11 +55,7 @@
                         <i class="fas fa-wallet me-2"></i> Keuangan
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $uri == 'karyawan' ? 'active' : '' ?>" href="<?= base_url('karyawan') ?>">
-                        <i class="fas fa-user-tie me-2"></i> Data Karyawan
-                    </a>
-                </li>
+
 
             <?php endif; ?>
             <hr>
@@ -62,5 +65,38 @@
                 </a>
             </li>
         </ul>
+
+        <div class="px-3 mb-4 mt-auto">
+            <div class="card border-0 shadow-sm bg-white rounded-4 overflow-hidden position-relative">
+
+                <div class="position-absolute top-0 start-0 w-100" style="height: 40px; background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); opacity: 0.15;"></div>
+
+                <div class="card-body text-center pt-4 pb-3">
+
+                    <div class="position-relative d-inline-block mb-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                            style="width: 60px; height: 60px; background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); font-size: 24px;">
+                            <?php
+                            $nama = $this->session->userdata('username') ? $this->session->userdata('username') : 'A';
+                            echo strtoupper(substr($nama, 0, 1));
+                            ?>
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle" style="width: 15px; height: 15px;"></span>
+                    </div>
+
+                    <h6 class="mb-1 fw-bold text-dark text-truncate px-2">
+                        <?= ucfirst($nama); ?>
+                    </h6>
+
+                    <div class="d-inline-block">
+                        <?php $role = $this->session->userdata('role'); ?>
+                        <span class="badge rounded-pill bg-light <?= ($role == 'admin') ? 'text-primary border-primary' : 'text-success border-success'; ?> border bg-opacity-10 px-3 py-1 fw-normal" style="font-size: 11px; letter-spacing: 0.5px;">
+                            <?= strtoupper($role); ?>
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
 </nav>

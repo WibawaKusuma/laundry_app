@@ -1,8 +1,6 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-    <!-- <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Paket Laundry</h1>
-    </div> -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
     <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
@@ -12,9 +10,11 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary fw-bold">Daftar Paket</h5>
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-box me-2"></i> Daftar Paket
+                    </h5>
                     <a href="<?= base_url('paket/tambah'); ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-plus me-1"></i> Baru
                     </a>
                 </div>
 
@@ -24,7 +24,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">#</th>
-                                    <th>Nama Paket</th>
+                                    <th>Paket</th>
                                     <th>Jenis</th>
                                     <th>Harga</th>
                                     <th>Estimasi</th>
@@ -44,7 +44,7 @@
                                     foreach ($paket as $row) : ?>
                                         <tr>
                                             <td><?= $no++; ?></td>
-                                            <td class="fw-bold"><?= $row->nama_paket; ?></td>
+                                            <td class=""><?= $row->nama_paket; ?></td>
                                             <td>
                                                 <?php if ($row->jenis == 'kiloan') : ?>
                                                     <span class="badge bg-info text-dark">Kiloan</span>
