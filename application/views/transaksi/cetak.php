@@ -190,6 +190,12 @@
             <?= strtoupper($transaksi->dibayar); ?>
         </div>
 
+        <?php if (!empty($transaksi->nama_metode_bayar)) : ?>
+            <div style="text-align: center; font-size: 9pt; margin-bottom: 5px;">
+                Bayar: <?= $transaksi->nama_metode_bayar; ?>
+            </div>
+        <?php endif; ?>
+
         <div class="footer">
             <p>Terima Kasih</p>
             <p>Simpan struk ini sbg bukti.</p>

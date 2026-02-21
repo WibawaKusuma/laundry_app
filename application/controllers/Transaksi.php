@@ -21,9 +21,9 @@ class Transaksi extends MY_Controller
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
 
-        // 2. Validasi: Jika kosong (baru buka menu), set default (Misal: Bulan ini)
+        // 2. Validasi: Jika kosong (baru buka menu), set default 3 hari terakhir
         if (empty($tgl_awal) || empty($tgl_akhir)) {
-            $tgl_awal  = date('Y-m-d'); // Tanggal 1 bulan ini
+            $tgl_awal  = date('Y-m-d', strtotime('-2 days')); // 3 hari terakhir
             $tgl_akhir = date('Y-m-d');  // Hari ini
         }
 
@@ -313,10 +313,11 @@ class Transaksi extends MY_Controller
     {
         $data['title'] = 'Detail Transaksi';
 
-        // 1. Ambil Data Header Transaksi (Gabung dengan Pelanggan)
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.no_hp');
+        // 1. Ambil Data Header Transaksi (Gabung dengan Pelanggan & Metode Bayar)
+        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.no_hp, metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
         $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('metode_bayar', 'metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $data['transaksi'] = $this->db->get()->row();
 
@@ -332,6 +333,10 @@ class Transaksi extends MY_Controller
         $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
         $this->db->where('detail_transaksi.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->db->get()->result();
+
+        // 3. Ambil Daftar Metode Bayar (untuk dropdown)
+        $this->db->where('is_active', 1);
+        $data['metode_bayar'] = $this->db->get('metode_bayar')->result();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -355,16 +360,17 @@ class Transaksi extends MY_Controller
     // --- PROSES BAYAR & AMBIL CUCIAN (UPDATE V2) ---
     public function bayar_tagihan($kode_invoice)
     {
-        // 1. Set Zona Waktu WITA (Agar jam di struk sesuai Bali)
-        // date_default_timezone_set('Asia/Makassar');
+        // 1. Ambil metode bayar dari POST
+        $id_metode_bayar = $this->input->post('id_metode_bayar');
 
         // 2. Update Database (Status: Diambil & Lunas)
         $tgl_bayar = date('Y-m-d H:i:s');
 
         $data_update = [
-            'status'    => 'Diambil',       // Ubah status cucian jadi 'Diambil'
-            'dibayar'   => 'Sudah Dibayar', // Ubah status bayar jadi Lunas
-            'tgl_bayar' => $tgl_bayar
+            'status'         => 'Diambil',
+            'dibayar'        => 'Sudah Dibayar',
+            'tgl_bayar'      => $tgl_bayar,
+            'id_metode_bayar' => $id_metode_bayar
         ];
 
         $this->db->where('kode_invoice', $kode_invoice);
@@ -447,7 +453,10 @@ class Transaksi extends MY_Controller
             $pesan .= "🧔 $nama_kasir%0A%0A%0A";
 
             $pesan .= "Pembayaran:%0A";
-            $pesan .= "💵 Tunai Rp$total_fmt%0A%0A";
+            // Ambil nama metode bayar
+            $metode = $this->db->get_where('metode_bayar', ['id' => $id_metode_bayar])->row();
+            $nama_metode = $metode ? $metode->nama : 'Tunai';
+            $pesan .= "💵 $nama_metode Rp$total_fmt%0A%0A";
 
             $pesan .= "Status: Lunas%0A";
             $pesan .= "=================%0A%0A";
@@ -470,9 +479,10 @@ class Transaksi extends MY_Controller
     public function cetak($kode_invoice)
     {
         // 1. Ambil Data (Sama seperti fungsi detail)
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.alamat');
+        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.alamat, metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
         $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('metode_bayar', 'metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $data['transaksi'] = $this->db->get()->row();
 

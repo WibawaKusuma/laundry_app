@@ -82,7 +82,7 @@
         <div class="col-md-4">
 
             <div class="card shadow-sm border-0 mb-3">
-                <div class="card-header bg-white fw-bold">
+                <div class="card-header bg-primary text-white fw-bold">
                     <i class="fas fa-tshirt me-2"></i> Status Laundry
                 </div>
                 <div class="card-body">
@@ -106,7 +106,7 @@
             </div>
 
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-bold">
+                <div class="card-header bg-primary text-white fw-bold">
                     <i class="fas fa-money-bill-wave me-2"></i> Pembayaran
                 </div>
                 <div class="card-body text-center">
@@ -115,18 +115,52 @@
                         <div class="alert alert-danger mb-3">
                             Status: <strong>BELUM LUNAS</strong>
                         </div>
-                        <p class="small text-muted">Pastikan uang sudah diterima sebelum konfirmasi.</p>
 
-                        <a href="<?= base_url('transaksi/bayar_tagihan/' . $transaksi->kode_invoice); ?>" class="btn btn-success w-100 btn-bayar">
-                            <i class="fas fa-check-circle me-2"></i> Bayar Sekarang
-                        </a>
+                        <form id="formBayar" action="<?= base_url('transaksi/bayar_tagihan/' . $transaksi->kode_invoice); ?>" method="post">
+                            <div class="mb-3 text-start">
+                                <label class="form-label small text-muted fw-bold">Pilih Metode Pembayaran</label>
+                                <?php foreach ($metode_bayar as $mb) : ?>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="id_metode_bayar" id="metode_<?= $mb->id; ?>" value="<?= $mb->id; ?>" <?= $mb->nama == 'Tunai' ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="metode_<?= $mb->id; ?>">
+                                            <?php if ($mb->nama == 'Tunai') : ?>
+                                                <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                            <?php elseif ($mb->nama == 'QRIS') : ?>
+                                                <i class="fas fa-qrcode text-primary me-1"></i>
+                                            <?php elseif ($mb->nama == 'Transfer') : ?>
+                                                <i class="fas fa-university text-info me-1"></i>
+                                            <?php endif; ?>
+                                            <?= $mb->nama; ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <p class="small text-muted">Pastikan uang sudah diterima sebelum konfirmasi.</p>
+
+                            <button type="button" class="btn btn-success w-100 btn-bayar">
+                                <i class="fas fa-check-circle me-2"></i> Bayar Sekarang
+                            </button>
+                        </form>
 
                     <?php else : ?>
                         <div class="alert alert-success mb-3 text-center">
-                            <!-- <i class="fas fa-check-circle fa-2x mb-2 d-block"></i> -->
                             Status: <strong>LUNAS</strong>
                         </div>
-                        <small class="text-muted d-block">Dibayar pada:</small>
+                        <?php if (!empty($transaksi->nama_metode_bayar)) : ?>
+                            <small class="text-muted d-block">Metode Bayar:</small>
+                            <span class="fw-bold">
+                                <?php if ($transaksi->nama_metode_bayar == 'Tunai') : ?>
+                                    <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                <?php elseif ($transaksi->nama_metode_bayar == 'QRIS') : ?>
+                                    <i class="fas fa-qrcode text-primary me-1"></i>
+                                <?php elseif ($transaksi->nama_metode_bayar == 'Transfer') : ?>
+                                    <i class="fas fa-university text-info me-1"></i>
+                                <?php endif; ?>
+                                <?= $transaksi->nama_metode_bayar; ?>
+                            </span>
+                        <?php endif; ?>
+                        <small class="text-muted d-block mt-2">Dibayar pada:</small>
                         <span class="fw-bold"><?= date('d/m/Y H:i', strtotime($transaksi->tgl_bayar)); ?></span>
                     <?php endif; ?>
 
@@ -138,23 +172,27 @@
 </main>
 
 <script>
-    // SweetAlert untuk Konfirmasi Bayar
-    $('.btn-bayar').on('click', function(e) {
-        e.preventDefault();
-        const href = $(this).attr('href');
+    // SweetAlert untuk Konfirmasi Bayar (submit form POST)
+    document.addEventListener('DOMContentLoaded', function() {
+        var btnBayar = document.querySelector('.btn-bayar');
+        if (btnBayar) {
+            btnBayar.addEventListener('click', function(e) {
+                e.preventDefault();
 
-        Swal.fire({
-            title: 'Konfirmasi Pembayaran',
-            text: "Apakah pelanggan sudah membayar tagihan lunas?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#198754',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Sudah Bayar!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.location.href = href;
-            }
-        })
+                Swal.fire({
+                    title: 'Konfirmasi Pembayaran',
+                    text: "Apakah pelanggan sudah membayar tagihan lunas?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Sudah Bayar!'
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        document.getElementById('formBayar').submit();
+                    }
+                });
+            });
+        }
     });
 </script>

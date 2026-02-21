@@ -20,11 +20,29 @@ class Pelanggan extends MY_Controller
     {
         $data['pelanggan'] = $this->db->get('pelanggan')->result();
 
-
         $this->load->view('templates/header');   // 1. Header (Navbar)
         $this->load->view('templates/sidebar');  // 2. Sidebar (Menu Kiri)
         $this->load->view('pelanggan/index', $data);
         $this->load->view('templates/footer');   // 4. Footer (Script JS)
+    }
+
+    // AJAX live search - return JSON
+    public function search()
+    {
+        $keyword = $this->input->get('keyword');
+
+        if ($keyword) {
+            $this->db->group_start();
+            $this->db->like('nama', $keyword);
+            $this->db->or_like('no_hp', $keyword);
+            $this->db->group_end();
+        }
+
+        $result = $this->db->get('pelanggan')->result();
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
     }
 
     public function tambah()

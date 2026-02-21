@@ -55,6 +55,11 @@
                         <i class="fas fa-wallet me-2"></i> Keuangan
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $uri == 'dashboard_omset' ? 'active' : '' ?>" href="<?= base_url('dashboard_omset') ?>">
+                        <i class="fas fa-chart-line me-2"></i> Dashboard Omset
+                    </a>
+                </li>
 
 
             <?php endif; ?>

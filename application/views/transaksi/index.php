@@ -55,8 +55,17 @@
                 </div>
 
                 <div class="card-body">
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchTransaksi" class="form-control border-start-0" placeholder="Cari nama pelanggan atau invoice...">
+                        <button class="btn btn-outline-secondary d-none" type="button" id="btnClearSearch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                        <table class="table table-hover align-middle" id="tabelTransaksi">
                             <thead class="table-light">
                                 <tr>
                                     <th>No</th>
@@ -73,7 +82,7 @@
                                     <tr>
                                         <td colspan="7" class="text-center py-5 text-muted">
                                             <i class="fas fa-cash-register fa-3x mb-3"></i>
-                                            <p>Belum ada transaksi hari ini.</p>
+                                            <p>Belum ada transaksi.</p>
                                         </td>
                                     </tr>
                                 <?php else : ?>
@@ -124,3 +133,34 @@
         </div>
     </div>
 </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchInput = document.getElementById('searchTransaksi');
+        var btnClear = document.getElementById('btnClearSearch');
+        var table = document.getElementById('tabelTransaksi');
+        var rows = table ? table.querySelectorAll('tbody tr') : [];
+
+        searchInput.addEventListener('keyup', function() {
+            var keyword = this.value.toLowerCase();
+            btnClear.classList.toggle('d-none', keyword.length === 0);
+
+            rows.forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 4) return; // skip empty row
+                var invoice = cells[1].textContent.toLowerCase();
+                var nama = cells[3].textContent.toLowerCase();
+                row.style.display = (invoice.indexOf(keyword) > -1 || nama.indexOf(keyword) > -1) ? '' : 'none';
+            });
+        });
+
+        btnClear.addEventListener('click', function() {
+            searchInput.value = '';
+            btnClear.classList.add('d-none');
+            rows.forEach(function(row) {
+                row.style.display = '';
+            });
+            searchInput.focus();
+        });
+    });
+</script>
