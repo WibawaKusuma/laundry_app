@@ -227,6 +227,12 @@ define('FCPATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
 // Name of the "system" directory
 define('SYSDIR', basename(BASEPATH));
 
+// Path ke folder entry point (folder yang berisi index.php ini)
+define('SITE_PATH', dirname(__FILE__) . DIRECTORY_SEPARATOR);
+
+// Nama folder entry point (misal: is-laundry, ajung-laundry)
+define('SITE_DIR', basename(SITE_PATH));
+
 // The path to the "application" directory
 if (is_dir($application_folder)) {
 	if (($_temp = realpath($application_folder)) !== FALSE) {
