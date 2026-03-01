@@ -52,7 +52,7 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Jumlah (Qty / Kg)</label>
-                            <input type="number" id="qty" class="form-control" value="1" min="0.1" step="0.01">
+                            <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="0.00">
                         </div>
 
                         <button type="button" class="btn btn-sm btn-success" id="btn-tambah-cart">
@@ -149,7 +149,7 @@
                         loadCart();
                         // Reset Input
                         $('#id_paket').val('');
-                        $('#qty').val(1);
+                        $('#qty').val('');
                         // Notifikasi Kecil (Toast)
                         Swal.fire({
                             icon: 'success',

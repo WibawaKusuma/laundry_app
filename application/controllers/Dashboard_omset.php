@@ -29,11 +29,15 @@ class Dashboard_omset extends MY_Controller
             $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
             $this->db->where('YEAR(transaksi.tgl_masuk)', $tahun);
             $this->db->where('MONTH(transaksi.tgl_masuk)', $bln);
+            $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
+            $this->db->where('transaksi.tgl_bayar IS NOT NULL', null, false);
             $result = $this->db->get()->row();
 
             // Hitung jumlah transaksi bulan ini
             $this->db->where('YEAR(tgl_masuk)', $tahun);
             $this->db->where('MONTH(tgl_masuk)', $bln);
+            $this->db->where('dibayar', 'Sudah Dibayar');
+            $this->db->where('tgl_bayar IS NOT NULL', null, false);
             $jml_transaksi = $this->db->count_all_results('transaksi');
 
             $data_bulanan[] = [
