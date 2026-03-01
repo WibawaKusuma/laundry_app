@@ -108,8 +108,8 @@
 <body onload="window.print()">
 
     <div class="header">
-        <h2>LAUNDRY APP</h2>
-        <p>Jl. Mawar Melati No. 123, Tabanan, Bali | Telp: 0812-3456-7890</p>
+        <h2><?= $company['company_name']; ?></h2>
+        <p><?= $company['company_address']; ?> | Telp: <?= $company['company_phone']; ?></p>
     </div>
 
     <div class="judul">

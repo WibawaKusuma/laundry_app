@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Laundry</title>
+    <title><?= isset($company['company_name']) ? $company['company_name'] : 'Sistem Laundry'; ?></title>
     <link href="<?= base_url('assets/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/all.min.css') ?>" rel="stylesheet">
 
@@ -109,7 +109,7 @@
         </button>
 
         <a class="navbar-brand col-md-3 col-lg-2 me-0 ps-2 fs-6" href="<?= base_url('dashboard') ?>">
-            <i class="fas fa-soap me-2"></i> LAUNDRY APP
+            <i class="fas fa-soap me-2"></i> <?= isset($company['company_name']) ? $company['company_name'] : 'LAUNDRY APP'; ?>
         </a>
 
     </nav>

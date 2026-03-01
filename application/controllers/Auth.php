@@ -8,6 +8,10 @@ class Auth extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_auth');
+
+        // Load config perusahaan untuk halaman login
+        $this->load->model('Config_model');
+        $this->load->vars(['company' => $this->Config_model->get_all()]);
     }
 
     public function index()

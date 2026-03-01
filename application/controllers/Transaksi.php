@@ -498,6 +498,7 @@ class Transaksi extends MY_Controller
         $data['detail'] = $this->db->get()->result();
 
         // 3. Load View Khusus Cetak (Tanpa Header/Sidebar Admin)
+        $data['company'] = $this->company;
         $this->load->view('transaksi/cetak', $data);
     }
 }

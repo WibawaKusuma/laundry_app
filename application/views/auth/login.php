@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Laundry App</title>
+    <title>Login - <?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -82,10 +82,14 @@
                     <div class="card-body p-4 p-md-5">
 
                         <div class="text-center mb-4">
-                            <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 80px; height: 80px;">
-                                <i class="fas fa-soap fa-3x"></i>
-                            </div>
-                            <h4 class="fw-bold text-dark mb-1">Laundry App</h4>
+                            <?php if (isset($company['company_logo'])): ?>
+                                <img src="<?= base_url($company['company_logo']); ?>" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;" class="mb-3">
+                            <?php else: ?>
+                                <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 80px; height: 80px;">
+                                    <i class="fas fa-soap fa-3x"></i>
+                                </div>
+                            <?php endif; ?>
+                            <h4 class="fw-bold text-dark mb-1"><?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></h4>
                             <p class="text-muted small">Silakan login untuk melanjutkan</p>
                         </div>
 

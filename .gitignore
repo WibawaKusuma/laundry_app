@@ -1,0 +1,24 @@
+# ============================================
+# Laundry App - Git Ignore
+# ============================================
+
+# --- Config sensitif (database, base_url) ---
+application/config/config.php
+application/config/database.php
+
+# --- CI3 Logs & Cache ---
+application/logs/*
+!application/logs/index.html
+application/cache/*
+!application/cache/index.html
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

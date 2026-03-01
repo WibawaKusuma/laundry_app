@@ -3,10 +3,19 @@
 // 1. INI CLASS UTAMA (INDUK)
 class MY_Controller extends CI_Controller
 {
+    public $company = [];
+
     public function __construct()
     {
         parent::__construct();
         $this->load->library('session');
+
+        // Load config perusahaan dari database
+        $this->load->model('Config_model');
+        $this->company = $this->Config_model->get_all();
+
+        // Kirim ke semua view secara otomatis
+        $this->load->vars(['company' => $this->company]);
     }
 
     // Pastikan Anda punya fungsi pengecekan ini dari AI

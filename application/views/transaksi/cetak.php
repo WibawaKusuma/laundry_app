@@ -15,12 +15,9 @@
 
         body {
             font-family: 'Courier New', Courier, monospace;
-            /* Font kasir klasik */
-            font-size: 10pt;
-            /* Ukuran font pas */
-            width: 58mm;
-            /* Lebar kertas thermal standar */
-            padding: 2mm;
+            font-size: 20pt;
+            width: 72mm;
+            padding: 3mm;
             color: #000;
             background: #fff;
         }
@@ -38,44 +35,57 @@
             padding-bottom: 5px;
         }
 
+        .header .logo {
+            width: 110px;
+            height: 100px;
+            margin: 0 auto 6px;
+            display: block;
+        }
+
         .header h2 {
-            font-size: 14pt;
+            font-size: 16pt;
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
         .header p {
-            font-size: 8pt;
+            font-size: 12pt;
+            font-weight: bold;
+            line-height: 1.4;
         }
 
         /* INFO TRANSAKSI */
         .info {
             margin-bottom: 10px;
-            font-size: 8pt;
+            font-size: 12pt;
+            font-weight: bold;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
+            margin-bottom: 2px;
         }
 
         /* TABEL ITEM */
         .table-items {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt;
+            font-size: 13pt;
             margin-bottom: 10px;
         }
 
         .table-items th {
             border-bottom: 1px dashed #000;
             text-align: left;
-            padding: 2px 0;
+            padding: 4px 0;
+            font-size: 13pt;
         }
 
         .table-items td {
-            padding: 2px 0;
+            padding: 4px 0;
             vertical-align: top;
+            font-weight: bold;
         }
 
         .qty {
@@ -103,23 +113,23 @@
             display: flex;
             justify-content: space-between;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13pt;
         }
 
         .status-bayar {
             text-align: center;
             font-weight: bold;
+            font-size: 12pt;
             margin: 10px 0;
             border: 1px solid #000;
-            padding: 2px;
+            padding: 4px;
         }
 
         .footer {
             text-align: center;
-            font-size: 8pt;
+            font-size: 10pt;
             margin-top: 10px;
             padding-bottom: 20px;
-            /* Jarak bawah agar kertas bisa disobek */
         }
 
         /* PENTING: MENGHILANGKAN HEADER/FOOTER BROWSER (URL, DATE, DLL) */
@@ -141,17 +151,19 @@
 
     <div class="container">
         <div class="header">
-            <h2>LAUNDRY APP</h2>
-            <p>Jl. Mawar Melati No. 123<br>Tabanan, Bali</p>
-            <p>0812-3456-7890</p>
+            <img src="<?= base_url($company['company_logo']); ?>" alt="Logo" class="logo">
+            <h2><?= $company['company_name']; ?></h2>
+            <p><?= $company['company_address']; ?></p>
+            <p><?= $company['company_phone']; ?></p>
         </div>
 
         <div class="info">
             <div class="info-row">
-                <span>No: <?= substr($transaksi->kode_invoice, -8); ?></span> <span><?= date('d/m/y H:i'); ?></span>
+                <!-- <span>No: <?= substr($transaksi->kode_invoice, -8); ?></span> <span><?= date('d/m/y H:i'); ?></span> -->
+                <span>Tanggal: <?= date('d/m/y H:i'); ?></span>
             </div>
             <div class="info-row">
-                <span>Plg: <?= substr($transaksi->nama_pelanggan, 0, 15); ?></span>
+                <span>Pelanggan: <?= substr($transaksi->nama_pelanggan, 0, 15); ?></span>
             </div>
         </div>
 
@@ -172,7 +184,7 @@
                 ?>
                     <tr>
                         <td class="item"><?= $d->nama_paket; ?></td>
-                        <td class="qty"><?= $d->qty; ?></td>
+                        <td class="qty"><?= $d->qty; ?>kg</td>
                         <td class="price"><?= number_format($subtotal, 0, ',', '.'); ?></td>
                     </tr>
                 <?php endforeach; ?>
@@ -199,7 +211,7 @@
         <div class="footer">
             <p>Terima Kasih</p>
             <p>Simpan struk ini sbg bukti.</p>
-            <p>--- Layanan Laundry Kilat ---</p>
+            <p>--- <?= $company['company_tagline']; ?> ---</p>
         </div>
     </div>
 

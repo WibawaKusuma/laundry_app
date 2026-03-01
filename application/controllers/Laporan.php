@@ -53,6 +53,7 @@ class Laporan extends Admin_Controller
         $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir);
 
         // Load View Khusus Cetak (Tanpa Header/Sidebar Admin)
+        $data['company'] = $this->company;
         $this->load->view('laporan/cetak', $data);
     }
 
