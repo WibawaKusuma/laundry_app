@@ -240,10 +240,13 @@ class Transaksi extends MY_Controller
         $wa_link = "";
 
         if ($pelanggan && !empty($pelanggan->no_hp)) {
-            // Ubah 08 jadi 628
+            // Format nomor ke format internasional (62xxx)
             $nomor = trim($pelanggan->no_hp);
+            $nomor = str_replace([' ', '-', '+'], '', $nomor); // Hapus spasi, strip, plus
             if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);
+                $nomor = '62' . substr($nomor, 1);       // 08xxx → 628xxx
+            } elseif (substr($nomor, 0, 2) != '62') {
+                $nomor = '62' . $nomor;                   // 8xxx → 628xxx
             }
 
             // Format Tanggal
@@ -395,10 +398,13 @@ class Transaksi extends MY_Controller
         $wa_link = "";
 
         if ($trx && !empty($trx->no_hp)) {
-            // Ubah format nomor 08xx jadi 628xx
+            // Format nomor ke format internasional (62xxx)
             $nomor = trim($trx->no_hp);
+            $nomor = str_replace([' ', '-', '+'], '', $nomor); // Hapus spasi, strip, plus
             if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);
+                $nomor = '62' . substr($nomor, 1);       // 08xxx → 628xxx
+            } elseif (substr($nomor, 0, 2) != '62') {
+                $nomor = '62' . $nomor;                   // 8xxx → 628xxx
             }
 
             // Nama Hari Indonesia
