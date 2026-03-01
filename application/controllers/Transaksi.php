@@ -257,10 +257,14 @@ class Transaksi extends MY_Controller
             // --- SUSUN PESAN WA (TEKS POLOS) ---
             // Gunakan %0A untuk Enter (Baris Baru)
 
+            $company_name    = $this->company['company_name'] ?? 'APP Laundry';
+            $company_address = $this->company['company_address'] ?? 'Jalan';
+            $company_phone   = $this->company['company_phone'] ?? '08000000000';
+
             $pesan = "FAKTUR ELEKTRONIK TRANSAKSI REGULER%0A";
-            $pesan .= "APP Laundry%0A";
-            $pesan .= "Jln. Sriwijaya no. 39,Br.Malkangin, Desa Dajan Peken, Tabanan%0A";
-            $pesan .= "6287873894708%0A%0A";
+            $pesan .= "{$company_name}%0A";
+            $pesan .= "{$company_address}%0A";
+            $pesan .= "{$company_phone}%0A%0A";
 
             $pesan .= "Nomor Nota :%0A";
             $pesan .= "$invoice%0A%0A";
@@ -440,9 +444,13 @@ class Transaksi extends MY_Controller
             // --- SUSUN TEKS PESAN UTAMA ---
             $pesan = "FAKTUR BUKTI PENGAMBILAN%0A%0A";
 
-            $pesan .= "App Laundry%0A";
-            $pesan .= "Jln. Sriwijaya no. 39,Br.Malkangin, Desa Dajan Peken, Tabanan%0A";
-            $pesan .= "6287873894708%0A%0A";
+            $company_name    = $this->company['company_name'] ?? 'App Laundry';
+            $company_address = $this->company['company_address'] ?? 'Jalan';
+            $company_phone   = $this->company['company_phone'] ?? '08000000000';
+
+            $pesan .= "{$company_name}%0A";
+            $pesan .= "{$company_address}%0A";
+            $pesan .= "{$company_phone}%0A%0A";
 
             $pesan .= "Nomor Nota :%0A";
             $pesan .= "$kode_invoice%0A%0A";
