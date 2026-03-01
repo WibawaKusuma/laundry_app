@@ -37,6 +37,7 @@ class Auth extends CI_Controller
                 $data = array(
                     'user_id' => $check->id,
                     'username' => $check->username,
+                    'name' => $check->name,
                     'role' => $check->role,
                     'status' => 'login'
                 );
@@ -55,6 +56,7 @@ class Auth extends CI_Controller
     {
         $this->session->unset_userdata('user_id');
         $this->session->unset_userdata('username');
+        $this->session->unset_userdata('name');
         $this->session->unset_userdata('role');
         $this->session->unset_userdata('status');
         $this->session->set_flashdata('success', 'Anda telah logout');

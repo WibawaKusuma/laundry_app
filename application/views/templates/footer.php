@@ -46,8 +46,8 @@
                 cancelButtonText: 'Tutup'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Buka WhatsApp di Tab Baru
-                    window.open(waLink, '_blank');
+                    // Redirect langsung ke WA - kompatibel semua device
+                    window.location.href = waLink;
                 }
             });
         }

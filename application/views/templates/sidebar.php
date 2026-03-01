@@ -79,19 +79,24 @@
                 <div class="card-body text-center pt-4 pb-3">
 
                     <div class="position-relative d-inline-block mb-2">
+                        <?php
+                        $fullname = $this->session->userdata('name') ? $this->session->userdata('name') : '';
+                        $username = $this->session->userdata('username') ? $this->session->userdata('username') : 'A';
+                        $initial = $fullname ? strtoupper(substr($fullname, 0, 1)) : strtoupper(substr($username, 0, 1));
+                        ?>
                         <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
                             style="width: 60px; height: 60px; background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); font-size: 24px;">
-                            <?php
-                            $nama = $this->session->userdata('username') ? $this->session->userdata('username') : 'A';
-                            echo strtoupper(substr($nama, 0, 1));
-                            ?>
+                            <?= $initial; ?>
                         </div>
                         <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle" style="width: 15px; height: 15px;"></span>
                     </div>
 
                     <h6 class="mb-1 fw-bold text-dark text-truncate px-2">
-                        <?= ucfirst($nama); ?>
+                        <?= $fullname ? ucwords($fullname) : ucfirst($username); ?>
                     </h6>
+                    <p class="mb-1 text-muted text-truncate px-2" style="font-size: 12px;">
+                        @<?= $username; ?>
+                    </p>
 
                     <div class="d-inline-block">
                         <?php $role = $this->session->userdata('role'); ?>

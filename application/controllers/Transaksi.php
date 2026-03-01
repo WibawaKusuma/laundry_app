@@ -202,7 +202,7 @@ class Transaksi extends MY_Controller
             'batas_waktu'  => $tgl_selesai,
             'status'       => 'Baru',
             'dibayar'      => 'Belum Dibayar',
-            'id_user'      => $this->session->userdata('id_user')
+            'id_user'      => $this->session->userdata('user_id')
         ];
 
         $this->db->insert('transaksi', $data_transaksi);
