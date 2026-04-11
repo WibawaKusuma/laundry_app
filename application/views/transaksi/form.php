@@ -39,20 +39,32 @@
                         <hr>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Pilih Paket Laundry</label>
-                            <select id="id_paket" class="form-select">
-                                <option value="">-- Pilih Paket --</option>
-                                <?php foreach ($paket as $pk) : ?>
-                                    <option value="<?= $pk->id; ?>">
-                                        <?= $pk->nama_paket; ?> - Rp <?= number_format($pk->harga, 0, ',', '.'); ?> / <?= $pk->jenis; ?>
-                                    </option>
+                            <label class="form-label fw-bold">Pilih Kategori Layanan</label>
+                            <select id="filter_kategori" class="form-select">
+                                <option value="">-- Semua Kategori --</option>
+                                <?php foreach ($kategori as $kat) : ?>
+                                    <option value="<?= $kat->id_kategori; ?>"><?= $kat->nama_kategori; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Jumlah (Qty / Kg)</label>
-                            <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="0.00">
+                            <label class="form-label fw-bold">Pilih Paket Laundry</label>
+                            <select id="id_paket" class="form-select">
+                                <option value="">-- Pilih Paket --</option>
+                                <?php foreach ($paket as $pk) : ?>
+                                    <option value="<?= $pk->id_paket_laundry; ?>"
+                                            data-kategori="<?= $pk->id_kat; ?>">
+                                        <?= $pk->nama_paket; ?> - Rp <?= number_format($pk->harga, 0, ',', '.'); ?> / <?= strtoupper($pk->nama_satuan ?? '-'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted" id="info-paket-kosong" style="display:none">Tidak ada paket untuk kategori ini.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Jumlah Bawaan (Qty)</label>
+                            <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2">
                         </div>
 
                         <button type="button" class="btn btn-sm btn-success" id="btn-tambah-cart">
@@ -185,12 +197,61 @@
 
 <script>
     $(document).ready(function() {
-        // Inisialisasi Select2 pada elemen dengan id="select_pelanggan"
+
+        // --- Inisialisasi Select2: Pelanggan ---
         $('#select_pelanggan').select2({
             theme: 'bootstrap-5',
             placeholder: 'Cari nama atau nomor HP...',
             allowClear: true,
-            width: '100%' // Memastikan lebar menyesuaikan container
+            width: '100%'
         });
+
+        // --- Inisialisasi Select2: Paket ---
+        function initSelect2Paket() {
+            $('#id_paket').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Ketik untuk mencari paket...',
+                allowClear: true,
+                width: '100%'
+            });
+        }
+        initSelect2Paket();
+
+        // --- Simpan semua option paket sejak awal (sebelum Select2 mengambil alih) ---
+        var semuaOpsiPaket = $('#id_paket option').not(':first').clone();
+
+        // --- Filter paket berdasarkan kategori ---
+        $('#filter_kategori').on('change', function() {
+            var selectedKat = $(this).val();
+
+            // Hancurkan Select2 dulu sebelum manipulasi DOM
+            $('#id_paket').select2('destroy');
+
+            // Reset dropdown paket
+            $('#id_paket').find('option:not(:first)').remove();
+            $('#id_paket').val('');
+
+            if (selectedKat === '') {
+                // Tampilkan semua paket
+                $('#id_paket').append(semuaOpsiPaket.clone());
+                $('#info-paket-kosong').hide();
+            } else {
+                // Filter hanya paket dengan kategori terpilih
+                var filtered = semuaOpsiPaket.filter(function() {
+                    return $(this).data('kategori') == selectedKat;
+                });
+
+                if (filtered.length > 0) {
+                    $('#id_paket').append(filtered.clone());
+                    $('#info-paket-kosong').hide();
+                } else {
+                    $('#info-paket-kosong').show();
+                }
+            }
+
+            // Inisialisasi ulang Select2 setelah DOM diupdate
+            initSelect2Paket();
+        });
+
     });
 </script>

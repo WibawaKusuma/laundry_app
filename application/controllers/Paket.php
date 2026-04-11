@@ -13,7 +13,11 @@ class Paket extends Admin_Controller
 
     public function index()
     {
-        $data['paket'] = $this->db->get('paket_laundry')->result();
+        $this->db->select('m_paket_laundry.*, m_kategori.nama_kategori, m_satuan.nama_satuan');
+        $this->db->from('m_paket_laundry');
+        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        $data['paket'] = $this->db->get()->result();
         // --- PERUBAHAN DI SINI ---
         // Kita memuat struktur halaman secara berurutan dari Controller
         $this->load->view('templates/header');   // 1. Header (Navbar)
@@ -28,12 +32,17 @@ class Paket extends Admin_Controller
         $data['title'] = 'Tambah Paket Laundry';
         // Agar variable $title di form.php tidak error
         $data['paket'] = (object)[
-            'id' => '',
+            'id_paket_laundry' => '',
+            'id_kategori' => '',
             'nama_paket' => '',
-            'harga' => '',
-            'jenis' => '',
-            'durasi_jam' => ''
+            'id_satuan' => '',
+            'durasi_jam' => '',
+            'harga' => ''
         ];
+
+        // Ambil data untuk opsi dropdown master
+        $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['satuan'] = $this->db->get('m_satuan')->result();
 
         // --- DI SINI TIDAK ADA SIDEBAR ---
         $this->load->view('templates/header');
@@ -52,7 +61,10 @@ class Paket extends Admin_Controller
             'required' => '%s harus diisi!',
             'numeric' => '%s harus berupa angka!'
         ]);
-        $this->form_validation->set_rules('jenis', 'Jenis', 'required', [
+        $this->form_validation->set_rules('id_kategori', 'Kategori', 'required', [
+            'required' => 'Silakan pilih %s layanan!'
+        ]);
+        $this->form_validation->set_rules('id_satuan', 'Satuan', 'required', [
             'required' => 'Silakan pilih %s layanan!'
         ]);
         $this->form_validation->set_rules('durasi_jam', 'Durasi', 'required|numeric', [
@@ -66,13 +78,14 @@ class Paket extends Admin_Controller
         } else {
             // JIKA SUKSES: Lanjut simpan ke database
             $data = [
+                'id_kategori' => $this->input->post('id_kategori', true),
                 'nama_paket' => $this->input->post('nama_paket', true),
-                'harga'      => $this->input->post('harga', true),
-                'jenis'      => $this->input->post('jenis', true),
-                'durasi_jam' => $this->input->post('durasi_jam', true)
+                'id_satuan' => $this->input->post('id_satuan', true),
+                'durasi_jam' => $this->input->post('durasi_jam', true),
+                'harga'      => $this->input->post('harga', true)
             ];
 
-            if ($this->db->insert('paket_laundry', $data)) {
+            if ($this->db->insert('m_paket_laundry', $data)) {
                 $this->session->set_flashdata('success', 'Data Laundry Berhasil Disimpan');
             } else {
                 $this->session->set_flashdata('error', 'Gagal menyimpan ke database!');
@@ -85,7 +98,11 @@ class Paket extends Admin_Controller
     public function edit($id)
     {
         $data['title'] = 'Edit Paket Laundry';
-        $data['paket'] = $this->db->get_where('paket_laundry', array('id' => $id))->row();
+        $data['paket'] = $this->db->get_where('m_paket_laundry', array('id_paket_laundry' => $id))->row();
+
+        // Ambil data untuk opsi dropdown master
+        $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['satuan'] = $this->db->get('m_satuan')->result();
 
         $this->load->view('templates/header');
         $this->load->view('paket/form', $data);
@@ -99,7 +116,8 @@ class Paket extends Admin_Controller
         // Aturan validasi sama seperti simpan
         $this->form_validation->set_rules('nama_paket', 'Nama Paket', 'required|trim');
         $this->form_validation->set_rules('harga', 'Harga', 'required|numeric');
-        $this->form_validation->set_rules('jenis', 'Jenis', 'required');
+        $this->form_validation->set_rules('id_kategori', 'Kategori', 'required');
+        $this->form_validation->set_rules('id_satuan', 'Satuan', 'required');
         $this->form_validation->set_rules('durasi_jam', 'Durasi', 'required|numeric');
 
         if ($this->form_validation->run() == FALSE) {
@@ -107,14 +125,15 @@ class Paket extends Admin_Controller
             $this->edit($id);
         } else {
             $data = [
+                'id_kategori' => $this->input->post('id_kategori', true),
                 'nama_paket' => $this->input->post('nama_paket', true),
-                'harga'      => $this->input->post('harga', true),
-                'jenis'      => $this->input->post('jenis', true),
-                'durasi_jam' => $this->input->post('durasi_jam', true)
+                'id_satuan' => $this->input->post('id_satuan', true),
+                'durasi_jam' => $this->input->post('durasi_jam', true),
+                'harga'      => $this->input->post('harga', true)
             ];
 
-            $this->db->where('id', $id);
-            if ($this->db->update('paket_laundry', $data)) {
+            $this->db->where('id_paket_laundry', $id);
+            if ($this->db->update('m_paket_laundry', $data)) {
                 $this->session->set_flashdata('success', 'Data Laundry Berhasil Diupdate');
             } else {
                 $this->session->set_flashdata('error', 'Gagal mengupdate data!');
@@ -126,8 +145,8 @@ class Paket extends Admin_Controller
 
     public function hapus($id)
     {
-        $this->db->where('id', $id);
-        $this->db->delete('paket_laundry');
+        $this->db->where('id_paket_laundry', $id);
+        $this->db->delete('m_paket_laundry');
         $this->session->set_flashdata('flash', 'Dihapus');
         redirect('paket');
     }

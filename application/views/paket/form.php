@@ -16,13 +16,13 @@
                 <div class="card-body p-4">
 
                     <?php
-                    $is_edit = !empty($paket->id);
+                    $is_edit = !empty($paket->id_paket_laundry);
                     $url_action = $is_edit ? base_url('paket/update') : base_url('paket/simpan');
                     ?>
 
                     <form id="formPaket" action="<?= $url_action; ?>" method="post">
 
-                        <?= form_hidden('id', $paket->id ?? ''); ?>
+                        <?= form_hidden('id', $paket->id_paket_laundry ?? ''); ?>
 
                         <div class="mb-3">
                             <label for="nama_paket" class="form-label fw-bold">Nama Paket Laundry</label>
@@ -43,24 +43,41 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="jenis" class="form-label fw-bold">Jenis Hitungan</label>
-                                <select class="form-select" id="jenis" name="jenis" required>
-                                    <option value="" disabled selected>-- Pilih Jenis --</option>
-                                    <option value="kiloan" <?= ($paket->jenis ?? '') == 'kiloan' ? 'selected' : ''; ?>>Kiloan (Per Kg)</option>
-                                    <option value="satuan" <?= ($paket->jenis ?? '') == 'satuan' ? 'selected' : ''; ?>>Satuan (Per Pcs)</option>
+                                <label for="id_kategori" class="form-label fw-bold">Kategori Layanan</label>
+                                <select class="form-select" id="id_kategori" name="id_kategori" required>
+                                    <option value="" disabled selected>-- Pilih Kategori --</option>
+                                    <?php foreach($kategori as $kat) : ?>
+                                        <option value="<?= $kat->id_kategori ?>" <?= ($paket->id_kategori ?? '') == $kat->id_kategori ? 'selected' : ''; ?>>
+                                            <?= $kat->nama_kategori ?>
+                                        </option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label for="durasi_jam" class="form-label fw-bold">Estimasi Durasi Pengerjaan</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="durasi_jam" name="durasi_jam"
-                                    placeholder="Contoh: 24"
-                                    value="<?= $paket->durasi_jam ?? ''; ?>" required>
-                                <span class="input-group-text bg-light">Jam</span>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_satuan" class="form-label fw-bold">Satuan Ukuran</label>
+                                <select class="form-select" id="id_satuan" name="id_satuan" required>
+                                    <option value="" disabled selected>-- Pilih Satuan --</option>
+                                    <?php foreach($satuan as $sat) : ?>
+                                        <option value="<?= $sat->id_satuan ?>" <?= ($paket->id_satuan ?? '') == $sat->id_satuan ? 'selected' : ''; ?>>
+                                            <?= $sat->nama_satuan ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
-                            <small class="text-muted">Masukkan estimasi waktu dalam satuan jam (Contoh: 24 jam = 1 hari).</small>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="durasi_jam" class="form-label fw-bold">Estimasi Durasi Pengerjaan</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="durasi_jam" name="durasi_jam"
+                                        placeholder="Contoh: 24"
+                                        value="<?= $paket->durasi_jam ?? ''; ?>" required>
+                                    <span class="input-group-text bg-light">Jam</span>
+                                </div>
+                                <small class="text-muted">Ketik angka jam saja (Contoh: 24 jam = 1 hari).</small>
+                            </div>
                         </div>
 
                         <hr>

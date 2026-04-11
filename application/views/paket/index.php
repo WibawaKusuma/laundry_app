@@ -24,10 +24,12 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">#</th>
+                                    <th>Kategori</th>
                                     <th>Paket</th>
-                                    <th>Jenis</th>
+                                    <th>Satuan</th>
                                     <th>Harga</th>
-                                    <th>Estimasi</th>
+                                    <!-- <th>Kecepatan</th> -->
+                                    <th>Durasi</th>
                                     <th width="15%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -44,21 +46,19 @@
                                     foreach ($paket as $row) : ?>
                                         <tr>
                                             <td><?= $no++; ?></td>
-                                            <td class=""><?= $row->nama_paket; ?></td>
-                                            <td>
-                                                <?php if ($row->jenis == 'kiloan') : ?>
-                                                    <span class="badge bg-info text-dark">Kiloan</span>
-                                                <?php else : ?>
-                                                    <span class="badge bg-success">Satuan</span>
-                                                <?php endif; ?>
-                                            </td>
+                                            <td><?= $row->nama_kategori; ?></td>
+                                            <td class="fw-bold"><?= $row->nama_paket; ?></td>
+                                            <td><?= $row->nama_satuan; ?></td>
                                             <td>Rp <?= number_format($row->harga, 0, ',', '.'); ?></td>
+                                            <!-- <td>
+                                                <span class="badge bg-secondary"><?= $row->paket_kecepatan; ?></span>
+                                            </td> -->
                                             <td><?= $row->durasi_jam; ?> Jam</td>
                                             <td class="text-center">
-                                                <a href="<?= base_url('paket/edit/' . $row->id); ?>" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <a href="<?= base_url('paket/edit/' . $row->id_paket_laundry); ?>" class="btn btn-sm btn-outline-warning" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="<?= base_url('paket/hapus/' . $row->id); ?>" class="btn btn-sm btn-outline-danger btn-hapus" title="Hapus">
+                                                <a href="<?= base_url('paket/hapus/' . $row->id_paket_laundry); ?>" class="btn btn-sm btn-outline-danger btn-hapus" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             </td>

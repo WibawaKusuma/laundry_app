@@ -55,9 +55,18 @@ class Transaksi extends MY_Controller
     {
         $data['title'] = 'Input Transaksi Baru';
 
-        // Ambil data untuk Dropdown
+        // Ambil data pelanggan untuk Dropdown
         $data['pelanggan'] = $this->db->get('pelanggan')->result();
-        $data['paket'] = $this->db->get('paket_laundry')->result();
+
+        // Ambil daftar kategori untuk Dropdown filter
+        $data['kategori'] = $this->db->get('m_kategori')->result();
+
+        // Ambil data paket untuk Dropdown (dengan nama satuan & kategori)
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat');
+        $this->db->from('m_paket_laundry');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $data['paket'] = $this->db->get()->result();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar'); // Sidebar Tetap Muncul
@@ -73,14 +82,21 @@ class Transaksi extends MY_Controller
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
 
-        // Ambil detail paket dari database
-        $paket = $this->db->get_where('paket_laundry', ['id' => $id_paket])->row();
+        // Ambil detail paket dari database dengan JOIN satuan & kategori
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori');
+        $this->db->from('m_paket_laundry');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->where('id_paket_laundry', $id_paket);
+        $paket = $this->db->get()->row();
 
         if ($paket) {
             // Siapkan array item
             $item = [
-                'id' => $paket->id,
+                'id' => $paket->id_paket_laundry,
                 'nama_paket' => $paket->nama_paket,
+                'nama_satuan' => $paket->nama_satuan,
+                'nama_kategori' => $paket->nama_kategori,
                 'harga' => $paket->harga,
                 'qty' => $qty,
                 'subtotal' => $paket->harga * $qty
@@ -121,9 +137,9 @@ class Transaksi extends MY_Controller
                 $html .= '
                 <tr>
                     <td>' . $no++ . '</td>
-                    <td>' . $item['nama_paket'] . '</td>
+                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . '</small></td>
                     <td>Rp ' . number_format($item['harga'], 0, ',', '.') . '</td>
-                    <td>' . $item['qty'] . '</td>
+                    <td>' . $item['qty'] . ' ' . $item['nama_satuan'] . '</td>
                     <td class="text-end fw-bold">Rp ' . number_format($item['subtotal'], 0, ',', '.') . '</td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger btn-hapus-cart" data-id="' . $id . '">
@@ -175,7 +191,7 @@ class Transaksi extends MY_Controller
 
         foreach ($cart as $item) {
             // Ambil data paket untuk cek durasi
-            $paket_db = $this->db->get_where('paket_laundry', ['id' => $item['id']])->row();
+            $paket_db = $this->db->get_where('m_paket_laundry', ['id_paket_laundry' => $item['id']])->row();
 
             // Cek Durasi Terlama
             if ($paket_db && $paket_db->durasi_jam > $max_jam) {
@@ -217,6 +233,7 @@ class Transaksi extends MY_Controller
                 'id_transaksi' => $id_transaksi,
                 'id_paket'     => $item['id'],
                 'qty'          => $item['qty'],
+                'harga'        => $item['harga'],
                 'keterangan'   => ''
             ];
 
@@ -228,7 +245,9 @@ class Transaksi extends MY_Controller
             $harga_satuan = isset($item['harga']) ? $item['harga'] : 0;
             $subtotal_item = $harga_satuan * $item['qty'];
 
-            $list_item_wa .= "✅ " . strtoupper($item['nama_paket']) . ", " . (float)$item['qty'] . " Kg/Pcs%0A";
+            $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
+
+            $list_item_wa .= "✅ " . strtoupper($item['nama_paket']) . ", " . (float)$item['qty'] . " " . strtoupper($satuan_wa) . "%0A";
             $list_item_wa .= "@ Rp" . number_format($harga_satuan, 0, ',', '.') . ", Total Rp" . number_format($subtotal_item, 0, ',', '.') . "%0A";
             $list_item_wa .= "Ket : -%0A"; // Bisa diganti jika ada input keterangan
         }
@@ -335,9 +354,9 @@ class Transaksi extends MY_Controller
         }
 
         // 2. Ambil Data Detail Paket (Gabung dengan Paket)
-        $this->db->select('detail_transaksi.*, paket_laundry.nama_paket, paket_laundry.harga');
+        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
         $this->db->from('detail_transaksi');
-        $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
         $this->db->where('detail_transaksi.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->db->get()->result();
 
@@ -392,9 +411,9 @@ class Transaksi extends MY_Controller
         $trx = $this->db->get()->row();
 
         // B. Detail Paket (Apa saja yang dicuci)
-        $this->db->select('detail_transaksi.*, paket_laundry.nama_paket, paket_laundry.harga');
+        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
         $this->db->from('detail_transaksi');
-        $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
         $this->db->where('detail_transaksi.id_transaksi', $trx->id);
         $details = $this->db->get()->result();
 
@@ -505,9 +524,9 @@ class Transaksi extends MY_Controller
         }
 
         // 2. Ambil Detail Barang
-        $this->db->select('detail_transaksi.*, paket_laundry.nama_paket, paket_laundry.harga');
+        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
         $this->db->from('detail_transaksi');
-        $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
         $this->db->where('detail_transaksi.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->db->get()->result();
 

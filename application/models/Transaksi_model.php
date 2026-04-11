@@ -43,7 +43,7 @@ class Transaksi_model extends CI_Model
 
         $subquery = $this->db->query('SELECT SUM(dt.qty * pl.harga) AS grand_total, dt.id_transaksi 
                                     FROM detail_transaksi dt 
-                                    JOIN paket_laundry pl ON dt.id_paket = pl.id_paket 
+                                    JOIN m_paket_laundry pl ON dt.id_paket = pl.id_paket_laundry 
                                     GROUP BY dt.id_transaksi');
         $results = $subquery->result();
 
@@ -78,9 +78,9 @@ class Transaksi_model extends CI_Model
         // Kita loop hasil transaksi untuk mencari total harganya
         foreach ($transaksi as $tr) {
             // Query hitung (qty * harga) dari tabel detail & paket
-            $this->db->select('SUM(detail_transaksi.qty * paket_laundry.harga) as total_harga');
+            $this->db->select('SUM(detail_transaksi.qty * m_paket_laundry.harga) as total_harga');
             $this->db->from('detail_transaksi');
-            $this->db->join('paket_laundry', 'paket_laundry.id = detail_transaksi.id_paket');
+            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
             $this->db->where('detail_transaksi.id_transaksi', $tr->id);
             $query = $this->db->get()->row();
 
