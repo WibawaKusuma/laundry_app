@@ -3,11 +3,11 @@
 # ============================================
 
 # --- Config sensitif (database, base_url) ---
-# application/config/config.php
-# application/config/database.php
+application/config/config.php
+application/config/database.php
 
 # --- Sites entry points (config database per-laundry) ---
-# sites/
+sites/
 
 # --- CI3 Logs & Cache ---
 application/logs/*
@@ -26,3 +26,8 @@ desktop.ini
 .codex/
 *.sublime-project
 *.sublime-workspace
+
+# --- Temporary & Dumps ---
+/*.sql
+/*.png
+/*.zip
