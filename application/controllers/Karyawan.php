@@ -1,12 +1,11 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Karyawan extends CI_Controller
+class Karyawan extends Admin_Controller
 {
     public function __construct()
     {
         parent::__construct();
-        // Admin_Controller otomatis cek login, jadi tidak perlu if session lagi disini
         $this->load->model('Karyawan_model');
     }
 
@@ -37,10 +36,7 @@ class Karyawan extends CI_Controller
         $role     = $this->input->post('role');
 
         // --- 1. CEK DUPLIKASI USERNAME ---
-        // Kita tanya ke database: "Ada gak user dengan username ini?"
-        // Pastikan nama tabelnya sesuai database ('users' atau 'user')
-        // Berdasarkan error log Anda: INSERT INTO `users`, jadi tabelnya 'users'
-        $cek = $this->db->get_where('users', ['username' => $username])->num_rows();
+        $cek = $this->db->get_where('m_users', ['username' => $username])->num_rows();
 
         if ($cek > 0) {
             // Jika hasil > 0, berarti Username SUDAH ADA.

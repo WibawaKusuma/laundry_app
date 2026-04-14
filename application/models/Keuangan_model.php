@@ -6,9 +6,9 @@ class Keuangan_model extends CI_Model
     // Tambahkan parameter default null
     public function get_all($tgl_awal = null, $tgl_akhir = null)
     {
-        $this->db->select('pengeluaran.*, users.name as nama_user');
+        $this->db->select('pengeluaran.*, m_users.name as nama_user');
         $this->db->from('pengeluaran');
-        $this->db->join('users', 'users.id = pengeluaran.id_user', 'left');
+        $this->db->join('m_users', 'm_users.id = pengeluaran.id_user', 'left');
 
         // --- FILTER TANGGAL ---
         if ($tgl_awal && $tgl_akhir) {
@@ -47,9 +47,9 @@ class Keuangan_model extends CI_Model
 
     public function get_by_date($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('pengeluaran.*, users.name as nama_user');
+        $this->db->select('pengeluaran.*, m_users.name as nama_user');
         $this->db->from('pengeluaran');
-        $this->db->join('users', 'users.id = pengeluaran.id_user', 'left');
+        $this->db->join('m_users', 'm_users.id = pengeluaran.id_user', 'left');
 
         // Filter Tanggal
         // Pastikan format di database DATE (YYYY-MM-DD)

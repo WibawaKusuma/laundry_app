@@ -1,14 +1,20 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Perhatikan: extends Staff_Controller
-// Artinya: Staff boleh buka, Admin juga boleh (tergantung logika di MY_Controller)
-class Order extends Staff_Controller
+class Order extends MY_Controller
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (empty($this->session->userdata('role'))) {
+            redirect('auth/login');
+        }
+    }
 
     public function index()
     {
-        // Load view order di sini
-        $this->load->view('order/index');
+        // Route legacy diarahkan ke alur transaksi aktif.
+        redirect('transaksi/baru');
     }
 }

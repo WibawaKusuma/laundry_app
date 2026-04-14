@@ -6,7 +6,6 @@ class Transaksi extends MY_Controller
     public function __construct()
     {
         parent::__construct();
-        // Load library yang dibutuhkan
         $this->load->library('form_validation');
 
         if (empty($this->session->userdata('role'))) {
@@ -14,33 +13,24 @@ class Transaksi extends MY_Controller
         }
     }
 
-    // --- HALAMAN RIWAYAT TRANSAKSI (INDEX) ---
     public function index()
     {
-        // 1. Ambil data Tanggal dari URL (GET Request)
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
 
-        // 2. Validasi: Jika kosong (baru buka menu), set default 3 hari terakhir
         if (empty($tgl_awal) || empty($tgl_akhir)) {
-            $tgl_awal  = date('Y-m-d', strtotime('-2 days')); // 3 hari terakhir
-            $tgl_akhir = date('Y-m-d');  // Hari ini
+            $tgl_awal  = date('Y-m-d', strtotime('-2 days'));
+            $tgl_akhir = date('Y-m-d');
         }
 
-        // 3. Query Database dengan Filter
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan');
         $this->db->from('transaksi');
-        $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
-
-        // --- FILTER DITERAPKAN DI SINI ---
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
-        // ---------------------------------
-
         $this->db->order_by('transaksi.id', 'DESC');
         $data['transaksi'] = $this->db->get()->result();
 
-        // 4. Kirim balik tanggal ke View (agar input tidak reset)
         $data['tgl_awal']  = $tgl_awal;
         $data['tgl_akhir'] = $tgl_akhir;
 
@@ -50,18 +40,12 @@ class Transaksi extends MY_Controller
         $this->load->view('templates/footer');
     }
 
-    // --- HALAMAN INPUT TRANSAKSI BARU ---
     public function baru()
     {
         $data['title'] = 'Input Transaksi Baru';
-
-        // Ambil data pelanggan untuk Dropdown
-        $data['pelanggan'] = $this->db->get('pelanggan')->result();
-
-        // Ambil daftar kategori untuk Dropdown filter
+        $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
         $data['kategori'] = $this->db->get('m_kategori')->result();
 
-        // Ambil data paket untuk Dropdown (dengan nama satuan & kategori)
         $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
@@ -69,20 +53,16 @@ class Transaksi extends MY_Controller
         $data['paket'] = $this->db->get()->result();
 
         $this->load->view('templates/header');
-        $this->load->view('templates/sidebar'); // Sidebar Tetap Muncul
+        $this->load->view('templates/sidebar');
         $this->load->view('transaksi/form', $data);
         $this->load->view('templates/footer');
     }
 
-    // --- LOGIKA KERANJANG BELANJA (AJAX) ---
-
-    // 1. Tambah Item ke Session Cart
     public function add_to_cart()
     {
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
 
-        // Ambil detail paket dari database dengan JOIN satuan & kategori
         $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
@@ -91,7 +71,6 @@ class Transaksi extends MY_Controller
         $paket = $this->db->get()->row();
 
         if ($paket) {
-            // Siapkan array item
             $item = [
                 'id' => $paket->id_paket_laundry,
                 'nama_paket' => $paket->nama_paket,
@@ -102,15 +81,12 @@ class Transaksi extends MY_Controller
                 'subtotal' => $paket->harga * $qty
             ];
 
-            // Masukkan ke Session 'cart'
-            // Jika cart belum ada, buat array baru
             if (!$this->session->userdata('cart')) {
                 $cart = [];
             } else {
                 $cart = $this->session->userdata('cart');
             }
 
-            // Cek apakah paket sudah ada di cart? Kalau ada, update qty
             if (isset($cart[$id_paket])) {
                 $cart[$id_paket]['qty'] += $qty;
                 $cart[$id_paket]['subtotal'] = $cart[$id_paket]['harga'] * $cart[$id_paket]['qty'];
@@ -123,7 +99,6 @@ class Transaksi extends MY_Controller
         }
     }
 
-    // 2. Tampilkan Tabel Keranjang (Load HTML via AJAX)
     public function show_cart()
     {
         $cart = $this->session->userdata('cart');
@@ -159,7 +134,6 @@ class Transaksi extends MY_Controller
         ]);
     }
 
-    // 3. Hapus Item Cart
     public function hapus_cart()
     {
         $id = $this->input->post('id');
@@ -173,10 +147,8 @@ class Transaksi extends MY_Controller
         echo json_encode(['status' => 'success']);
     }
 
-    // --- PROSES SIMPAN TRANSAKSI KE DATABASE (REVISI) ---
     public function simpan()
     {
-        // 1. Ambil Data Session & Input
         $cart = $this->session->userdata('cart');
         $id_pelanggan = $this->input->post('id_pelanggan');
 
@@ -185,30 +157,25 @@ class Transaksi extends MY_Controller
             redirect('transaksi/baru');
         }
 
-        // 2. Hitung Estimasi Waktu & Total Biaya
         $max_jam = 0;
         $total_tagihan = 0;
 
         foreach ($cart as $item) {
-            // Ambil data paket untuk cek durasi
             $paket_db = $this->db->get_where('m_paket_laundry', ['id_paket_laundry' => $item['id']])->row();
 
-            // Cek Durasi Terlama
             if ($paket_db && $paket_db->durasi_jam > $max_jam) {
                 $max_jam = $paket_db->durasi_jam;
             }
 
-            // Hitung Total Tagihan (Harga Paket dari Session x Qty)
-            // Pastikan di session cart menyimpan 'harga' dan 'subtotal'
-            // Jika di session tidak ada harga, ambil dari $paket_db->harga
             $harga_satuan = isset($item['harga']) ? $item['harga'] : ($paket_db->harga ?? 0);
             $total_tagihan += $harga_satuan * $item['qty'];
         }
 
-        if ($max_jam == 0) $max_jam = 24;
-        $tgl_selesai = date('Y-m-d H:i:s', strtotime("+$max_jam hours"));
+        if ($max_jam == 0) {
+            $max_jam = 24;
+        }
 
-        // 3. Simpan Header Transaksi
+        $tgl_selesai = date('Y-m-d H:i:s', strtotime("+$max_jam hours"));
         $invoice = 'INV-' . date('Ymd') . '-' . rand(100, 999);
 
         $data_transaksi = [
@@ -224,9 +191,8 @@ class Transaksi extends MY_Controller
         $this->db->insert('transaksi', $data_transaksi);
         $id_transaksi = $this->db->insert_id();
 
-        // 4. Simpan Detail & Susun Pesan WA
         $data_detail = [];
-        $list_item_wa = ""; // Variabel penampung list barang
+        $list_item_wa = "";
 
         foreach ($cart as $item) {
             $data_detail[] = [
@@ -237,44 +203,32 @@ class Transaksi extends MY_Controller
                 'keterangan'   => ''
             ];
 
-            // --- SUSUN FORMAT ITEM UNTUK WA ---
-            // Format: ✅ [NAMA], [QTY] [SATUAN]
-            //         @ [HARGA], Total [SUBTOTAL]
-
-            // Cek harga (pastikan data harga ada)
             $harga_satuan = isset($item['harga']) ? $item['harga'] : 0;
             $subtotal_item = $harga_satuan * $item['qty'];
-
             $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
 
-            $list_item_wa .= "✅ " . strtoupper($item['nama_paket']) . ", " . (float)$item['qty'] . " " . strtoupper($satuan_wa) . "%0A";
+            $list_item_wa .= "âœ… " . strtoupper($item['nama_paket']) . ", " . (float) $item['qty'] . " " . strtoupper($satuan_wa) . "%0A";
             $list_item_wa .= "@ Rp" . number_format($harga_satuan, 0, ',', '.') . ", Total Rp" . number_format($subtotal_item, 0, ',', '.') . "%0A";
-            $list_item_wa .= "Ket : -%0A"; // Bisa diganti jika ada input keterangan
+            $list_item_wa .= "Ket : -%0A";
         }
 
-        $this->db->insert_batch('detail_transaksi', $data_detail);
+        $this->db->insert_batch('transaksi_detail', $data_detail);
 
-        // 5. Generate Link WhatsApp (Sesuai Request)
-        $pelanggan = $this->db->get_where('pelanggan', ['id' => $id_pelanggan])->row();
+        $pelanggan = $this->db->get_where('m_pelanggan', ['id' => $id_pelanggan])->row();
         $wa_link = "";
 
         if ($pelanggan && !empty($pelanggan->no_hp)) {
-            // Format nomor ke format internasional (62xxx)
             $nomor = trim($pelanggan->no_hp);
-            $nomor = str_replace([' ', '-', '+'], '', $nomor); // Hapus spasi, strip, plus
+            $nomor = str_replace([' ', '-', '+'], '', $nomor);
             if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);       // 08xxx → 628xxx
+                $nomor = '62' . substr($nomor, 1);
             } elseif (substr($nomor, 0, 2) != '62') {
-                $nomor = '62' . $nomor;                   // 8xxx → 628xxx
+                $nomor = '62' . $nomor;
             }
 
-            // Format Tanggal
             $tgl_terima_fmt = date('d/m/Y H:i');
             $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
             $total_fmt = number_format($total_tagihan, 0, ',', '.');
-
-            // --- SUSUN PESAN WA (TEKS POLOS) ---
-            // Gunakan %0A untuk Enter (Baris Baru)
 
             $company_name    = $this->company['company_name'] ?? 'APP Laundry';
             $company_address = $this->company['company_address'] ?? 'Jalan';
@@ -284,30 +238,23 @@ class Transaksi extends MY_Controller
             $pesan .= "{$company_name}%0A";
             $pesan .= "{$company_address}%0A";
             $pesan .= "{$company_phone}%0A%0A";
-
             $pesan .= "Nomor Nota :%0A";
             $pesan .= "$invoice%0A%0A";
-
             $pesan .= "Pelanggan Yth :%0A";
             $pesan .= "$pelanggan->nama%0A%0A";
-
             $pesan .= "Terima : $tgl_terima_fmt%0A";
             $pesan .= "Selesai : $tgl_selesai_fmt%0A";
-
             $pesan .= "%0A======================%0A";
             $pesan .= "Detail pesanan:%0A";
             $pesan .= "Layanan:%0A";
-            $pesan .= $list_item_wa; // Masukkan list item yg diloop tadi
-
+            $pesan .= $list_item_wa;
             $pesan .= "%0A==============%0A";
             $pesan .= "Detail biaya :%0A";
             $pesan .= "Total tagihan : Rp$total_fmt%0A";
             $pesan .= "Grand total : Rp$total_fmt%0A%0A";
-
             $pesan .= "Pembayaran:%0A";
             $pesan .= "Sisa tagihan : Rp$total_fmt%0A";
             $pesan .= "Status: Belum lunas%0A%0A";
-
             $pesan .= "=================%0A";
             $pesan .= "Syarat dan ketentuan:%0A";
             $pesan .= "PERHATIAN :%0A";
@@ -317,52 +264,42 @@ class Transaksi extends MY_Controller
             $pesan .= "4. Klaim luntur tidak dipisah diluar tanggungan%0A";
             $pesan .= "5. Hak klaim berlaku 2 jam setelah barang diambil%0A";
             $pesan .= "6. Setiap konsumen dianggap setuju dengan isi perhitungan tersebut diatas%0A";
-
             $pesan .= "%0ATerima kasih";
 
-            // Buat Link
             $wa_link = "https://wa.me/$nomor?text=$pesan";
         }
 
-        // 6. Bersihkan Cart & Redirect
         $this->session->unset_userdata('cart');
-
         $this->session->set_flashdata('wa_link', $wa_link);
         $this->session->set_flashdata('success', 'Transaksi Berhasil Disimpan!');
 
         redirect('transaksi');
     }
 
-    // --- FUNGSI BARU UNTUK TAHAP 3 (DETAIL & UPDATE) ---
-
     public function detail($kode_invoice)
     {
         $data['title'] = 'Detail Transaksi';
 
-        // 1. Ambil Data Header Transaksi (Gabung dengan Pelanggan & Metode Bayar)
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.no_hp, metode_bayar.nama as nama_metode_bayar');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
-        $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
-        $this->db->join('metode_bayar', 'metode_bayar.id = transaksi.id_metode_bayar', 'left');
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('m_metode_bayar', 'm_metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $data['transaksi'] = $this->db->get()->row();
 
-        // Jika data tidak ditemukan, balik ke index
         if (!$data['transaksi']) {
             $this->session->set_flashdata('error', 'Transaksi tidak ditemukan!');
             redirect('transaksi');
         }
 
-        // 2. Ambil Data Detail Paket (Gabung dengan Paket)
-        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
-        $this->db->from('detail_transaksi');
-        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
-        $this->db->where('detail_transaksi.id_transaksi', $data['transaksi']->id);
+        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
+        $this->db->from('transaksi_detail');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+        $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->db->get()->result();
 
-        // 3. Ambil Daftar Metode Bayar (untuk dropdown)
         $this->db->where('is_active', 1);
-        $data['metode_bayar'] = $this->db->get('metode_bayar')->result();
+        $data['metode_bayar'] = $this->db->get('m_metode_bayar')->result();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -383,54 +320,44 @@ class Transaksi extends MY_Controller
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
-    // --- PROSES BAYAR & AMBIL CUCIAN (UPDATE V2) ---
     public function bayar_tagihan($kode_invoice)
     {
-        // 1. Ambil metode bayar dari POST
         $id_metode_bayar = $this->input->post('id_metode_bayar');
-
-        // 2. Update Database (Status: Diambil & Lunas)
         $tgl_bayar = date('Y-m-d H:i:s');
 
         $data_update = [
-            'status'         => 'Diambil',
-            'dibayar'        => 'Sudah Dibayar',
-            'tgl_bayar'      => $tgl_bayar,
+            'status'          => 'Diambil',
+            'dibayar'         => 'Sudah Dibayar',
+            'tgl_bayar'       => $tgl_bayar,
             'id_metode_bayar' => $id_metode_bayar
         ];
 
         $this->db->where('kode_invoice', $kode_invoice);
         $this->db->update('transaksi', $data_update);
 
-        // 3. Ambil Data Lengkap (Header & Detail) untuk Pesan WA
-        // A. Header Transaksi & Pelanggan
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.no_hp');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp');
         $this->db->from('transaksi');
-        $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $trx = $this->db->get()->row();
 
-        // B. Detail Paket (Apa saja yang dicuci)
-        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
-        $this->db->from('detail_transaksi');
-        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
-        $this->db->where('detail_transaksi.id_transaksi', $trx->id);
+        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
+        $this->db->from('transaksi_detail');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+        $this->db->where('transaksi_detail.id_transaksi', $trx->id);
         $details = $this->db->get()->result();
 
-        // 4. Susun Pesan WA (Format Struk Pengambilan)
         $wa_link = "";
 
         if ($trx && !empty($trx->no_hp)) {
-            // Format nomor ke format internasional (62xxx)
             $nomor = trim($trx->no_hp);
-            $nomor = str_replace([' ', '-', '+'], '', $nomor); // Hapus spasi, strip, plus
+            $nomor = str_replace([' ', '-', '+'], '', $nomor);
             if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);       // 08xxx → 628xxx
+                $nomor = '62' . substr($nomor, 1);
             } elseif (substr($nomor, 0, 2) != '62') {
-                $nomor = '62' . $nomor;                   // 8xxx → 628xxx
+                $nomor = '62' . $nomor;
             }
 
-            // Nama Hari Indonesia
             $daftar_hari = [
                 'Sunday' => 'Minggu',
                 'Monday' => 'Senin',
@@ -441,26 +368,22 @@ class Transaksi extends MY_Controller
                 'Saturday' => 'Sabtu'
             ];
             $hari_ini = $daftar_hari[date('l')];
-            $tgl_jam  = date('d/m/y H:i'); // Contoh: 26/12/25 18:50
+            $tgl_jam  = date('d/m/y H:i');
 
-            // Nama Kasir (User Login)
             $nama_kasir = $this->session->userdata('username');
-            if (empty($nama_kasir)) $nama_kasir = "Admin";
+            if (empty($nama_kasir)) {
+                $nama_kasir = "Admin";
+            }
 
-            // Loop Detail Paket untuk Pesan
             $total_bayar = 0;
             $list_item_wa = "";
             foreach ($details as $d) {
                 $subtotal = $d->harga * $d->qty;
                 $total_bayar += $subtotal;
-
-                // Format: ✅ PAKET REGULER, 2.8 KG
-                $list_item_wa .= "✅ " . strtoupper($d->nama_paket) . ", " . (float)$d->qty . " Kg/Pcs%0A";
+                $list_item_wa .= "âœ… " . strtoupper($d->nama_paket) . ", " . (float) $d->qty . " Kg/Pcs%0A";
             }
             $total_fmt = number_format($total_bayar, 0, ',', '.');
 
-
-            // --- SUSUN TEKS PESAN UTAMA ---
             $pesan = "FAKTUR BUKTI PENGAMBILAN%0A%0A";
 
             $company_name    = $this->company['company_name'] ?? 'App Laundry';
@@ -470,52 +393,39 @@ class Transaksi extends MY_Controller
             $pesan .= "{$company_name}%0A";
             $pesan .= "{$company_address}%0A";
             $pesan .= "{$company_phone}%0A%0A";
-
             $pesan .= "Nomor Nota :%0A";
             $pesan .= "$kode_invoice%0A%0A";
-
             $pesan .= "Pelanggan Yth :%0A";
             $pesan .= "$trx->nama_pelanggan%0A";
-
             $pesan .= "======================%0A";
             $pesan .= "DETAIL PENGAMBILAN:%0A%0A";
-
             $pesan .= $list_item_wa;
-
-            $pesan .= "🕚 $hari_ini, $tgl_jam%0A";
-            $pesan .= "🧔 $nama_kasir%0A%0A%0A";
-
+            $pesan .= "ðŸ•š $hari_ini, $tgl_jam%0A";
+            $pesan .= "ðŸ§” $nama_kasir%0A%0A%0A";
             $pesan .= "Pembayaran:%0A";
-            // Ambil nama metode bayar
-            $metode = $this->db->get_where('metode_bayar', ['id' => $id_metode_bayar])->row();
+            $metode = $this->db->get_where('m_metode_bayar', ['id' => $id_metode_bayar])->row();
             $nama_metode = $metode ? $metode->nama : 'Tunai';
-            $pesan .= "💵 $nama_metode Rp$total_fmt%0A%0A";
-
+            $pesan .= "ðŸ’µ $nama_metode Rp$total_fmt%0A%0A";
             $pesan .= "Status: Lunas%0A";
             $pesan .= "=================%0A%0A";
-
             $pesan .= "Kami telah menyerahkan barang dan diterima dengan kondisi baik%0A";
             $pesan .= "Terima kasih";
 
-            // Buat Link WA
             $wa_link = "https://wa.me/$nomor?text=$pesan";
         }
 
-        // 5. Simpan Link WA ke Flashdata & Redirect
         $this->session->set_flashdata('wa_link', $wa_link);
         $this->session->set_flashdata('success', 'Pembayaran Berhasil! Cucian Diambil.');
 
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
-    // --- FUNGSI CETAK INVOICE (STRUK) ---
     public function cetak($kode_invoice)
     {
-        // 1. Ambil Data (Sama seperti fungsi detail)
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan, pelanggan.alamat, metode_bayar.nama as nama_metode_bayar');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.alamat, m_metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
-        $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
-        $this->db->join('metode_bayar', 'metode_bayar.id = transaksi.id_metode_bayar', 'left');
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('m_metode_bayar', 'm_metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $data['transaksi'] = $this->db->get()->row();
 
@@ -523,14 +433,12 @@ class Transaksi extends MY_Controller
             redirect('transaksi');
         }
 
-        // 2. Ambil Detail Barang
-        $this->db->select('detail_transaksi.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
-        $this->db->from('detail_transaksi');
-        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
-        $this->db->where('detail_transaksi.id_transaksi', $data['transaksi']->id);
+        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
+        $this->db->from('transaksi_detail');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+        $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->db->get()->result();
 
-        // 3. Load View Khusus Cetak (Tanpa Header/Sidebar Admin)
         $data['company'] = $this->company;
         $this->load->view('transaksi/cetak', $data);
     }

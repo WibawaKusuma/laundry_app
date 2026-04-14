@@ -19,7 +19,7 @@ class Transaksi_model extends CI_Model
     {
         $this->db->select('t.*, p.nama');
         $this->db->from('transaksi t');
-        $this->db->join('pelanggan p', 't.id_pelanggan = p.id');
+        $this->db->join('m_pelanggan p', 't.id_pelanggan = p.id');
 
         // Filter Tanggal
         if ($tgl_awal && $tgl_akhir) {
@@ -28,21 +28,20 @@ class Transaksi_model extends CI_Model
         }
 
         $this->db->order_by('t.id', 'DESC');
-        // Limit dihapus agar semua data dalam range tanggal tersebut muncul
         return $this->db->get()->result();
     }
 
     public function get_by_tanggal($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('t.*, p.nama_pelanggan');
+        $this->db->select('t.*, p.nama as nama_pelanggan');
         $this->db->from('transaksi t');
-        $this->db->join('pelanggan p', 't.id_pelanggan = p.id_pelanggan');
-        $this->db->where('t.tanggal >=', $tgl_awal);
-        $this->db->where('t.tanggal <=', $tgl_akhir);
-        $this->db->order_by('t.id_transaksi', 'DESC');
+        $this->db->join('m_pelanggan p', 't.id_pelanggan = p.id');
+        $this->db->where('DATE(t.tgl_masuk) >=', $tgl_awal);
+        $this->db->where('DATE(t.tgl_masuk) <=', $tgl_akhir);
+        $this->db->order_by('t.id', 'DESC');
 
         $subquery = $this->db->query('SELECT SUM(dt.qty * pl.harga) AS grand_total, dt.id_transaksi 
-                                    FROM detail_transaksi dt 
+                                    FROM transaksi_detail dt 
                                     JOIN m_paket_laundry pl ON dt.id_paket = pl.id_paket_laundry 
                                     GROUP BY dt.id_transaksi');
         $results = $subquery->result();
@@ -56,7 +55,7 @@ class Transaksi_model extends CI_Model
         $results = $query->result();
 
         foreach ($results as $row) {
-            $row->total_harga = $grand_total[$row->id_transaksi];
+            $row->total_harga = isset($grand_total[$row->id]) ? $grand_total[$row->id] : 0;
         }
 
         return $results;
@@ -64,27 +63,21 @@ class Transaksi_model extends CI_Model
 
     public function get_laporan($tgl_awal, $tgl_akhir)
     {
-        // 1. Ambil Data Transaksi Header
-        $this->db->select('transaksi.*, pelanggan.nama as nama_pelanggan');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan');
         $this->db->from('transaksi');
-        $this->db->join('pelanggan', 'pelanggan.id = transaksi.id_pelanggan');
-        // Perhatikan: nama kolom di DB kita 'tgl_masuk', bukan 'tanggal'
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
         $this->db->order_by('transaksi.id', 'ASC');
         $transaksi = $this->db->get()->result();
 
-        // 2. Hitung Total Harga per Transaksi
-        // Kita loop hasil transaksi untuk mencari total harganya
         foreach ($transaksi as $tr) {
-            // Query hitung (qty * harga) dari tabel detail & paket
-            $this->db->select('SUM(detail_transaksi.qty * m_paket_laundry.harga) as total_harga');
-            $this->db->from('detail_transaksi');
-            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
-            $this->db->where('detail_transaksi.id_transaksi', $tr->id);
+            $this->db->select('SUM(transaksi_detail.qty * m_paket_laundry.harga) as total_harga');
+            $this->db->from('transaksi_detail');
+            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+            $this->db->where('transaksi_detail.id_transaksi', $tr->id);
             $query = $this->db->get()->row();
 
-            // Masukkan hasil hitungan ke object transaksi
             $tr->total_harga = $query->total_harga;
         }
 

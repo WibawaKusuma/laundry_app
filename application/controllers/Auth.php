@@ -31,7 +31,7 @@ class Auth extends CI_Controller
             $username = $this->input->post('username');
             $password = $this->input->post('password');
 
-            $check = $this->M_auth->cek_login($username, md5($password));
+            $check = $this->M_auth->cek_login($username, $password);
 
             if ($check) {
                 $data = array(

@@ -1,14 +1,11 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Keuangan extends CI_Controller
+class Keuangan extends Admin_Controller
 {
     public function __construct()
     {
         parent::__construct();
-        // Pastikan User sudah login
-        // if (!$this->session->userdata('id_user')) { redirect('auth'); }
-
         $this->load->model('Keuangan_model');
     }
 
@@ -56,13 +53,11 @@ class Keuangan extends CI_Controller
 
     public function simpan()
     {
-        // AMBIL ID USER DARI SESSION LOGIN
-        // Sesuaikan key session dengan sistem login Anda (biasanya 'id_user' atau 'id')
-        $id_user_login = $this->session->userdata('id_user');
+        $id_user_login = $this->session->userdata('user_id');
 
-        // Fallback: Jika session kosong (misal testing), set ke 1
         if (empty($id_user_login)) {
-            $id_user_login = 1;
+            $this->session->set_flashdata('error', 'Session login tidak valid. Silakan login ulang.');
+            redirect('auth');
         }
 
         $data = [
@@ -70,7 +65,7 @@ class Keuangan extends CI_Controller
             'keterangan'      => $this->input->post('keterangan'),
             'nominal'         => $this->input->post('nominal'),
             'catatan'         => $this->input->post('catatan'),
-            'id_user'         => $id_user_login // <--- SIMPAN ID USER
+            'id_user'         => $id_user_login
         ];
 
         $this->Keuangan_model->insert($data);

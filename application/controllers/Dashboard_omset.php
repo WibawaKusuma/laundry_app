@@ -23,10 +23,10 @@ class Dashboard_omset extends MY_Controller
             $bln   = date('m', strtotime("-$i months"));
 
             // Hitung total omset bulan ini
-            $this->db->select('SUM(detail_transaksi.qty * m_paket_laundry.harga) as total_omset');
+            $this->db->select('SUM(transaksi_detail.qty * m_paket_laundry.harga) as total_omset');
             $this->db->from('transaksi');
-            $this->db->join('detail_transaksi', 'detail_transaksi.id_transaksi = transaksi.id');
-            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = detail_transaksi.id_paket');
+            $this->db->join('transaksi_detail', 'transaksi_detail.id_transaksi = transaksi.id');
+            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
             $this->db->where('YEAR(transaksi.tgl_masuk)', $tahun);
             $this->db->where('MONTH(transaksi.tgl_masuk)', $bln);
             $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
