@@ -5,7 +5,7 @@
     <div class="row align-items-center pt-3 pb-2 mb-4 border-bottom">
 
         <div class="col-12 col-md mb-3 mb-md-0">
-            <h5 class="text-primary mb-0">Dashboard Overview</h5>
+            <h5 class="mb-0">Dashboard Overview</h5>
             <small class="text-muted text-nowrap">
                 Periode: <?= date('d M Y', strtotime($tgl_awal)); ?> s/d <?= date('d M Y', strtotime($tgl_akhir)); ?>
             </small>

@@ -12,7 +12,7 @@
                     <div class="row align-items-center g-3">
 
                         <div class="col-12 col-lg me-auto">
-                            <h5 class="mb-0 text-primary">
+                            <h5 class="mb-0">
                                 <i class="fas fa-file-invoice-dollar me-2"></i> Data Transaksi
                             </h5>
                         </div>

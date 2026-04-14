@@ -16,7 +16,7 @@
             <div class="card border-0 shadow-sm">
 
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-users-cog me-2"></i> Daftar Pengguna
                     </h5>
                     <a href="<?= base_url('karyawan/tambah'); ?>" class="btn btn-primary btn-sm">

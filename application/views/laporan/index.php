@@ -8,7 +8,7 @@
             <div class="row align-items-center g-3">
 
                 <div class="col-12 col-xl-3">
-                    <h5 class="mb-0 text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-chart-line me-2"></i> Laporan Omset
                     </h5>
                 </div>

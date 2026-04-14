@@ -8,7 +8,7 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-edit me-2"></i> <?= $title; ?>
                     </h5>
                 </div>

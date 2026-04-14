@@ -14,10 +14,10 @@
             <div class="card border-0 shadow-sm rounded-4">
 
                 <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold text-primary">
+                    <h5 class="mb-0">
                         <i class="<?= $is_edit ? 'fas fa-edit' : 'fas fa-plus-circle'; ?> me-2"></i>
                         <?= $is_edit ? 'Edit Pengeluaran' : 'Form Pengeluaran Baru'; ?>
-                    </h6>
+                    </h5>
                 </div>
 
                 <div class="card-body p-4">

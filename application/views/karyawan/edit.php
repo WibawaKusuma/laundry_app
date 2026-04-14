@@ -16,9 +16,9 @@
             <div class="card border-0 shadow-sm">
 
                 <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-user-edit me-2"></i> Form Data Karyawan
-                    </h6>
+                    </h5>
                 </div>
 
                 <div class="card-body">

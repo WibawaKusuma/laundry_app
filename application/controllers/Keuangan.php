@@ -49,7 +49,7 @@ class Keuangan extends CI_Controller
     {
         $data['title'] = 'Tambah Pengeluaran';
         $this->load->view('templates/header', $data);
-        // $this->load->view('templates/sidebar');
+        $this->load->view('templates/sidebar');
         $this->load->view('keuangan/form');
         $this->load->view('templates/footer');
     }
@@ -84,7 +84,7 @@ class Keuangan extends CI_Controller
         $data['pengeluaran'] = $this->Keuangan_model->get_by_id($id);
 
         $this->load->view('templates/header', $data);
-        // $this->load->view('templates/sidebar');
+        $this->load->view('templates/sidebar');
         $this->load->view('keuangan/form', $data);
         $this->load->view('templates/footer');
     }

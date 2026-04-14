@@ -24,6 +24,7 @@ class Karyawan extends CI_Controller
     public function tambah()
     {
         $this->load->view('templates/header');
+        $this->load->view('templates/sidebar');
         $this->load->view('karyawan/form');
         $this->load->view('templates/footer');
     }
@@ -70,6 +71,7 @@ class Karyawan extends CI_Controller
         $data['karyawan'] = $this->Karyawan_model->get_by_id($id);
 
         $this->load->view('templates/header');
+        $this->load->view('templates/sidebar');
         $this->load->view('karyawan/edit', $data);
         $this->load->view('templates/footer');
     }

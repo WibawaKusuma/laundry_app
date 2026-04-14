@@ -15,7 +15,7 @@
             <div class="card border-0 shadow-sm rounded-4">
 
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-user-tag me-2"></i> Form Pelanggan
                     </h5>
                 </div>

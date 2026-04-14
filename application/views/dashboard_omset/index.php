@@ -3,8 +3,8 @@
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h5 class="text-primary">
-            <i class="fas fa-chart-line me-2 text-primary"></i> Dashboard Omset
+        <h5 class="">
+            <i class="fas fa-chart-line me-2"></i> Dashboard Omset
         </h5>
     </div>
 

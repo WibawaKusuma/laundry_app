@@ -9,7 +9,7 @@
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary">
+                    <h5 class="mb-0">
                         <i class="fas fa-users me-2"></i> Data Pelanggan
                     </h5>
                     <a href="<?= base_url('pelanggan/tambah'); ?>" class="btn btn-primary btn-sm">

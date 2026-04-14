@@ -1,7 +1,11 @@
 <!-- <div class="alert alert-info">
     Halaman saat ini: <strong><?= $this->uri->segment(1); ?></strong>
 </div> -->
-
+<!-- <style>
+    .nav-link {
+        background-color: #000000;
+    }
+</style> -->
 <!-- <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"> -->
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-white sidebar collapse shadow-sm">
     <div class="position-sticky pt-3">

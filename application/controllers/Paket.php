@@ -44,10 +44,9 @@ class Paket extends Admin_Controller
         $data['kategori'] = $this->db->get('m_kategori')->result();
         $data['satuan'] = $this->db->get('m_satuan')->result();
 
-        // --- DI SINI TIDAK ADA SIDEBAR ---
         $this->load->view('templates/header');
-        // (Baris sidebar dihapus/tidak ditulis)
-        $this->load->view('paket/form', $data); // Form langsung tampil full lebar
+        $this->load->view('templates/sidebar');
+        $this->load->view('paket/form', $data);
         $this->load->view('templates/footer');
     }
 
@@ -105,6 +104,7 @@ class Paket extends Admin_Controller
         $data['satuan'] = $this->db->get('m_satuan')->result();
 
         $this->load->view('templates/header');
+        $this->load->view('templates/sidebar');
         $this->load->view('paket/form', $data);
         $this->load->view('templates/footer');
     }
