@@ -8,403 +8,132 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <style>
-        /* ===== RESET & BASE ===== */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a56db 0%, #06b6d4 100%);
-            min-height: 100dvh;
+            background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1rem;
         }
 
-        /* ===== BACKGROUND DECORATIONS ===== */
-        body::before,
-        body::after {
-            content: '';
-            position: fixed;
-            border-radius: 50%;
-            opacity: 0.12;
-            pointer-events: none;
-        }
-
-        body::before {
-            width: clamp(200px, 40vw, 500px);
-            height: clamp(200px, 40vw, 500px);
-            background: #fff;
-            top: -10%;
-            right: -10%;
-        }
-
-        body::after {
-            width: clamp(150px, 30vw, 350px);
-            height: clamp(150px, 30vw, 350px);
-            background: #fff;
-            bottom: -8%;
-            left: -8%;
-        }
-
-        /* ===== WRAPPER ===== */
-        .login-wrapper {
-            width: 100%;
-            max-width: 440px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ===== CARD ===== */
         .card-login {
-            background: #ffffff;
             border: none;
-            border-radius: 24px;
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.15),
-                0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 20px;
+            /* Lebih membulat sedikit */
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
 
-        .card-body-login {
-            padding: clamp(1.5rem, 6vw, 2.5rem);
-        }
-
-        /* ===== LOGO AREA ===== */
-        .logo-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .logo-icon {
-            width: clamp(64px, 15vw, 88px);
-            height: clamp(64px, 15vw, 88px);
-            background: linear-gradient(135deg, #1a56db, #06b6d4);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
-            box-shadow: 0 8px 20px rgba(26, 86, 219, 0.3);
-            flex-shrink: 0;
-        }
-
-        .logo-icon i {
-            font-size: clamp(1.5rem, 4vw, 2rem);
-            color: #fff;
-        }
-
-        .logo-img {
-            width: clamp(64px, 15vw, 88px);
-            height: clamp(64px, 15vw, 88px);
-            object-fit: contain;
-            border-radius: 16px;
-            margin-bottom: 1rem;
-        }
-
-        .logo-title {
-            font-size: clamp(1.1rem, 3.5vw, 1.4rem);
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0 0 0.25rem;
-            line-height: 1.3;
-        }
-
-        .logo-subtitle {
-            font-size: clamp(0.78rem, 2vw, 0.875rem);
-            color: #94a3b8;
-            margin: 0;
-        }
-
-        /* ===== ALERT ===== */
-        .alert-error {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 12px;
-            color: #dc2626;
-            font-size: 0.85rem;
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .alert-error i {
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        /* ===== FORM FIELDS ===== */
-        .field-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 0.4rem;
-            display: block;
-        }
-
-        .input-wrap {
-            position: relative;
-        }
-
-        .input-wrap .field-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 0.9rem;
-            pointer-events: none;
-            transition: color 0.2s;
-        }
-
-        .form-field {
-            width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.9rem;
-            color: #1e293b;
-            background: #f8fafc;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            outline: none;
-            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .form-field::placeholder {
-            color: #cbd5e1;
-        }
-
-        .form-field:focus {
-            background: #ffffff;
-            border-color: #1a56db;
-            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
-        }
-
-        .form-field:focus + .field-icon,
-        .input-wrap:focus-within .field-icon {
-            color: #1a56db;
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            padding: 0;
-            font-size: 0.9rem;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-
-        .toggle-password:hover {
-            color: #475569;
-        }
-
-        /* ===== SUBMIT BUTTON ===== */
         .btn-login {
-            width: 100%;
-            padding: 0.85rem;
-            font-family: 'Poppins', sans-serif;
-            font-size: clamp(0.9rem, 2.5vw, 1rem);
+            border-radius: 50px;
+            padding: 10px 20px;
+            /* Padding disesuaikan biar gak kegedean */
             font-weight: 600;
-            color: #ffffff;
-            background: linear-gradient(135deg, #1a56db, #06b6d4);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(26, 86, 219, 0.35);
-            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
+            font-size: 16px;
+            /* Ukuran font pas */
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+            transition: all 0.3s;
         }
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(26, 86, 219, 0.45);
+            box-shadow: 0 6px 15px rgba(13, 110, 253, 0.4);
         }
 
-        .btn-login:active {
-            transform: translateY(0);
+        .form-floating label {
+            padding-left: 1.5rem;
         }
 
-        /* ===== FOOTER ===== */
-        .login-footer {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: clamp(0.7rem, 1.8vw, 0.78rem);
-            color: rgba(255, 255, 255, 0.7);
+        .input-icon {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            color: #ccc;
+            z-index: 10;
         }
 
-        /* ===== RESPONSIVE TWEAKS ===== */
-
-        /* Phone small (< 360px) */
-        @media (max-width: 359px) {
-            body {
-                padding: 0.75rem;
-            }
-            .card-body-login {
-                padding: 1.25rem;
-            }
+        .form-control {
+            border-radius: 12px;
+            /* Input box lebih rounded */
+            border: 1px solid #eee;
+            background-color: #f8f9fa;
         }
 
-        /* Tablet portrait (600px – 1024px) */
-        @media (min-width: 600px) and (max-width: 1024px) {
-            .login-wrapper {
-                max-width: 420px;
-            }
-        }
-
-        /* Landscape phone */
-        @media (max-height: 500px) and (orientation: landscape) {
-            body {
-                align-items: flex-start;
-                padding: 0.75rem;
-            }
-            .logo-wrap {
-                flex-direction: row;
-                gap: 1rem;
-                margin-bottom: 1rem;
-                text-align: left;
-            }
-            .logo-icon, .logo-img {
-                margin-bottom: 0;
-            }
+        .form-control:focus {
+            background-color: #fff;
+            border-color: #0d6efd;
+            box-shadow: none;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="login-wrapper">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
 
-        <div class="card-login">
-            <div class="card-body-login">
+                <div class="card card-login bg-white">
+                    <div class="card-body p-4 p-md-5">
 
-                <!-- Logo & Title -->
-                <div class="logo-wrap">
-                    <?php if (isset($company['company_logo'])): ?>
-                        <img src="<?= base_url($company['company_logo']); ?>" alt="Logo" class="logo-img">
-                    <?php else: ?>
-                        <div class="logo-icon">
-                            <i class="fas fa-soap"></i>
+                        <div class="text-center mb-4">
+                            <?php if (isset($company['company_logo'])): ?>
+                                <img src="<?= base_url($company['company_logo']); ?>" alt="Logo" style="width: 80px; height: 80px; object-fit: contain;" class="mb-3">
+                            <?php else: ?>
+                                <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3" style="width: 80px; height: 80px;">
+                                    <i class="fas fa-soap fa-3x"></i>
+                                </div>
+                            <?php endif; ?>
+                            <h4 class="fw-bold text-dark mb-1"><?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></h4>
+                            <p class="text-muted small">Silakan login untuk melanjutkan</p>
                         </div>
-                    <?php endif; ?>
-                    <h1 class="logo-title"><?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></h1>
-                    <p class="logo-subtitle">Masuk ke akun Anda untuk melanjutkan</p>
+
+                        <?php if ($this->session->flashdata('error')): ?>
+                            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4 small" role="alert">
+                                <i class="fas fa-exclamation-circle me-1"></i> <?= $this->session->flashdata('error') ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        <?php endif; ?>
+
+                        <form action="<?= site_url('auth/login') ?>" method="post">
+
+                            <div class="form-floating mb-3 position-relative">
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Username" required autocomplete="off">
+                                <label for="username">Username</label>
+                                <i class="fas fa-user input-icon"></i>
+                            </div>
+
+                            <div class="form-floating mb-4 position-relative">
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                                <label for="password">Password</label>
+                                <i class="fas fa-lock input-icon"></i>
+                            </div>
+
+                            <div class="d-grid mb-4">
+                                <button type="submit" name="login" value="true" class="btn btn-primary btn-login btn-lg">
+                                    Login <i class="fas fa-arrow-right ms-2 small"></i>
+                                </button>
+                            </div>
+
+                        </form>
+
+                        <div class="text-center text-muted small mt-4" style="font-size: 0.8rem;">
+                            &copy; <?= date('Y'); ?> Laundry Management System
+                        </div>
+
+                    </div>
                 </div>
-
-                <!-- Error Alert -->
-                <?php if ($this->session->flashdata('error')): ?>
-                    <div class="alert-error">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span><?= $this->session->flashdata('error') ?></span>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Login Form -->
-                <form action="<?= site_url('auth/login') ?>" method="post" novalidate>
-
-                    <div style="margin-bottom: 1rem;">
-                        <label class="field-label" for="username">Username</label>
-                        <div class="input-wrap">
-                            <input
-                                type="text"
-                                class="form-field"
-                                id="username"
-                                name="username"
-                                placeholder="Masukkan username"
-                                required
-                                autocomplete="username"
-                                autocapitalize="off"
-                                autocorrect="off"
-                            >
-                            <i class="fas fa-user field-icon"></i>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 1.5rem;">
-                        <label class="field-label" for="password">Password</label>
-                        <div class="input-wrap">
-                            <input
-                                type="password"
-                                class="form-field"
-                                id="password"
-                                name="password"
-                                placeholder="Masukkan password"
-                                required
-                                autocomplete="current-password"
-                                style="padding-right: 3rem;"
-                            >
-                            <i class="fas fa-lock field-icon"></i>
-                            <button type="button" class="toggle-password" id="togglePwd" aria-label="Tampilkan password">
-                                <i class="fas fa-eye" id="eyeIcon"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button type="submit" name="login" value="true" class="btn-login" id="btnLogin">
-                        <span>Masuk</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-
-                </form>
 
             </div>
         </div>
-
-        <!-- Footer -->
-        <p class="login-footer">
-            &copy; <?= date('Y'); ?> Laundry Management System
-        </p>
-
     </div>
 
-    <script>
-        // Toggle show/hide password
-        const togglePwd = document.getElementById('togglePwd');
-        const pwdInput  = document.getElementById('password');
-        const eyeIcon   = document.getElementById('eyeIcon');
-
-        togglePwd.addEventListener('click', function () {
-            const isHidden = pwdInput.type === 'password';
-            pwdInput.type  = isHidden ? 'text' : 'password';
-            eyeIcon.classList.toggle('fa-eye', !isHidden);
-            eyeIcon.classList.toggle('fa-eye-slash', isHidden);
-        });
-
-        // Loading state when form submitted
-        document.querySelector('form').addEventListener('submit', function () {
-            const btn = document.getElementById('btnLogin');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Memproses...</span>';
-            btn.style.opacity = '0.8';
-            btn.disabled = true;
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 
