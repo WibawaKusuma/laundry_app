@@ -75,18 +75,18 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'   => '',
-	'hostname' => 'localhost',
-	'username' => 'root',      // User default XAMPP
-	'password' => '',          // Password default XAMPP (kosong)
-	'database' => 'laundry_app',
-	'dbdriver' => 'mysqli',    // <--- WAJIB 'mysqli' (bukan sqlsrv)
+	'hostname' => defined('SITE_DB_HOST') ? SITE_DB_HOST : 'localhost',
+	'username' => defined('SITE_DB_USER') ? SITE_DB_USER : 'root',
+	'password' => defined('SITE_DB_PASS') ? SITE_DB_PASS : '',
+	'database' => defined('SITE_DB_NAME') ? SITE_DB_NAME : 'laundry_app',
+	'dbdriver' => defined('SITE_DB_DRIVER') ? SITE_DB_DRIVER : 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
 	'cache_on' => FALSE,
 	'cachedir' => '',
-	'char_set' => 'utf8',
-	'dbcollat' => 'utf8_general_ci',
+	'char_set' => defined('SITE_DB_CHARSET') ? SITE_DB_CHARSET : 'utf8',
+	'dbcollat' => defined('SITE_DB_COLLATION') ? SITE_DB_COLLATION : 'utf8_general_ci',
 	'swap_pre' => '',
 	'encrypt' => FALSE,
 	'compress' => FALSE,

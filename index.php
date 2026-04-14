@@ -58,6 +58,104 @@ define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'developm
 
 /*
  *---------------------------------------------------------------
+ * MULTI-SITE HOST CONFIG
+ *---------------------------------------------------------------
+ *
+ * Satu source code dapat dipakai banyak cabang dengan database berbeda
+ * berdasarkan host/subdomain.
+ */
+$site_host = '';
+if (!empty($_SERVER['HTTP_HOST'])) {
+	$site_host = strtolower(trim($_SERVER['HTTP_HOST']));
+	$site_host = preg_replace('/:\d+$/', '', $site_host);
+}
+
+$sites_path = __DIR__ . DIRECTORY_SEPARATOR . 'sites' . DIRECTORY_SEPARATOR;
+$site_hosts = [];
+$site_key = 'default';
+$site_config = [];
+
+if (is_file($sites_path . 'hosts.php')) {
+	$loaded_hosts = require $sites_path . 'hosts.php';
+	if (is_array($loaded_hosts)) {
+		$site_hosts = $loaded_hosts;
+	}
+}
+
+if ($site_host !== '' && isset($site_hosts[$site_host])) {
+	$site_key = $site_hosts[$site_host];
+} elseif (isset($site_hosts['*'])) {
+	$site_key = $site_hosts['*'];
+}
+
+$site_config_file = $sites_path . $site_key . '.php';
+if (is_file($site_config_file)) {
+	$loaded_site_config = require $site_config_file;
+	if (is_array($loaded_site_config)) {
+		$site_config = $loaded_site_config;
+	}
+}
+
+if (!defined('SITE_HOST')) {
+	define('SITE_HOST', $site_host);
+}
+
+if (!defined('SITE_KEY')) {
+	define('SITE_KEY', isset($site_config['site_key']) ? $site_config['site_key'] : $site_key);
+}
+
+if (!defined('SITE_NAME')) {
+	define('SITE_NAME', isset($site_config['site_name']) ? $site_config['site_name'] : SITE_KEY);
+}
+
+if (!defined('SITE_BASE_URL')) {
+	define('SITE_BASE_URL', isset($site_config['base_url']) ? rtrim($site_config['base_url'], '/') . '/' : '');
+}
+
+if (!defined('SITE_DB_HOST')) {
+	define('SITE_DB_HOST', isset($site_config['db_hostname']) ? $site_config['db_hostname'] : 'localhost');
+}
+
+if (!defined('SITE_DB_USER')) {
+	define('SITE_DB_USER', isset($site_config['db_username']) ? $site_config['db_username'] : 'root');
+}
+
+if (!defined('SITE_DB_PASS')) {
+	define('SITE_DB_PASS', isset($site_config['db_password']) ? $site_config['db_password'] : '');
+}
+
+if (!defined('SITE_DB_NAME')) {
+	define('SITE_DB_NAME', isset($site_config['db_database']) ? $site_config['db_database'] : 'laundry_app');
+}
+
+if (!defined('SITE_DB_DRIVER')) {
+	define('SITE_DB_DRIVER', isset($site_config['db_driver']) ? $site_config['db_driver'] : 'mysqli');
+}
+
+if (!defined('SITE_DB_CHARSET')) {
+	define('SITE_DB_CHARSET', isset($site_config['db_charset']) ? $site_config['db_charset'] : 'utf8');
+}
+
+if (!defined('SITE_DB_COLLATION')) {
+	define('SITE_DB_COLLATION', isset($site_config['db_collation']) ? $site_config['db_collation'] : 'utf8_general_ci');
+}
+
+if (!defined('SITE_UPLOAD_DIR')) {
+	define('SITE_UPLOAD_DIR', isset($site_config['upload_dir']) ? $site_config['upload_dir'] : 'uploads/' . SITE_KEY);
+}
+
+if (!defined('SITE_IS_VALID')) {
+	define('SITE_IS_VALID', !empty($site_config));
+}
+
+if (!defined('STDIN') && SITE_HOST !== '' && !SITE_IS_VALID) {
+	header('HTTP/1.1 503 Service Unavailable', TRUE, 503);
+	echo 'Site host is not configured: ' . htmlspecialchars(SITE_HOST, ENT_QUOTES, 'UTF-8');
+	exit(3);
+}
+
+/*
+ *---------------------------------------------------------------
  * ERROR REPORTING
  *---------------------------------------------------------------
  *
