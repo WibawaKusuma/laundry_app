@@ -69,6 +69,24 @@
             border-color: #0d6efd;
             box-shadow: none;
         }
+
+        /* Landscape tablet & mobile landscape */
+        @media (orientation: landscape) and (max-height: 600px) {
+            body {
+                align-items: flex-start;
+                padding: 1rem 0;
+            }
+            .card-login .card-body {
+                padding: 1.5rem 2rem !important;
+            }
+        }
+
+        @media (min-width: 576px) and (max-width: 991px) and (orientation: landscape) {
+            .login-col {
+                max-width: 65% !important;
+                flex: 0 0 65% !important;
+            }
+        }
     </style>
 </head>
 
@@ -76,7 +94,7 @@
 
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-5 col-lg-4">
+            <div class="col-10 col-sm-8 col-md-6 col-lg-5 col-xl-4 login-col">
 
                 <div class="card card-login bg-white">
                     <div class="card-body p-4 p-md-5">
