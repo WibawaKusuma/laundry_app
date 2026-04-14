@@ -39,13 +39,13 @@
 
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'paket' ? 'active' : '' ?>" href="<?= base_url('paket') ?>">
-                        <i class="fas fa-tshirt me-2"></i> Paket Laundry
+                        <i class="fas fa-tshirt me-2"></i> Paket
                     </a>
                 </li>
 
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'karyawan' ? 'active' : '' ?>" href="<?= base_url('karyawan') ?>">
-                        <i class="fas fa-user-tie me-2"></i> Data Karyawan
+                        <i class="fas fa-user-tie me-2"></i> Karyawan
                     </a>
                 </li>
 
