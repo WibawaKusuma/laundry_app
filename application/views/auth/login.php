@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="<?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?>">
     <title>Login - <?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></title>
-    <link rel="manifest" href="<?= base_url('manifest.json'); ?>">
+    <link rel="manifest" href="<?= base_url('manifest.json?v=3'); ?>">
     <link rel="icon" type="image/png" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
     <link rel="apple-touch-icon" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
 

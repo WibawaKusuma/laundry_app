@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="<?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?>">
     <title><?= isset($company['company_name']) ? $company['company_name'] : 'Sistem Laundry'; ?></title>
     <link rel="icon" type="image/png" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
-    <link rel="manifest" href="<?= base_url('manifest.json'); ?>">
+    <link rel="manifest" href="<?= base_url('manifest.json?v=3'); ?>">
     <link rel="apple-touch-icon" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
     <link href="<?= base_url('assets/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/all.min.css') ?>" rel="stylesheet">
