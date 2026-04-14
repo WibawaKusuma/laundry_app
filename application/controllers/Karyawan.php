@@ -3,6 +3,11 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Karyawan extends Admin_Controller
 {
+    private $allowed_roles = [
+        'admin' => 'Admin (Full Akses)',
+        'kasir' => 'Kasir (Transaksi Saja)',
+    ];
+
     public function __construct()
     {
         parent::__construct();
@@ -22,9 +27,11 @@ class Karyawan extends Admin_Controller
 
     public function tambah()
     {
+        $data['role_options'] = $this->allowed_roles;
+
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
-        $this->load->view('karyawan/form');
+        $this->load->view('karyawan/form', $data);
         $this->load->view('templates/footer');
     }
 
@@ -34,6 +41,12 @@ class Karyawan extends Admin_Controller
         $username = $this->input->post('username'); // Ambil username
         $password = $this->input->post('password');
         $role     = $this->input->post('role');
+
+        if (!array_key_exists($role, $this->allowed_roles)) {
+            $this->session->set_flashdata('error', 'Role karyawan tidak valid.');
+            redirect('karyawan/tambah');
+            return;
+        }
 
         // --- 1. CEK DUPLIKASI USERNAME ---
         $cek = $this->db->get_where('m_users', ['username' => $username])->num_rows();
@@ -63,8 +76,8 @@ class Karyawan extends Admin_Controller
     public function edit($id)
     {
         $data['title'] = 'Edit data karyawan';
-
         $data['karyawan'] = $this->Karyawan_model->get_by_id($id);
+        $data['role_options'] = $this->allowed_roles;
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -79,6 +92,12 @@ class Karyawan extends Admin_Controller
         $username = $this->input->post('username');
         $password = $this->input->post('password');
         $role = $this->input->post('role');
+
+        if (!array_key_exists($role, $this->allowed_roles)) {
+            $this->session->set_flashdata('error', 'Role karyawan tidak valid.');
+            redirect('karyawan/edit/' . $id);
+            return;
+        }
 
         $data = array(
             'name' => $name,

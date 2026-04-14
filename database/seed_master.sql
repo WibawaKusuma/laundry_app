@@ -45,9 +45,7 @@ ON DUPLICATE KEY UPDATE `nama_satuan` = VALUES(`nama_satuan`);
 
 INSERT INTO `m_users` (`id`, `username`, `password`, `role`, `name`) VALUES
 (1, 'admin', '$2y$10$3LCgYWwVQHLo2KZ.hefhn.fEaxTuRfX2odHkXTEjwoK.ZeiG7OxwW', 'admin', 'Administrator'),
-(2, 'kasir', 'de28f8f7998f23ab4194b51a6029416f', 'staff', 'Siti Kasir'),
-(4, 'admin2', '$2y$10$tQliYv.op/M2diZpNDzsVO.dYnzehU01Uom3qcRtvbp2p5U1.CnA6', 'admin', 'Administrator 2'),
-(6, 'admin3', '$2y$10$vNq5LsG/ntZpQaKtNXkKGOasK6371eGzvre/ZPo4B3l80d0j1TdGW', 'admin', 'Administrator 3')
+(2, 'kasir', '$2y$10$3RaDDTGuGLklHYo0WCXhZ.B43soSCKQTbg.HrsS1q478sYJNY88r.', 'kasir', 'Siti Kasir'),
 ON DUPLICATE KEY UPDATE
 `username` = VALUES(`username`),
 `password` = VALUES(`password`),

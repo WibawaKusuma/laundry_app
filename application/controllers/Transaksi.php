@@ -3,6 +3,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Transaksi extends MY_Controller
 {
+    private $allowed_statuses = ['Baru', 'Proses', 'Selesai', 'Diambil'];
+    private $allowed_payment_statuses = ['Belum Dibayar', 'Sudah Dibayar'];
+
     public function __construct()
     {
         parent::__construct();
@@ -183,8 +186,8 @@ class Transaksi extends MY_Controller
             'id_pelanggan' => $id_pelanggan,
             'tgl_masuk'    => date('Y-m-d H:i:s'),
             'batas_waktu'  => $tgl_selesai,
-            'status'       => 'Baru',
-            'dibayar'      => 'Belum Dibayar',
+            'status'       => $this->allowed_statuses[0],
+            'dibayar'      => $this->allowed_payment_statuses[0],
             'id_user'      => $this->session->userdata('user_id')
         ];
 
@@ -279,6 +282,12 @@ class Transaksi extends MY_Controller
     public function detail($kode_invoice)
     {
         $data['title'] = 'Detail Transaksi';
+        $data['status_options'] = [
+            'Baru' => 'Baru Masuk',
+            'Proses' => 'Sedang Dicuci',
+            'Selesai' => 'Selesai (Siap Ambil)',
+            'Diambil' => 'Sudah Diambil',
+        ];
 
         $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
@@ -312,6 +321,11 @@ class Transaksi extends MY_Controller
         $kode_invoice = $this->input->post('kode_invoice');
         $status_baru  = $this->input->post('status');
 
+        if (!in_array($status_baru, $this->allowed_statuses, true)) {
+            $this->session->set_flashdata('error', 'Status laundry tidak valid.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
         $this->db->set('status', $status_baru);
         $this->db->where('kode_invoice', $kode_invoice);
         $this->db->update('transaksi');
@@ -327,7 +341,7 @@ class Transaksi extends MY_Controller
 
         $data_update = [
             'status'          => 'Diambil',
-            'dibayar'         => 'Sudah Dibayar',
+            'dibayar'         => $this->allowed_payment_statuses[1],
             'tgl_bayar'       => $tgl_bayar,
             'id_metode_bayar' => $id_metode_bayar
         ];

@@ -92,10 +92,9 @@
                         <div class="mb-3">
                             <label class="form-label small text-muted">Update Status Pengerjaan</label>
                             <select name="status" class="form-select">
-                                <option value="Baru" <?= $transaksi->status == 'Baru' ? 'selected' : '' ?>>Baru Masuk</option>
-                                <option value="Proses" <?= $transaksi->status == 'Proses' ? 'selected' : '' ?>>Sedang Dicuci</option>
-                                <option value="Selesai" <?= $transaksi->status == 'Selesai' ? 'selected' : '' ?>>Selesai (Siap Ambil)</option>
-                                <option value="Diambil" <?= $transaksi->status == 'Diambil' ? 'selected' : '' ?>>Sudah Diambil</option>
+                                <?php foreach ($status_options as $value => $label) : ?>
+                                    <option value="<?= $value; ?>" <?= $transaksi->status == $value ? 'selected' : ''; ?>><?= $label; ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 btn-sm">

@@ -65,8 +65,9 @@
                             <label for="role" class="form-label fw-bold">Role / Jabatan</label>
                             <select class="form-select" id="role" name="role" required>
                                 <option value="">-- Pilih Role --</option>
-                                <option value="admin" <?= ($is_edit && $karyawan->role == 'admin') ? 'selected' : ''; ?>>Admin (Full Akses)</option>
-                                <option value="kasir" <?= ($is_edit && $karyawan->role == 'kasir') ? 'selected' : ''; ?>>Kasir (Transaksi Saja)</option>
+                                <?php foreach ($role_options as $value => $label) : ?>
+                                    <option value="<?= $value; ?>" <?= ($is_edit && $karyawan->role == $value) ? 'selected' : ''; ?>><?= $label; ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
 

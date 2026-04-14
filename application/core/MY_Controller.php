@@ -26,7 +26,7 @@ class MY_Controller extends CI_Controller
 
     public function isStaff()
     {
-        return $this->session->userdata('role') === 'staff';
+        return in_array($this->session->userdata('role'), ['staff', 'kasir'], true);
     }
 } // <--- PERHATIKAN: Ini adalah tutup kurung class MY_Controller
 
