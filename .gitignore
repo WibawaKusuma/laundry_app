@@ -3,8 +3,8 @@
 # ============================================
 
 # --- Config sensitif (database, base_url) ---
-application/config/config.php
-application/config/database.php
+# application/config/config.php
+# application/config/database.php
 
 # --- Sites entry points (config database per-laundry) ---
 sites/
