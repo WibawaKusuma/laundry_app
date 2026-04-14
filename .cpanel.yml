@@ -1,5 +1,4 @@
----
 deployment:
   tasks:
     - export DEPLOYPATH=/home/islx3544/public_html/sistem/
-    - /bin/cp -R . $DEPLOYPATH
+    - /usr/bin/rsync -av --delete ./ $DEPLOYPATH
