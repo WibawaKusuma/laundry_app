@@ -7,6 +7,49 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+    let deferredInstallPrompt = null;
+    const installButton = document.getElementById('install-app-btn');
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('<?= base_url('service-worker.js'); ?>').catch(function(error) {
+                console.warn('Service worker gagal didaftarkan:', error);
+            });
+        });
+    }
+
+    window.addEventListener('beforeinstallprompt', function(event) {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+
+        if (installButton) {
+            installButton.classList.remove('d-none');
+        }
+    });
+
+    window.addEventListener('appinstalled', function() {
+        deferredInstallPrompt = null;
+
+        if (installButton) {
+            installButton.classList.add('d-none');
+        }
+    });
+
+    if (installButton) {
+        installButton.addEventListener('click', async function() {
+            if (!deferredInstallPrompt) {
+                return;
+            }
+
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            installButton.classList.add('d-none');
+        });
+    }
+</script>
+
+<script>
     $(document).ready(function() {
         // A. Notifikasi Sukses/Gagal
         const flashSuccess = $('.flash-data-success').data('flashdata');

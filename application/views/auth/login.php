@@ -4,7 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="<?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?>">
     <title>Login - <?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?></title>
+    <link rel="manifest" href="<?= base_url('manifest.json'); ?>">
+    <link rel="icon" type="image/png" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
+    <link rel="apple-touch-icon" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -140,6 +147,12 @@
 
                         </form>
 
+                        <div class="d-grid mb-3">
+                            <button id="install-app-btn" type="button" class="btn btn-outline-primary rounded-pill d-none">
+                                <i class="fas fa-download me-2"></i>Install App
+                            </button>
+                        </div>
+
                         <div class="text-center text-muted small mt-4" style="font-size: 0.8rem;">
                             &copy; <?= date('Y'); ?> Laundry Management System
                         </div>
@@ -152,6 +165,48 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let deferredInstallPrompt = null;
+        const installButton = document.getElementById('install-app-btn');
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('<?= base_url('service-worker.js'); ?>').catch(function(error) {
+                    console.warn('Service worker gagal didaftarkan:', error);
+                });
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', function(event) {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+
+            if (installButton) {
+                installButton.classList.remove('d-none');
+            }
+        });
+
+        window.addEventListener('appinstalled', function() {
+            deferredInstallPrompt = null;
+
+            if (installButton) {
+                installButton.classList.add('d-none');
+            }
+        });
+
+        if (installButton) {
+            installButton.addEventListener('click', async function() {
+                if (!deferredInstallPrompt) {
+                    return;
+                }
+
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                installButton.classList.add('d-none');
+            });
+        }
+    </script>
 
 </body>
 

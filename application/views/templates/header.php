@@ -4,8 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="<?= isset($company['company_name']) ? $company['company_name'] : 'Laundry App'; ?>">
     <title><?= isset($company['company_name']) ? $company['company_name'] : 'Sistem Laundry'; ?></title>
     <link rel="icon" type="image/png" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
+    <link rel="manifest" href="<?= base_url('manifest.json'); ?>">
+    <link rel="apple-touch-icon" href="<?= isset($company['company_logo']) ? base_url($company['company_logo']) : base_url('assets/image/logo.png'); ?>">
     <link href="<?= base_url('assets/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/all.min.css') ?>" rel="stylesheet">
 
@@ -112,6 +118,10 @@
         <a class="navbar-brand col-md-3 col-lg-2 me-0 ps-2 fs-6" href="<?= base_url('dashboard') ?>">
             <i class="fas fa-soap me-2"></i> <?= isset($company['company_name']) ? $company['company_name'] : 'LAUNDRY APP'; ?>
         </a>
+
+        <button id="install-app-btn" class="btn btn-light btn-sm ms-auto me-2 d-none" type="button">
+            <i class="fas fa-download me-1"></i> Install App
+        </button>
 
     </nav>
 
