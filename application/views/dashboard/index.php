@@ -12,7 +12,7 @@
         </div>
 
         <div class="col-12 col-md-auto">
-            <form action="" method="get" class="row g-2 align-items-center">
+            <form action="" method="get" class="row g-2 align-items-center filter-container">
 
                 <div class="col-6 col-md-auto">
                     <div class="input-group input-group-sm">
@@ -42,8 +42,8 @@
     <div class="row g-4 mb-4">
 
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <p class="mb-0 text-muted small text-uppercase fw-bold">Total Pelanggan</p>
@@ -58,8 +58,8 @@
         </div>
 
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <p class="mb-0 text-muted small text-uppercase fw-bold">Cucian Baru</p>
@@ -74,8 +74,8 @@
         </div>
 
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <p class="mb-0 text-muted small text-uppercase fw-bold">Sedang Proses</p>
@@ -90,8 +90,8 @@
         </div>
 
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
-                <div class="card-body">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <p class="mb-0 text-muted small text-uppercase fw-bold">Siap Diambil</p>

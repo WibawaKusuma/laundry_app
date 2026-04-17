@@ -1,0 +1,169 @@
+:root {
+    --bs-primary: #1f297a;
+    --bs-primary-rgb: 31, 41, 122;
+    --bs-body-bg: #f8f9fc;
+    --bs-body-color: #333333;
+}
+
+/* Jarak agar konten tidak tertutup Navbar Atas */
+body {
+    padding-top: 60px;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+/* Perbaikan Z-Index agar Navbar selalu di atas Sidebar */
+.navbar {
+    z-index: 1030;
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #3b82f6 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+}
+
+/* Override style untuk memaksakan warna brand utama kita dengan support opacity */
+.text-primary { color: rgba(var(--bs-primary-rgb), var(--bs-text-opacity, 1)) !important; }
+.bg-primary { background-color: rgba(var(--bs-primary-rgb), var(--bs-bg-opacity, 1)) !important; }
+.btn-primary { 
+    background-color: var(--bs-primary); 
+    border-color: var(--bs-primary); 
+    color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active { 
+    background-color: #171e5c !important; 
+    border-color: #171e5c !important; 
+    color: #fff !important;
+}
+.btn-outline-primary { 
+    color: var(--bs-primary); 
+    border-color: var(--bs-primary); 
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active { 
+    background-color: var(--bs-primary) !important; 
+    color: #fff !important; 
+}
+
+p, h1, h2, h3, h4, h5 {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* Base Card Styling untuk "Clean / Float" feeling */
+.card {
+    border-radius: 0.75rem;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+    transition: all 0.2s ease-in-out;
+}
+/* Saat card di hover, naik perlahan (micro-interaction) */
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    min-height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid rgba(0,0,0,0.05) !important;
+    box-shadow: none;
+}
+
+/* Nav-link hover di sidebar */
+.sidebar .nav-link {
+    transition: all 0.3s ease-in-out;
+    border-radius: 0.375rem;
+    margin: 0.1rem 0.5rem;
+    color: #495057;
+}
+.sidebar .nav-link:hover {
+    background-color: rgba(31, 41, 122, 0.05); /* Slight blue tint */
+    color: var(--bs-primary);
+}
+.sidebar .nav-link.active {
+    background-color: rgba(31, 41, 122, 0.1) !important; 
+    color: var(--bs-primary) !important;
+    font-weight: 600;
+}
+
+/* Agar tulisan Laundry App terlihat rapi di mobile */
+@media (max-width: 767.98px) {
+    .navbar-brand {
+        font-size: 1rem;
+        width: auto;
+    }
+    #sidebarMenu {
+        position: fixed;
+        top: 56px;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        width: 250px;
+        padding-top: 20px;
+        overflow-y: auto;
+        background-color: #ffffff;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease-in-out;
+    }
+}
+
+/* Table custom styling minimalis */
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.table > :not(caption) > * > * {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.table-light th {
+    background-color: #f8f9fc !important;
+    color: #333;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0,0,0,0.04) !important;
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(31, 41, 122, 0.02) !important;
+}
+
+/* Badge gaya pill lembut */
+.badge {
+    padding: 0.5em 0.85em;
+    font-weight: 500;
+}
+/* override bootstrap background for subtle effect */
+.badge.bg-secondary { background-color: #e2e8f0 !important; color: #475569 !important; }
+.badge.bg-info { background-color: #e0f2fe !important; color: #0284c7 !important; }
+.badge.bg-warning { background-color: #fef3c7 !important; color: #d97706 !important; }
+.badge.bg-success { background-color: #dcfce7 !important; color: #16a34a !important; }
+
+/* Filter Container di Dashboard */
+.filter-container .input-group-text {
+    background-color: #fff;
+    border-right: none;
+    color: #94a3b8;
+}
+.filter-container .form-control {
+    border-left: none;
+}
+.filter-container .form-control:focus {
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    z-index: 99;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
