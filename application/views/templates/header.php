@@ -19,7 +19,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
-    <link href="<?= base_url('assets/css/custom-ui.css?v=1') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/custom-ui.css?v=2') ?>" rel="stylesheet">
 
 <body>
 

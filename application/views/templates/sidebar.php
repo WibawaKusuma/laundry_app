@@ -8,8 +8,8 @@
 </style> -->
 <!-- <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"> -->
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-white sidebar collapse shadow-sm">
-    <div class="position-sticky pt-3">
-        <ul class="nav flex-column nav-pills mb-4">
+    <div class="position-sticky pt-3 sidebar-inner">
+        <ul class="nav flex-column nav-pills mb-4 sidebar-nav">
 
             <?php $uri = $this->uri->segment(1); ?>
 
@@ -67,7 +67,7 @@
 
 
             <?php endif; ?>
-            <hr>
+            <hr class="sidebar-divider">
             <li class="nav-item">
                 <a class="nav-link text-danger" href="<?= base_url('auth/logout') ?>">
                     <i class="fas fa-sign-out-alt me-2"></i> Logout
