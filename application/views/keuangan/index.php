@@ -11,17 +11,17 @@
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
 
     <div class="row mb-4">
-        <div class="col-12 col-md-3">
-            <div class="card shadow-sm rounded-4" style="border: 0; border-left: 5px solid #dc3545;">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <p class="text-muted fw-bold text-uppercase small mb-1">Total Pengeluaran</p>
-                            <h3 class="text-danger mb-0">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm rounded-4 finance-summary-card" style="border: 0; border-left: 5px solid #dc3545;">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between finance-summary-content">
+                        <div class="finance-summary-text">
+                            <p class="text-muted fw-bold text-uppercase small mb-1 finance-summary-label">Total Pengeluaran</p>
+                            <h3 class="text-danger mb-0 finance-summary-value">
                                 Rp <?= number_format($total_pengeluaran, 0, ',', '.'); ?>
                             </h3>
                         </div>
-                        <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 d-flex align-items-center justify-content-center finance-summary-icon" style="width: 60px; height: 60px;">
                             <i class="fas fa-wallet fa-2x"></i>
                         </div>
                     </div>

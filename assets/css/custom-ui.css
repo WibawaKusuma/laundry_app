@@ -208,6 +208,61 @@ p, h1, h2, h3, h4, h5 {
     background-color: rgba(31, 41, 122, 0.02) !important;
 }
 
+.finance-summary-card {
+    min-height: 100%;
+}
+
+.finance-summary-content {
+    gap: 1rem;
+}
+
+.finance-summary-text {
+    min-width: 0;
+}
+
+.finance-summary-label {
+    letter-spacing: 0.04em;
+    line-height: 1.35;
+}
+
+.finance-summary-value {
+    font-size: clamp(2rem, 2vw + 1rem, 2.5rem);
+    line-height: 1.05;
+}
+
+.finance-summary-icon {
+    flex: 0 0 auto;
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) and (orientation: landscape) {
+    .finance-summary-card {
+        max-width: 440px;
+    }
+
+    .finance-summary-content {
+        align-items: center;
+    }
+
+    .finance-summary-label {
+        max-width: 12rem;
+        font-size: 0.78rem;
+    }
+
+    .finance-summary-value {
+        font-size: 2.15rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .finance-summary-content {
+        gap: 0.85rem;
+    }
+
+    .finance-summary-label {
+        max-width: 10rem;
+    }
+}
+
 /* Badge gaya pill lembut */
 .badge {
     padding: 0.5em 0.85em;
