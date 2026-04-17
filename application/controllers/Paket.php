@@ -7,41 +7,39 @@ class Paket extends Admin_Controller
     public function __construct()
     {
         parent::__construct();
-        // Load Library Form Validation (Wajib)
         $this->load->library('form_validation');
     }
 
     public function index()
     {
-        $this->db->select('m_paket_laundry.*, m_kategori.nama_kategori, m_satuan.nama_satuan');
+        $this->db->select('m_paket_laundry.*, m_kategori.nama_kategori, m_tipe.nama_tipe, m_satuan.nama_satuan');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $data['paket'] = $this->db->get()->result();
-        // --- PERUBAHAN DI SINI ---
-        // Kita memuat struktur halaman secara berurutan dari Controller
-        $this->load->view('templates/header');   // 1. Header (Navbar)
-        $this->load->view('templates/sidebar');  // 2. Sidebar (Menu Kiri)
-        $this->load->view('paket/index', $data); // 3. Konten Utama (Tabel)
-        $this->load->view('templates/footer');   // 4. Footer (Script JS)
+
+        $this->load->view('templates/header');
+        $this->load->view('templates/sidebar');
+        $this->load->view('paket/index', $data);
+        $this->load->view('templates/footer');
     }
 
     public function tambah()
     {
-        // KITA TAMBAHKAN INI:
         $data['title'] = 'Tambah Paket Laundry';
-        // Agar variable $title di form.php tidak error
-        $data['paket'] = (object)[
+        $data['paket'] = (object) [
             'id_paket_laundry' => '',
             'id_kategori' => '',
+            'id_tipe' => '',
             'nama_paket' => '',
             'id_satuan' => '',
             'durasi_jam' => '',
             'harga' => ''
         ];
 
-        // Ambil data untuk opsi dropdown master
         $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['tipe'] = $this->db->get('m_tipe')->result();
         $data['satuan'] = $this->db->get('m_satuan')->result();
 
         $this->load->view('templates/header');
@@ -52,7 +50,6 @@ class Paket extends Admin_Controller
 
     public function simpan()
     {
-        // 1. Buat Aturan Validasi (Satpam)
         $this->form_validation->set_rules('nama_paket', 'Nama Paket', 'required|trim', [
             'required' => '%s tidak boleh kosong!'
         ]);
@@ -63,6 +60,9 @@ class Paket extends Admin_Controller
         $this->form_validation->set_rules('id_kategori', 'Kategori', 'required', [
             'required' => 'Silakan pilih %s layanan!'
         ]);
+        $this->form_validation->set_rules('id_tipe', 'Tipe', 'required', [
+            'required' => 'Silakan pilih %s laundry!'
+        ]);
         $this->form_validation->set_rules('id_satuan', 'Satuan', 'required', [
             'required' => 'Silakan pilih %s layanan!'
         ]);
@@ -70,18 +70,16 @@ class Paket extends Admin_Controller
             'required' => '%s pengerjaan harus diisi!'
         ]);
 
-        // 2. Cek Apakah Lolos Validasi?
         if ($this->form_validation->run() == FALSE) {
-            // JIKA GAGAL: Kembalikan ke halaman tambah + Bawa Pesan Error
             $this->tambah();
         } else {
-            // JIKA SUKSES: Lanjut simpan ke database
             $data = [
                 'id_kategori' => $this->input->post('id_kategori', true),
+                'id_tipe' => $this->input->post('id_tipe', true),
                 'nama_paket' => $this->input->post('nama_paket', true),
                 'id_satuan' => $this->input->post('id_satuan', true),
                 'durasi_jam' => $this->input->post('durasi_jam', true),
-                'harga'      => $this->input->post('harga', true)
+                'harga' => $this->input->post('harga', true)
             ];
 
             if ($this->db->insert('m_paket_laundry', $data)) {
@@ -99,8 +97,8 @@ class Paket extends Admin_Controller
         $data['title'] = 'Edit Paket Laundry';
         $data['paket'] = $this->db->get_where('m_paket_laundry', array('id_paket_laundry' => $id))->row();
 
-        // Ambil data untuk opsi dropdown master
         $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['tipe'] = $this->db->get('m_tipe')->result();
         $data['satuan'] = $this->db->get('m_satuan')->result();
 
         $this->load->view('templates/header');
@@ -113,23 +111,23 @@ class Paket extends Admin_Controller
     {
         $id = $this->input->post('id');
 
-        // Aturan validasi sama seperti simpan
         $this->form_validation->set_rules('nama_paket', 'Nama Paket', 'required|trim');
         $this->form_validation->set_rules('harga', 'Harga', 'required|numeric');
         $this->form_validation->set_rules('id_kategori', 'Kategori', 'required');
+        $this->form_validation->set_rules('id_tipe', 'Tipe', 'required');
         $this->form_validation->set_rules('id_satuan', 'Satuan', 'required');
         $this->form_validation->set_rules('durasi_jam', 'Durasi', 'required|numeric');
 
         if ($this->form_validation->run() == FALSE) {
-            // Jika Gagal, kembalikan ke fungsi edit (bukan tambah)
             $this->edit($id);
         } else {
             $data = [
                 'id_kategori' => $this->input->post('id_kategori', true),
+                'id_tipe' => $this->input->post('id_tipe', true),
                 'nama_paket' => $this->input->post('nama_paket', true),
                 'id_satuan' => $this->input->post('id_satuan', true),
                 'durasi_jam' => $this->input->post('durasi_jam', true),
-                'harga'      => $this->input->post('harga', true)
+                'harga' => $this->input->post('harga', true)
             ];
 
             $this->db->where('id_paket_laundry', $id);

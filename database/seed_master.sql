@@ -34,6 +34,12 @@ INSERT INTO `m_kategori` (`id_kategori`, `nama_kategori`) VALUES
 (4, 'Pakaian Bayi')
 ON DUPLICATE KEY UPDATE `nama_kategori` = VALUES(`nama_kategori`);
 
+INSERT INTO `m_tipe` (`id_tipe`, `nama_tipe`) VALUES
+(1, 'Cuci Komplit'),
+(2, 'Cuci Lipat'),
+(3, 'Setrika')
+ON DUPLICATE KEY UPDATE `nama_tipe` = VALUES(`nama_tipe`);
+
 INSERT INTO `m_satuan` (`id_satuan`, `nama_satuan`) VALUES
 (1, 'KG'),
 (2, 'PCS'),
@@ -45,19 +51,20 @@ ON DUPLICATE KEY UPDATE `nama_satuan` = VALUES(`nama_satuan`);
 
 INSERT INTO `m_users` (`id`, `username`, `password`, `role`, `name`) VALUES
 (1, 'admin', '$2y$10$3LCgYWwVQHLo2KZ.hefhn.fEaxTuRfX2odHkXTEjwoK.ZeiG7OxwW', 'admin', 'Administrator'),
-(2, 'kasir', '$2y$10$3RaDDTGuGLklHYo0WCXhZ.B43soSCKQTbg.HrsS1q478sYJNY88r.', 'kasir', 'Siti Kasir'),
+(2, 'kasir', '$2y$10$3RaDDTGuGLklHYo0WCXhZ.B43soSCKQTbg.HrsS1q478sYJNY88r.', 'kasir', 'Siti Kasir')
 ON DUPLICATE KEY UPDATE
 `username` = VALUES(`username`),
 `password` = VALUES(`password`),
 `role` = VALUES(`role`),
 `name` = VALUES(`name`);
 
-INSERT INTO `m_paket_laundry` (`id_paket_laundry`, `id_kategori`, `nama_paket`, `id_satuan`, `harga`, `durasi_jam`) VALUES
-(3, 2, 'cuci setrika', 1, 10000, 72),
-(4, 1, 'setrika', 2, 5000, 24),
-(5, 4, 'Cuci Komplit', 1, 18000, 4)
+INSERT INTO `m_paket_laundry` (`id_paket_laundry`, `id_kategori`, `id_tipe`, `nama_paket`, `id_satuan`, `harga`, `durasi_jam`) VALUES
+(3, 2, 3, 'Express', 1, 10000, 72),
+(4, 1, 3, 'Reguler', 2, 5000, 24),
+(5, 4, 1, 'Cuci Komplit', 1, 18000, 4)
 ON DUPLICATE KEY UPDATE
 `id_kategori` = VALUES(`id_kategori`),
+`id_tipe` = VALUES(`id_tipe`),
 `nama_paket` = VALUES(`nama_paket`),
 `id_satuan` = VALUES(`id_satuan`),
 `harga` = VALUES(`harga`),

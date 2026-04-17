@@ -30,7 +30,7 @@
                         <div class="mb-3">
                             <label for="nama_paket" class="form-label fw-bold">Nama Paket Laundry</label>
                             <input type="text" class="form-control" id="nama_paket" name="nama_paket"
-                                placeholder="Contoh: Cuci Komplit Wangi"
+                                placeholder="Contoh: Express atau Reguler"
                                 value="<?= $paket->nama_paket ?? ''; ?>" required>
                         </div>
 
@@ -60,6 +60,18 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
+                                <label for="id_tipe" class="form-label fw-bold">Tipe Laundry</label>
+                                <select class="form-select" id="id_tipe" name="id_tipe" required>
+                                    <option value="" disabled <?= empty($paket->id_tipe) ? 'selected' : ''; ?>>-- Pilih Tipe --</option>
+                                    <?php foreach ($tipe as $tp) : ?>
+                                        <option value="<?= $tp->id_tipe ?>" <?= ($paket->id_tipe ?? '') == $tp->id_tipe ? 'selected' : ''; ?>>
+                                            <?= $tp->nama_tipe ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
                                 <label for="id_satuan" class="form-label fw-bold">Satuan Ukuran</label>
                                 <select class="form-select" id="id_satuan" name="id_satuan" required>
                                     <option value="" disabled <?= empty($paket->id_satuan) ? 'selected' : ''; ?>>-- Pilih Satuan --</option>
@@ -70,7 +82,9 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                        </div>
 
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="durasi_jam" class="form-label fw-bold">Estimasi Durasi Pengerjaan</label>
                                 <div class="input-group">
@@ -104,37 +118,32 @@
 
 <script>
     $(document).ready(function() {
-
-        // 1. Script untuk Konfirmasi Simpan (Edit/Baru)
         $('.btn-simpan').on('click', function(e) {
-            e.preventDefault(); // Mencegah form submit langsung
+            e.preventDefault();
 
             Swal.fire({
                 title: 'Simpan Data?',
-                text: "Pastikan data yang diinput sudah benar.",
+                text: 'Pastikan data yang diinput sudah benar.',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#198754', // Warna hijau success
+                confirmButtonColor: '#198754',
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Ya, Simpan!',
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Jika user klik Ya, baru form di-submit secara manual
                     $('#formPaket').submit();
                 }
             });
         });
 
-        // 2. Script untuk Menampilkan Error Validasi (Jika ada error dari Controller)
         const flashError = $('.flash-data-error').data('flashdata');
         if (flashError) {
             Swal.fire({
                 icon: 'error',
                 title: 'Gagal!',
-                html: flashError, // Pakai html biar <br> terbaca
+                html: flashError,
             });
         }
-
     });
 </script>

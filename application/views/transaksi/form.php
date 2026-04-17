@@ -10,109 +10,108 @@
     <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
 
     <form action="<?= base_url('transaksi/simpan'); ?>" method="post">
-        <div class="row">
-
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="fas fa-user me-2"></i> Data Pelanggan & Paket</h6>
-                    </div>
-                    <div class="card-body">
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Pilih Pelanggan</label>
-
-                            <select name="id_pelanggan" id="select_pelanggan" class="form-select" required>
-                                <option value="">-- Ketik Nama Pelanggan --</option>
-                                <?php foreach ($pelanggan as $p) : ?>
-                                    <option value="<?= $p->id; ?>"><?= $p->nama; ?> (<?= $p->no_hp; ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-
-                            <div class="form-text mt-2">
-                                Belum ada? <a href="<?= base_url('pelanggan/tambah'); ?>" class="text-decoration-none">
-                                    <i class="fas fa-plus-circle"></i> Tambah Pelanggan Baru
-                                </a>
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Pilih Kategori Layanan</label>
-                            <select id="filter_kategori" class="form-select">
-                                <option value="">-- Semua Kategori --</option>
-                                <?php foreach ($kategori as $kat) : ?>
-                                    <option value="<?= $kat->id_kategori; ?>"><?= $kat->nama_kategori; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Pilih Paket Laundry</label>
-                            <select id="id_paket" class="form-select">
-                                <option value="">-- Pilih Paket --</option>
-                                <?php foreach ($paket as $pk) : ?>
-                                    <option value="<?= $pk->id_paket_laundry; ?>"
-                                            data-kategori="<?= $pk->id_kat; ?>">
-                                        <?= $pk->nama_paket; ?> - Rp <?= number_format($pk->harga, 0, ',', '.'); ?> / <?= strtoupper($pk->nama_satuan ?? '-'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="text-muted" id="info-paket-kosong" style="display:none">Tidak ada paket untuk kategori ini.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Jumlah Bawaan (Qty)</label>
-                            <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2">
-                        </div>
-
-                        <button type="button" class="btn btn-sm btn-success" id="btn-tambah-cart">
-                            <i class="fas fa-cart-plus me-2"></i> Masukkan Keranjang
-                        </button>
-
-                    </div>
-                </div>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-user me-2"></i> Data Pelanggan & Paket</h6>
             </div>
-
-            <div class="col-md-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white">
-                        <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i> Keranjang Cucian</h6>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Nama Paket</th>
-                                        <th>Harga</th>
-                                        <th>Qty</th>
-                                        <th class="text-end">Subtotal</th>
-                                        <th class="text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabel-cart">
-                                </tbody>
-                                <tfoot class="bg-light">
-                                    <tr>
-                                        <td colspan="4" class="text-end">GRAND TOTAL :</td>
-                                        <td class="text-end text-primary">Rp <span id="total-bayar">0</span></td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+            <div class="card-body p-4">
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold">Pilih Pelanggan</label>
+                        <select name="id_pelanggan" id="select_pelanggan" class="form-select" required>
+                            <option value="">-- Ketik Nama Pelanggan --</option>
+                            <?php foreach ($pelanggan as $p) : ?>
+                                <option value="<?= $p->id; ?>"><?= $p->nama; ?> (<?= $p->no_hp; ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text mt-2">
+                            Belum ada? <a href="<?= base_url('pelanggan/tambah'); ?>" class="text-decoration-none">
+                                <i class="fas fa-plus-circle"></i> Tambah Pelanggan Baru
+                            </a>
                         </div>
                     </div>
-                    <div class="card-footer bg-white p-3 text-end">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fas fa-save me-2"></i> Simpan
+
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold">Pilih Kategori Layanan</label>
+                        <select id="filter_kategori" class="form-select">
+                            <option value="">-- Semua Kategori --</option>
+                            <?php foreach ($kategori as $kat) : ?>
+                                <option value="<?= $kat->id_kategori; ?>"><?= $kat->nama_kategori; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold">Pilih Tipe Laundry</label>
+                        <select id="filter_tipe" class="form-select">
+                            <option value="">-- Semua Tipe --</option>
+                            <?php foreach ($tipe as $tp) : ?>
+                                <option value="<?= $tp->id_tipe; ?>"><?= $tp->nama_tipe; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold">Pilih Paket Laundry</label>
+                        <select id="id_paket" class="form-select">
+                            <option value="">-- Pilih Paket --</option>
+                            <?php foreach ($paket as $pk) : ?>
+                                <option value="<?= $pk->id_paket_laundry; ?>"
+                                    data-kategori="<?= $pk->id_kat; ?>"
+                                    data-tipe="<?= $pk->id_tp; ?>">
+                                    <?= $pk->nama_tipe; ?> - <?= $pk->nama_paket; ?> - Rp <?= number_format($pk->harga, 0, ',', '.'); ?> / <?= strtoupper($pk->nama_satuan ?? '-'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted" id="info-paket-kosong" style="display:none">Tidak ada paket untuk kombinasi kategori dan tipe ini.</small>
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold">Jumlah Bawaan (Qty)</label>
+                        <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2">
+                    </div>
+
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold d-block">&nbsp;</label>
+                        <button type="button" class="btn btn-sm btn-success w-100 py-2" id="btn-tambah-cart">
+                            <i class="fas fa-cart-plus me-2"></i>Masukkan Keranjang
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i> Keranjang Cucian</h6>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-save me-2"></i> Simpan
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Paket</th>
+                                <th>Harga</th>
+                                <th>Qty</th>
+                                <th class="text-end">Subtotal</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-cart"></tbody>
+                        <tfoot class="bg-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">GRAND TOTAL :</td>
+                                <td class="text-end text-primary fw-bold">Rp <span id="total-bayar">0</span></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
         </div>
     </form>
 </main>
@@ -121,10 +120,8 @@
 <script>
     $(document).ready(function() {
 
-        // Load Keranjang saat halaman dibuka pertama kali
         loadCart();
 
-        // Fungsi Load Cart
         function loadCart() {
             $.ajax({
                 url: '<?= base_url("transaksi/show_cart") ?>',
@@ -137,7 +134,6 @@
             });
         }
 
-        // Fungsi Tambah ke Cart
         $('#btn-tambah-cart').click(function() {
             var id_paket = $('#id_paket').val();
             var qty = $('#qty').val();
@@ -157,12 +153,9 @@
                 dataType: 'JSON',
                 success: function(response) {
                     if (response.status == 'success') {
-                        // Refresh Tabel
                         loadCart();
-                        // Reset Input
-                        $('#id_paket').val('');
+                        $('#id_paket').val('').trigger('change');
                         $('#qty').val('');
-                        // Notifikasi Kecil (Toast)
                         Swal.fire({
                             icon: 'success',
                             title: 'Masuk Keranjang',
@@ -176,7 +169,6 @@
             });
         });
 
-        // Fungsi Hapus Item Cart (Event Delegation)
         $(document).on('click', '.btn-hapus-cart', function() {
             var id = $(this).data('id');
 
@@ -191,14 +183,11 @@
                 }
             });
         });
-
     });
 </script>
 
 <script>
     $(document).ready(function() {
-
-        // --- Inisialisasi Select2: Pelanggan ---
         $('#select_pelanggan').select2({
             theme: 'bootstrap-5',
             placeholder: 'Cari nama atau nomor HP...',
@@ -206,7 +195,6 @@
             width: '100%'
         });
 
-        // --- Inisialisasi Select2: Paket ---
         function initSelect2Paket() {
             $('#id_paket').select2({
                 theme: 'bootstrap-5',
@@ -217,41 +205,33 @@
         }
         initSelect2Paket();
 
-        // --- Simpan semua option paket sejak awal (sebelum Select2 mengambil alih) ---
         var semuaOpsiPaket = $('#id_paket option').not(':first').clone();
 
-        // --- Filter paket berdasarkan kategori ---
-        $('#filter_kategori').on('change', function() {
-            var selectedKat = $(this).val();
+        function filterPaketOptions() {
+            var selectedKat = $('#filter_kategori').val();
+            var selectedTipe = $('#filter_tipe').val();
 
-            // Hancurkan Select2 dulu sebelum manipulasi DOM
             $('#id_paket').select2('destroy');
-
-            // Reset dropdown paket
             $('#id_paket').find('option:not(:first)').remove();
             $('#id_paket').val('');
 
-            if (selectedKat === '') {
-                // Tampilkan semua paket
-                $('#id_paket').append(semuaOpsiPaket.clone());
+            var filtered = semuaOpsiPaket.filter(function() {
+                var cocokKategori = selectedKat === '' || $(this).data('kategori') == selectedKat;
+                var cocokTipe = selectedTipe === '' || $(this).data('tipe') == selectedTipe;
+                return cocokKategori && cocokTipe;
+            });
+
+            if (filtered.length > 0) {
+                $('#id_paket').append(filtered.clone());
                 $('#info-paket-kosong').hide();
             } else {
-                // Filter hanya paket dengan kategori terpilih
-                var filtered = semuaOpsiPaket.filter(function() {
-                    return $(this).data('kategori') == selectedKat;
-                });
-
-                if (filtered.length > 0) {
-                    $('#id_paket').append(filtered.clone());
-                    $('#info-paket-kosong').hide();
-                } else {
-                    $('#info-paket-kosong').show();
-                }
+                $('#info-paket-kosong').show();
             }
 
-            // Inisialisasi ulang Select2 setelah DOM diupdate
             initSelect2Paket();
-        });
+        }
 
+        $('#filter_kategori').on('change', filterPaketOptions);
+        $('#filter_tipe').on('change', filterPaketOptions);
     });
 </script>

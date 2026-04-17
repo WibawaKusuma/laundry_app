@@ -53,6 +53,12 @@ CREATE TABLE IF NOT EXISTS `m_kategori` (
   PRIMARY KEY (`id_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS `m_tipe` (
+  `id_tipe` int(11) NOT NULL AUTO_INCREMENT,
+  `nama_tipe` varchar(100) NOT NULL,
+  PRIMARY KEY (`id_tipe`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE IF NOT EXISTS `m_satuan` (
   `id_satuan` int(11) NOT NULL AUTO_INCREMENT,
   `nama_satuan` varchar(50) NOT NULL,
@@ -62,6 +68,7 @@ CREATE TABLE IF NOT EXISTS `m_satuan` (
 CREATE TABLE IF NOT EXISTS `m_paket_laundry` (
   `id_paket_laundry` int(11) NOT NULL AUTO_INCREMENT,
   `id_kategori` int(11) DEFAULT NULL,
+  `id_tipe` int(11) DEFAULT NULL,
   `nama_paket` varchar(255) DEFAULT NULL,
   `id_satuan` int(11) DEFAULT NULL,
   `harga` int(11) DEFAULT NULL,
@@ -108,6 +115,17 @@ CREATE TABLE IF NOT EXISTS `pengeluaran` (
   PRIMARY KEY (`id`),
   KEY `idx_pengeluaran_id_user` (`id_user`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `m_paket_laundry`
+  ADD CONSTRAINT `fk_paket_kategori`
+    FOREIGN KEY (`id_kategori`) REFERENCES `m_kategori` (`id_kategori`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_paket_tipe`
+    FOREIGN KEY (`id_tipe`) REFERENCES `m_tipe` (`id_tipe`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_paket_satuan`
+    FOREIGN KEY (`id_satuan`) REFERENCES `m_satuan` (`id_satuan`)
+    ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `transaksi`
   ADD CONSTRAINT `fk_transaksi_m_metode_bayar`

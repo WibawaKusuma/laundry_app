@@ -25,10 +25,10 @@
                                 <tr>
                                     <th width="5%">#</th>
                                     <th>Kategori</th>
+                                    <th>Tipe</th>
                                     <th>Paket</th>
                                     <th>Satuan</th>
                                     <th>Harga</th>
-                                    <!-- <th>Kecepatan</th> -->
                                     <th>Durasi</th>
                                     <th width="15%" class="text-center">Aksi</th>
                                 </tr>
@@ -36,7 +36,7 @@
                             <tbody>
                                 <?php if (empty($paket)) : ?>
                                     <tr>
-                                        <td colspan="6" class="text-center py-5 text-muted">
+                                        <td colspan="8" class="text-center py-5 text-muted">
                                             <i class="fas fa-box-open fa-3x mb-3"></i>
                                             <p>Belum ada data paket laundry.</p>
                                         </td>
@@ -47,12 +47,10 @@
                                         <tr>
                                             <td><?= $no++; ?></td>
                                             <td><?= $row->nama_kategori; ?></td>
+                                            <td><?= $row->nama_tipe ?? '-'; ?></td>
                                             <td class="fw-bold"><?= $row->nama_paket; ?></td>
                                             <td><?= $row->nama_satuan; ?></td>
                                             <td>Rp <?= number_format($row->harga, 0, ',', '.'); ?></td>
-                                            <!-- <td>
-                                                <span class="badge bg-secondary"><?= $row->paket_kecepatan; ?></span>
-                                            </td> -->
                                             <td><?= $row->durasi_jam; ?> Jam</td>
                                             <td class="text-center">
                                                 <a href="<?= base_url('paket/edit/' . $row->id_paket_laundry); ?>" class="btn btn-sm btn-outline-warning" title="Edit">

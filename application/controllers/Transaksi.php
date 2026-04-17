@@ -48,11 +48,13 @@ class Transaksi extends MY_Controller
         $data['title'] = 'Input Transaksi Baru';
         $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
         $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['tipe'] = $this->db->get('m_tipe')->result();
 
-        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat');
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat, m_tipe.nama_tipe, m_tipe.id_tipe as id_tp');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
         $data['paket'] = $this->db->get()->result();
 
         $this->load->view('templates/header');
@@ -66,10 +68,11 @@ class Transaksi extends MY_Controller
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
 
-        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori');
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_tipe.nama_tipe');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
         $this->db->where('id_paket_laundry', $id_paket);
         $paket = $this->db->get()->row();
 
@@ -79,6 +82,7 @@ class Transaksi extends MY_Controller
                 'nama_paket' => $paket->nama_paket,
                 'nama_satuan' => $paket->nama_satuan,
                 'nama_kategori' => $paket->nama_kategori,
+                'nama_tipe' => $paket->nama_tipe,
                 'harga' => $paket->harga,
                 'qty' => $qty,
                 'subtotal' => $paket->harga * $qty
@@ -115,7 +119,7 @@ class Transaksi extends MY_Controller
                 $html .= '
                 <tr>
                     <td>' . $no++ . '</td>
-                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . '</small></td>
+                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . ' - ' . ($item['nama_tipe'] ?? '-') . '</small></td>
                     <td>Rp ' . number_format($item['harga'], 0, ',', '.') . '</td>
                     <td>' . $item['qty'] . ' ' . $item['nama_satuan'] . '</td>
                     <td class="text-end fw-bold">Rp ' . number_format($item['subtotal'], 0, ',', '.') . '</td>
@@ -184,11 +188,11 @@ class Transaksi extends MY_Controller
         $data_transaksi = [
             'kode_invoice' => $invoice,
             'id_pelanggan' => $id_pelanggan,
-            'tgl_masuk'    => date('Y-m-d H:i:s'),
-            'batas_waktu'  => $tgl_selesai,
-            'status'       => $this->allowed_statuses[0],
-            'dibayar'      => $this->allowed_payment_statuses[0],
-            'id_user'      => $this->session->userdata('user_id')
+            'tgl_masuk' => date('Y-m-d H:i:s'),
+            'batas_waktu' => $tgl_selesai,
+            'status' => $this->allowed_statuses[0],
+            'dibayar' => $this->allowed_payment_statuses[0],
+            'id_user' => $this->session->userdata('user_id')
         ];
 
         $this->db->insert('transaksi', $data_transaksi);
@@ -200,18 +204,19 @@ class Transaksi extends MY_Controller
         foreach ($cart as $item) {
             $data_detail[] = [
                 'id_transaksi' => $id_transaksi,
-                'id_paket'     => $item['id'],
-                'qty'          => $item['qty'],
-                'harga'        => $item['harga'],
-                'keterangan'   => ''
+                'id_paket' => $item['id'],
+                'qty' => $item['qty'],
+                'harga' => $item['harga'],
+                'keterangan' => ''
             ];
 
             $harga_satuan = isset($item['harga']) ? $item['harga'] : 0;
             $subtotal_item = $harga_satuan * $item['qty'];
             $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
+            $nama_tipe = isset($item['nama_tipe']) ? strtoupper($item['nama_tipe']) : 'LAYANAN';
 
-            $list_item_wa .= "âœ… " . strtoupper($item['nama_paket']) . ", " . (float) $item['qty'] . " " . strtoupper($satuan_wa) . "%0A";
-            $list_item_wa .= "@ Rp" . number_format($harga_satuan, 0, ',', '.') . ", Total Rp" . number_format($subtotal_item, 0, ',', '.') . "%0A";
+            $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($item['nama_paket']) . ', ' . (float) $item['qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
+            $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
             $list_item_wa .= "Ket : -%0A";
         }
 
@@ -233,9 +238,9 @@ class Transaksi extends MY_Controller
             $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
             $total_fmt = number_format($total_tagihan, 0, ',', '.');
 
-            $company_name    = $this->company['company_name'] ?? 'APP Laundry';
+            $company_name = $this->company['company_name'] ?? 'APP Laundry';
             $company_address = $this->company['company_address'] ?? 'Jalan';
-            $company_phone   = $this->company['company_phone'] ?? '08000000000';
+            $company_phone = $this->company['company_phone'] ?? '08000000000';
 
             $pesan = "FAKTUR ELEKTRONIK TRANSAKSI REGULER%0A";
             $pesan .= "{$company_name}%0A";
@@ -340,9 +345,9 @@ class Transaksi extends MY_Controller
         $tgl_bayar = date('Y-m-d H:i:s');
 
         $data_update = [
-            'status'          => 'Diambil',
-            'dibayar'         => $this->allowed_payment_statuses[1],
-            'tgl_bayar'       => $tgl_bayar,
+            'status' => 'Diambil',
+            'dibayar' => $this->allowed_payment_statuses[1],
+            'tgl_bayar' => $tgl_bayar,
             'id_metode_bayar' => $id_metode_bayar
         ];
 
@@ -386,23 +391,23 @@ class Transaksi extends MY_Controller
 
             $nama_kasir = $this->session->userdata('username');
             if (empty($nama_kasir)) {
-                $nama_kasir = "Admin";
+                $nama_kasir = 'Admin';
             }
 
             $total_bayar = 0;
-            $list_item_wa = "";
+            $list_item_wa = '';
             foreach ($details as $d) {
                 $subtotal = $d->harga * $d->qty;
                 $total_bayar += $subtotal;
-                $list_item_wa .= "âœ… " . strtoupper($d->nama_paket) . ", " . (float) $d->qty . " Kg/Pcs%0A";
+                $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . (float) $d->qty . " Kg/Pcs%0A";
             }
             $total_fmt = number_format($total_bayar, 0, ',', '.');
 
             $pesan = "FAKTUR BUKTI PENGAMBILAN%0A%0A";
 
-            $company_name    = $this->company['company_name'] ?? 'App Laundry';
+            $company_name = $this->company['company_name'] ?? 'App Laundry';
             $company_address = $this->company['company_address'] ?? 'Jalan';
-            $company_phone   = $this->company['company_phone'] ?? '08000000000';
+            $company_phone = $this->company['company_phone'] ?? '08000000000';
 
             $pesan .= "{$company_name}%0A";
             $pesan .= "{$company_address}%0A";
@@ -414,12 +419,12 @@ class Transaksi extends MY_Controller
             $pesan .= "======================%0A";
             $pesan .= "DETAIL PENGAMBILAN:%0A%0A";
             $pesan .= $list_item_wa;
-            $pesan .= "ðŸ•š $hari_ini, $tgl_jam%0A";
-            $pesan .= "ðŸ§” $nama_kasir%0A%0A%0A";
+            $pesan .= "Diserahkan, $hari_ini, $tgl_jam%0A";
+            $pesan .= "Oleh: $nama_kasir%0A%0A%0A";
             $pesan .= "Pembayaran:%0A";
             $metode = $this->db->get_where('m_metode_bayar', ['id' => $id_metode_bayar])->row();
             $nama_metode = $metode ? $metode->nama : 'Tunai';
-            $pesan .= "ðŸ’µ $nama_metode Rp$total_fmt%0A%0A";
+            $pesan .= "$nama_metode Rp$total_fmt%0A%0A";
             $pesan .= "Status: Lunas%0A";
             $pesan .= "=================%0A%0A";
             $pesan .= "Kami telah menyerahkan barang dan diterima dengan kondisi baik%0A";
