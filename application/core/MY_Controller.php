@@ -18,6 +18,14 @@ class MY_Controller extends CI_Controller
         $this->load->vars(['company' => $this->company]);
     }
 
+    protected function preventPageCache()
+    {
+        $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        $this->output->set_header('Cache-Control: post-check=0, pre-check=0', false);
+        $this->output->set_header('Pragma: no-cache');
+        $this->output->set_header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    }
+
     // Pastikan Anda punya fungsi pengecekan ini dari AI
     public function isAdmin()
     {
@@ -43,6 +51,8 @@ class Admin_Controller extends MY_Controller
         if (!$this->isAdmin()) {
             redirect('auth/login');
         }
+
+        $this->preventPageCache();
     }
 }
 
@@ -54,5 +64,7 @@ class Staff_Controller extends MY_Controller
         if (!$this->isStaff()) {
             redirect('auth/login');
         }
+
+        $this->preventPageCache();
     }
 }

@@ -2,11 +2,14 @@
     <div class="flash-data-error" data-flashdata="<?= str_replace(array("\r", "\n"), '', nl2br(validation_errors())); ?>"></div>
 <?php endif; ?>
 
-<div class="container-fluid p-4">
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
+
     <div class="row">
         <div class="col-md-8 mx-auto">
 
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-header bg-white py-3">
                     <h5 class="mb-0">
                         <i class="fas fa-edit me-2"></i> <?= $title; ?>
@@ -45,8 +48,8 @@
                             <div class="col-md-6 mb-3">
                                 <label for="id_kategori" class="form-label fw-bold">Kategori Layanan</label>
                                 <select class="form-select" id="id_kategori" name="id_kategori" required>
-                                    <option value="" disabled selected>-- Pilih Kategori --</option>
-                                    <?php foreach($kategori as $kat) : ?>
+                                    <option value="" disabled <?= empty($paket->id_kategori) ? 'selected' : ''; ?>>-- Pilih Kategori --</option>
+                                    <?php foreach ($kategori as $kat) : ?>
                                         <option value="<?= $kat->id_kategori ?>" <?= ($paket->id_kategori ?? '') == $kat->id_kategori ? 'selected' : ''; ?>>
                                             <?= $kat->nama_kategori ?>
                                         </option>
@@ -59,8 +62,8 @@
                             <div class="col-md-6 mb-3">
                                 <label for="id_satuan" class="form-label fw-bold">Satuan Ukuran</label>
                                 <select class="form-select" id="id_satuan" name="id_satuan" required>
-                                    <option value="" disabled selected>-- Pilih Satuan --</option>
-                                    <?php foreach($satuan as $sat) : ?>
+                                    <option value="" disabled <?= empty($paket->id_satuan) ? 'selected' : ''; ?>>-- Pilih Satuan --</option>
+                                    <?php foreach ($satuan as $sat) : ?>
                                         <option value="<?= $sat->id_satuan ?>" <?= ($paket->id_satuan ?? '') == $sat->id_satuan ? 'selected' : ''; ?>>
                                             <?= $sat->nama_satuan ?>
                                         </option>
@@ -97,10 +100,7 @@
 
         </div>
     </div>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</main>
 
 <script>
     $(document).ready(function() {

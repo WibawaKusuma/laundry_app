@@ -12,7 +12,11 @@
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-            navigator.serviceWorker.register('<?= base_url('service-worker.js'); ?>').catch(function(error) {
+            navigator.serviceWorker.register('<?= base_url('service-worker.js'); ?>', {
+                updateViaCache: 'none'
+            }).then(function(registration) {
+                registration.update();
+            }).catch(function(error) {
                 console.warn('Service worker gagal didaftarkan:', error);
             });
         });

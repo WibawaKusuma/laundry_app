@@ -1,6 +1,5 @@
-const CACHE_NAME = 'laundry-app-v2';
+const CACHE_NAME = 'laundry-app-v3';
 const APP_SHELL = [
-  './',
   './manifest.json',
   './assets/css/bootstrap.min.css',
   './assets/css/all.min.css',
@@ -35,15 +34,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const requestDestination = event.request.destination;
+  const isStaticAssetRequest =
+    ['style', 'script', 'image', 'font'].includes(requestDestination) ||
+    requestUrl.pathname.startsWith('/assets/');
 
-  // Hindari cache agresif untuk halaman dinamis dan request pihak ketiga.
-  if (
-    requestUrl.origin !== self.location.origin ||
-    requestUrl.pathname.includes('/auth/') ||
-    requestUrl.pathname.includes('/transaksi') ||
-    requestUrl.pathname.includes('/laporan') ||
-    requestUrl.pathname.includes('/keuangan')
-  ) {
+  // Jangan cache halaman dinamis/CRUD. Hanya aset statis same-origin yang boleh di-cache.
+  if (!isSameOrigin || !isStaticAssetRequest) {
     return;
   }
 
