@@ -59,10 +59,16 @@
                                 foreach ($detail as $d) :
                                     $subtotal = $d->subtotal;
                                     $grand_total += $subtotal;
+                                    $item_label = !empty($d->nama_tipe) ? $d->nama_tipe : $d->nama_paket;
                                 ?>
                                     <tr>
                                         <td>
-                                            <?= $d->nama_paket; ?>
+                                            <span class="fw-semibold"><?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                                            <?php if (!empty($d->nama_paket) && strcasecmp($d->nama_paket, $item_label) !== 0) : ?>
+                                                <small class="d-block text-muted mt-1">
+                                                    Paket: <?= htmlspecialchars($d->nama_paket, ENT_QUOTES, 'UTF-8'); ?>
+                                                </small>
+                                            <?php endif; ?>
                                             <?php if (!empty($d->promo_applied)) : ?>
                                                 <small class="d-block text-primary mt-1">
                                                     <i class="fas fa-tags me-1"></i><?= $d->promo_label; ?>:

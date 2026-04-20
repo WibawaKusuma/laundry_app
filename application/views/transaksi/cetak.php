@@ -169,7 +169,7 @@
                 <span>Tanggal: <?= date('d/m/y H:i'); ?></span>
             </div>
             <div class="info-row">
-                <span>Pelanggan: <span class="customer-name"><?= htmlspecialchars(substr($transaksi->nama_pelanggan, 0, 20), ENT_QUOTES, 'UTF-8'); ?></span></span>
+                <span>Pelangganaaaa: <span class="customer-name"><?= htmlspecialchars(substr($transaksi->nama_pelanggan, 0, 20), ENT_QUOTES, 'UTF-8'); ?></span></span>
             </div>
         </div>
 
