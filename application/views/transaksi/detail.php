@@ -2,31 +2,31 @@
 
     <style>
         .trx-detail-table {
-            table-layout: fixed;
+            min-width: 940px;
         }
 
         .trx-detail-table .col-paket {
-            width: 40%;
+            width: 38%;
         }
 
         .trx-detail-table .col-harga {
-            width: 11%;
+            width: 13%;
         }
 
         .trx-detail-table .col-qty {
-            width: 8%;
+            width: 9%;
         }
 
         .trx-detail-table .col-catatan {
-            width: 22%;
+            width: 20%;
         }
 
         .trx-detail-table .col-subtotal {
-            width: 19%;
+            width: 20%;
         }
 
         .trx-detail-table .paket-cell {
-            min-width: 280px;
+            min-width: 320px;
         }
 
         .trx-detail-table .paket-title {
@@ -40,45 +40,11 @@
         }
 
         .trx-detail-table .catatan-cell {
-            min-width: 190px;
+            min-width: 180px;
         }
 
         .trx-detail-table .catatan-text {
             line-height: 1.45;
-        }
-
-        @media (min-width: 768px) and (max-width: 1199.98px) {
-            .trx-detail-table .col-paket {
-                width: 45%;
-            }
-
-            .trx-detail-table .col-harga {
-                width: 11%;
-            }
-
-            .trx-detail-table .col-qty {
-                width: 8%;
-            }
-
-            .trx-detail-table .col-catatan {
-                width: 16%;
-            }
-
-            .trx-detail-table .col-subtotal {
-                width: 20%;
-            }
-
-            .trx-detail-table .paket-cell {
-                min-width: 320px;
-            }
-
-            .trx-detail-table .catatan-cell {
-                min-width: 150px;
-            }
-
-            .trx-detail-table .paket-meta {
-                font-size: 0.77rem;
-            }
         }
     </style>
 
@@ -186,14 +152,14 @@
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="text-end">Rp <?= number_format($subtotal, 0, ',', '.'); ?></td>
+                                        <td class="text-end text-nowrap">Rp <?= number_format($subtotal, 0, ',', '.'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
                                     <td colspan="4" class="text-end fw-bold">TOTAL HARUS DIBAYAR</td>
-                                    <td class="text-end fw-bold fs-5 text-primary">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
+                                    <td class="text-end fw-bold fs-5 text-primary text-nowrap">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
                                 </tr>
                             </tfoot>
                         </table>
