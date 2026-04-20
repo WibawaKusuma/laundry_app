@@ -67,6 +67,12 @@
             margin-bottom: 2px;
         }
 
+        .customer-name {
+            font-size: 16pt;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
         /* TABEL ITEM */
         .table-items {
             width: 100%;
@@ -163,7 +169,7 @@
                 <span>Tanggal: <?= date('d/m/y H:i'); ?></span>
             </div>
             <div class="info-row">
-                <span>Pelanggan: <?= substr($transaksi->nama_pelanggan, 0, 15); ?></span>
+                <span>Pelanggan: <span class="customer-name"><?= htmlspecialchars(substr($transaksi->nama_pelanggan, 0, 20), ENT_QUOTES, 'UTF-8'); ?></span></span>
             </div>
         </div>
 
@@ -181,15 +187,22 @@
                 foreach ($detail as $d) :
                     $subtotal = $d->subtotal;
                     $grand_total += $subtotal;
+                    $item_label = !empty($d->nama_tipe) ? $d->nama_tipe : $d->nama_paket;
+                    $unit_label = !empty($d->nama_satuan) ? strtoupper($d->nama_satuan) : 'KG';
                 ?>
                     <tr>
                         <td class="item">
-                            <?= $d->nama_paket; ?>
+                            <?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?>
+                            <?php if (!empty($d->nama_paket) && strcasecmp($d->nama_paket, $item_label) !== 0) : ?>
+                                <div style="font-size: 9pt; font-weight: normal;">
+                                    Paket: <?= htmlspecialchars($d->nama_paket, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php endif; ?>
                             <div style="font-size: 9pt; font-weight: normal;">
                                 Ket: <?= htmlspecialchars($d->item_note_text ?? '-', ENT_QUOTES, 'UTF-8'); ?>
                             </div>
                         </td>
-                        <td class="qty"><?= $d->qty_label; ?>kg</td>
+                        <td class="qty"><?= $d->qty_label; ?><?= strtolower($unit_label); ?></td>
                         <td class="price"><?= number_format($subtotal, 0, ',', '.'); ?></td>
                     </tr>
                 <?php endforeach; ?>

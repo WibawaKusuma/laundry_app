@@ -571,9 +571,11 @@ class Transaksi extends MY_Controller
             redirect('transaksi');
         }
 
-        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga');
+        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga, m_tipe.nama_tipe, m_satuan.nama_satuan');
         $this->db->from('transaksi_detail');
         $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->enrich_detail_rows($this->db->get()->result());
 
