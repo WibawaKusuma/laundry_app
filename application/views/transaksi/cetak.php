@@ -179,12 +179,19 @@
                 <?php
                 $grand_total = 0;
                 foreach ($detail as $d) :
-                    $subtotal = $d->harga * $d->qty;
+                    $subtotal = $d->subtotal;
                     $grand_total += $subtotal;
                 ?>
                     <tr>
-                        <td class="item"><?= $d->nama_paket; ?></td>
-                        <td class="qty"><?= $d->qty; ?>kg</td>
+                        <td class="item">
+                            <?= $d->nama_paket; ?>
+                            <?php if (!empty($d->promo_applied)) : ?>
+                                <div style="font-size: 9pt; font-weight: normal;">
+                                    Promo 3 kg gratis, bayar <?= (float) $d->charged_qty; ?> kg
+                                </div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="qty"><?= $d->qty_label; ?>kg</td>
                         <td class="price"><?= number_format($subtotal, 0, ',', '.'); ?></td>
                     </tr>
                 <?php endforeach; ?>

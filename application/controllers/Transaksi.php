@@ -5,6 +5,8 @@ class Transaksi extends MY_Controller
 {
     private $allowed_statuses = ['Baru', 'Proses', 'Selesai', 'Diambil'];
     private $allowed_payment_statuses = ['Belum Dibayar', 'Sudah Dibayar'];
+    private $promo_config_key = 'promo';
+    private $promo_free_kg = 3;
 
     public function __construct()
     {
@@ -14,6 +16,171 @@ class Transaksi extends MY_Controller
         if (empty($this->session->userdata('role'))) {
             redirect('auth/login');
         }
+    }
+
+    private function get_promo_settings()
+    {
+        $is_enabled = isset($this->company[$this->promo_config_key]) && (string) $this->company[$this->promo_config_key] === '1';
+
+        return [
+            'is_enabled' => $is_enabled,
+            'config_key' => $this->promo_config_key,
+            'label' => 'Promo Gratis Cuci 3 Kg',
+            'free_qty' => $this->promo_free_kg,
+        ];
+    }
+
+    private function is_kg_unit($unit_name)
+    {
+        $unit = strtolower(trim((string) $unit_name));
+        return in_array($unit, ['kg', 'kgs', 'kilo', 'kilogram'], true);
+    }
+
+    private function sanitize_qty($qty)
+    {
+        $qty = (float) $qty;
+        return $qty > 0 ? $qty : 0;
+    }
+
+    private function is_promo_service_eligible($nama_tipe, $nama_paket = '')
+    {
+        $service_name = strtolower(trim((string) $nama_tipe . ' ' . $nama_paket));
+        $service_name = preg_replace('/\s+/', ' ', $service_name);
+
+        if (strpos($service_name, 'setrika') !== false && strpos($service_name, 'cuci') === false) {
+            return false;
+        }
+
+        return strpos($service_name, 'cuci komplit') !== false || strpos($service_name, 'cuci setrika') !== false;
+    }
+
+    private function calculate_cart_pricing($harga, $qty, $nama_satuan, $promo_requested = false, $nama_tipe = '', $nama_paket = '')
+    {
+        $settings = $this->get_promo_settings();
+        $actual_qty = $this->sanitize_qty($qty);
+        $promo_applied = $promo_requested
+            && $settings['is_enabled']
+            && $this->is_kg_unit($nama_satuan)
+            && $this->is_promo_service_eligible($nama_tipe, $nama_paket)
+            && $actual_qty > 0;
+
+        $rounded_qty = $promo_applied ? (float) ceil($actual_qty) : $actual_qty;
+        $charged_qty = $promo_applied ? max(0, $rounded_qty - $settings['free_qty']) : $actual_qty;
+        $free_qty = $promo_applied ? min($settings['free_qty'], $rounded_qty) : 0;
+
+        return [
+            'actual_qty' => $actual_qty,
+            'rounded_qty' => $rounded_qty,
+            'charged_qty' => $charged_qty,
+            'free_qty' => $free_qty,
+            'subtotal' => (float) $harga * $charged_qty,
+            'promo_requested' => (bool) $promo_requested,
+            'promo_applied' => $promo_applied,
+            'promo_label' => $settings['label'],
+        ];
+    }
+
+    private function normalize_cart_item($item)
+    {
+        $pricing = $this->calculate_cart_pricing(
+            $item['harga'] ?? 0,
+            $item['qty'] ?? 0,
+            $item['nama_satuan'] ?? '',
+            !empty($item['promo_requested']),
+            $item['nama_tipe'] ?? '',
+            $item['nama_paket'] ?? ''
+        );
+
+        $item['qty'] = $pricing['actual_qty'];
+        $item['rounded_qty'] = $pricing['rounded_qty'];
+        $item['charged_qty'] = $pricing['charged_qty'];
+        $item['promo_free_qty'] = $pricing['free_qty'];
+        $item['promo_requested'] = $pricing['promo_requested'];
+        $item['promo_applied'] = $pricing['promo_applied'];
+        $item['promo_label'] = $pricing['promo_label'];
+        $item['subtotal'] = $pricing['subtotal'];
+
+        return $item;
+    }
+
+    private function get_normalized_cart($persist = true)
+    {
+        $cart = $this->session->userdata('cart');
+        $normalized_cart = [];
+
+        if (empty($cart) || !is_array($cart)) {
+            return [];
+        }
+
+        foreach ($cart as $key => $item) {
+            $normalized_cart[$key] = $this->normalize_cart_item($item);
+        }
+
+        if ($persist) {
+            $this->session->set_userdata('cart', $normalized_cart);
+        }
+
+        return $normalized_cart;
+    }
+
+    private function build_promo_keterangan($item)
+    {
+        if (empty($item['promo_applied'])) {
+            return '';
+        }
+
+        return json_encode([
+            'promo_type' => 'free_3kg',
+            'promo_label' => $item['promo_label'] ?? 'Promo Gratis Cuci 3 Kg',
+            'actual_qty' => (float) ($item['qty'] ?? 0),
+            'rounded_qty' => (float) ($item['rounded_qty'] ?? 0),
+            'charged_qty' => (float) ($item['charged_qty'] ?? 0),
+            'free_qty' => (float) ($item['promo_free_qty'] ?? 0),
+            'unit' => strtolower((string) ($item['nama_satuan'] ?? 'kg')),
+        ]);
+    }
+
+    private function parse_promo_keterangan($keterangan)
+    {
+        if (empty($keterangan)) {
+            return null;
+        }
+
+        $decoded = json_decode($keterangan, true);
+        if (!is_array($decoded) || empty($decoded['promo_type'])) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    private function enrich_detail_rows($details)
+    {
+        foreach ($details as $detail) {
+            $promo = $this->parse_promo_keterangan($detail->keterangan ?? '');
+
+            $detail->actual_qty = (float) $detail->qty;
+            $detail->rounded_qty = (float) $detail->qty;
+            $detail->charged_qty = (float) $detail->qty;
+            $detail->promo_free_qty = 0;
+            $detail->promo_applied = false;
+            $detail->promo_label = '';
+            $detail->qty_label = rtrim(rtrim(number_format((float) $detail->qty, 2, '.', ''), '0'), '.');
+            $detail->subtotal = (float) $detail->harga * (float) $detail->qty;
+
+            if ($promo) {
+                $detail->actual_qty = (float) ($promo['actual_qty'] ?? $detail->qty);
+                $detail->rounded_qty = (float) ($promo['rounded_qty'] ?? $detail->actual_qty);
+                $detail->charged_qty = (float) ($promo['charged_qty'] ?? $detail->qty);
+                $detail->promo_free_qty = (float) ($promo['free_qty'] ?? 0);
+                $detail->promo_applied = true;
+                $detail->promo_label = $promo['promo_label'] ?? 'Promo Gratis Cuci 3 Kg';
+                $detail->qty_label = rtrim(rtrim(number_format($detail->actual_qty, 2, '.', ''), '0'), '.');
+                $detail->subtotal = (float) $detail->harga * $detail->charged_qty;
+            }
+        }
+
+        return $details;
     }
 
     public function index()
@@ -46,6 +213,7 @@ class Transaksi extends MY_Controller
     public function baru()
     {
         $data['title'] = 'Input Transaksi Baru';
+        $data['promo_settings'] = $this->get_promo_settings();
         $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
         $data['kategori'] = $this->db->get('m_kategori')->result();
         $data['tipe'] = $this->db->get('m_tipe')->result();
@@ -67,6 +235,7 @@ class Transaksi extends MY_Controller
     {
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
+        $promo_requested = $this->input->post('promo_cuci_3kg') == '1';
 
         $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_tipe.nama_tipe');
         $this->db->from('m_paket_laundry');
@@ -77,6 +246,7 @@ class Transaksi extends MY_Controller
         $paket = $this->db->get()->row();
 
         if ($paket) {
+            $pricing = $this->calculate_cart_pricing($paket->harga, $qty, $paket->nama_satuan, $promo_requested, $paket->nama_tipe, $paket->nama_paket);
             $item = [
                 'id' => $paket->id_paket_laundry,
                 'nama_paket' => $paket->nama_paket,
@@ -84,8 +254,14 @@ class Transaksi extends MY_Controller
                 'nama_kategori' => $paket->nama_kategori,
                 'nama_tipe' => $paket->nama_tipe,
                 'harga' => $paket->harga,
-                'qty' => $qty,
-                'subtotal' => $paket->harga * $qty
+                'qty' => $pricing['actual_qty'],
+                'rounded_qty' => $pricing['rounded_qty'],
+                'charged_qty' => $pricing['charged_qty'],
+                'promo_free_qty' => $pricing['free_qty'],
+                'promo_requested' => $pricing['promo_requested'],
+                'promo_applied' => $pricing['promo_applied'],
+                'promo_label' => $pricing['promo_label'],
+                'subtotal' => $pricing['subtotal']
             ];
 
             if (!$this->session->userdata('cart')) {
@@ -94,21 +270,26 @@ class Transaksi extends MY_Controller
                 $cart = $this->session->userdata('cart');
             }
 
-            if (isset($cart[$id_paket])) {
-                $cart[$id_paket]['qty'] += $qty;
-                $cart[$id_paket]['subtotal'] = $cart[$id_paket]['harga'] * $cart[$id_paket]['qty'];
+            $cart_key = $id_paket . '-' . ($pricing['promo_applied'] ? 'promo' : 'normal');
+
+            if (isset($cart[$cart_key])) {
+                $cart[$cart_key]['qty'] += $pricing['actual_qty'];
+                $cart[$cart_key] = $this->normalize_cart_item($cart[$cart_key]);
             } else {
-                $cart[$id_paket] = $item;
+                $cart[$cart_key] = $item;
             }
 
             $this->session->set_userdata('cart', $cart);
-            echo json_encode(['status' => 'success']);
+            echo json_encode([
+                'status' => 'success',
+                'promo_applied' => $pricing['promo_applied']
+            ]);
         }
     }
 
     public function show_cart()
     {
-        $cart = $this->session->userdata('cart');
+        $cart = $this->get_normalized_cart();
         $html = '';
         $total_bayar = 0;
         $no = 1;
@@ -116,12 +297,20 @@ class Transaksi extends MY_Controller
         if (!empty($cart)) {
             foreach ($cart as $id => $item) {
                 $total_bayar += $item['subtotal'];
+                $qty_label = rtrim(rtrim(number_format((float) $item['qty'], 2, '.', ''), '0'), '.');
+                $harga_label = 'Rp ' . number_format($item['harga'], 0, ',', '.');
+                $promo_html = '';
+
+                if (!empty($item['promo_applied'])) {
+                    $promo_html = '<small class="d-block text-primary mt-1"><i class="fas fa-tags me-1"></i>' . $item['promo_label'] . ' aktif: berat asli ' . $qty_label . ' ' . $item['nama_satuan'] . ', dibulatkan ' . (float) $item['rounded_qty'] . ' ' . $item['nama_satuan'] . ', dibayar ' . (float) $item['charged_qty'] . ' ' . $item['nama_satuan'] . '.</small>';
+                }
+
                 $html .= '
                 <tr>
                     <td>' . $no++ . '</td>
-                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . ' - ' . ($item['nama_tipe'] ?? '-') . '</small></td>
-                    <td>Rp ' . number_format($item['harga'], 0, ',', '.') . '</td>
-                    <td>' . $item['qty'] . ' ' . $item['nama_satuan'] . '</td>
+                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . ' - ' . ($item['nama_tipe'] ?? '-') . '</small>' . $promo_html . '</td>
+                    <td>' . $harga_label . '</td>
+                    <td>' . $qty_label . ' ' . $item['nama_satuan'] . '</td>
                     <td class="text-end fw-bold">Rp ' . number_format($item['subtotal'], 0, ',', '.') . '</td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger btn-hapus-cart" data-id="' . $id . '">
@@ -156,7 +345,7 @@ class Transaksi extends MY_Controller
 
     public function simpan()
     {
-        $cart = $this->session->userdata('cart');
+        $cart = $this->get_normalized_cart();
         $id_pelanggan = $this->input->post('id_pelanggan');
 
         if (empty($cart) || empty($id_pelanggan)) {
@@ -174,8 +363,7 @@ class Transaksi extends MY_Controller
                 $max_jam = $paket_db->durasi_jam;
             }
 
-            $harga_satuan = isset($item['harga']) ? $item['harga'] : ($paket_db->harga ?? 0);
-            $total_tagihan += $harga_satuan * $item['qty'];
+            $total_tagihan += isset($item['subtotal']) ? (float) $item['subtotal'] : 0;
         }
 
         if ($max_jam == 0) {
@@ -205,17 +393,20 @@ class Transaksi extends MY_Controller
             $data_detail[] = [
                 'id_transaksi' => $id_transaksi,
                 'id_paket' => $item['id'],
-                'qty' => $item['qty'],
+                'qty' => $item['charged_qty'],
                 'harga' => $item['harga'],
-                'keterangan' => ''
+                'keterangan' => $this->build_promo_keterangan($item)
             ];
 
             $harga_satuan = isset($item['harga']) ? $item['harga'] : 0;
-            $subtotal_item = $harga_satuan * $item['qty'];
+            $subtotal_item = isset($item['subtotal']) ? (float) $item['subtotal'] : 0;
             $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
             $nama_tipe = isset($item['nama_tipe']) ? strtoupper($item['nama_tipe']) : 'LAYANAN';
 
             $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($item['nama_paket']) . ', ' . (float) $item['qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
+            if (!empty($item['promo_applied'])) {
+                $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $item['charged_qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
+            }
             $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
             $list_item_wa .= "Ket : -%0A";
         }
@@ -310,7 +501,7 @@ class Transaksi extends MY_Controller
         $this->db->from('transaksi_detail');
         $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
         $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
-        $data['detail'] = $this->db->get()->result();
+        $data['detail'] = $this->enrich_detail_rows($this->db->get()->result());
 
         $this->db->where('is_active', 1);
         $data['metode_bayar'] = $this->db->get('m_metode_bayar')->result();
@@ -364,7 +555,7 @@ class Transaksi extends MY_Controller
         $this->db->from('transaksi_detail');
         $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
         $this->db->where('transaksi_detail.id_transaksi', $trx->id);
-        $details = $this->db->get()->result();
+        $details = $this->enrich_detail_rows($this->db->get()->result());
 
         $wa_link = "";
 
@@ -397,9 +588,12 @@ class Transaksi extends MY_Controller
             $total_bayar = 0;
             $list_item_wa = '';
             foreach ($details as $d) {
-                $subtotal = $d->harga * $d->qty;
+                $subtotal = $d->subtotal;
                 $total_bayar += $subtotal;
-                $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . (float) $d->qty . " Kg/Pcs%0A";
+                $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . $d->qty_label . " Kg/Pcs%0A";
+                if (!empty($d->promo_applied)) {
+                    $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $d->charged_qty . " Kg/Pcs%0A";
+                }
             }
             $total_fmt = number_format($total_bayar, 0, ',', '.');
 
@@ -456,7 +650,7 @@ class Transaksi extends MY_Controller
         $this->db->from('transaksi_detail');
         $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
         $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
-        $data['detail'] = $this->db->get()->result();
+        $data['detail'] = $this->enrich_detail_rows($this->db->get()->result());
 
         $data['company'] = $this->company;
         $this->load->view('transaksi/cetak', $data);

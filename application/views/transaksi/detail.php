@@ -56,13 +56,22 @@
                                 <?php
                                 $grand_total = 0;
                                 foreach ($detail as $d) :
-                                    $subtotal = $d->harga * $d->qty;
+                                    $subtotal = $d->subtotal;
                                     $grand_total += $subtotal;
                                 ?>
                                     <tr>
-                                        <td><?= $d->nama_paket; ?></td>
+                                        <td>
+                                            <?= $d->nama_paket; ?>
+                                            <?php if (!empty($d->promo_applied)) : ?>
+                                                <small class="d-block text-primary mt-1">
+                                                    <i class="fas fa-tags me-1"></i><?= $d->promo_label; ?>:
+                                                    berat asli <?= $d->qty_label; ?> kg, dibulatkan <?= (float) $d->rounded_qty; ?> kg,
+                                                    dibayar <?= (float) $d->charged_qty; ?> kg.
+                                                </small>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>Rp <?= number_format($d->harga, 0, ',', '.'); ?></td>
-                                        <td class="text-center"><?= $d->qty; ?></td>
+                                        <td class="text-center"><?= $d->qty_label; ?><?= !empty($d->promo_applied) ? ' kg' : ''; ?></td>
                                         <td class="text-end">Rp <?= number_format($subtotal, 0, ',', '.'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>

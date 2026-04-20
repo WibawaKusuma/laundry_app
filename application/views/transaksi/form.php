@@ -1,5 +1,7 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
+    <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
+
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">&nbsp;</h1>
         <a href="<?= base_url('transaksi'); ?>" class="btn btn-secondary btn-sm">
@@ -70,6 +72,26 @@
                         <label class="form-label fw-bold">Jumlah Bawaan (Qty)</label>
                         <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2">
                     </div>
+
+                    <?php if ($promo_enabled) : ?>
+                        <div class="col-md-6 col-xl-4">
+                            <label class="form-label fw-bold d-block">Promo Transaksi</label>
+                            <div class="border rounded-3 p-3 bg-light h-100">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" value="1" id="promo_cuci_3kg">
+                                    <label class="form-check-label fw-semibold" for="promo_cuci_3kg">
+                                        Aktifkan <?= $promo_settings['label']; ?>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block">
+                                    Berlaku untuk layanan kiloan tipe Cuci Komplit dan Cuci Setrika. Berat dibulatkan ke atas lalu <?= $promo_settings['free_qty']; ?> kg pertama gratis.
+                                </small>
+                                <small class="text-primary d-block mt-1">
+                                    Contoh: 3.8 kg dihitung 4 kg, yang dibayar hanya 1 kg. Layanan Setrika saja tidak mendapat promo.
+                                </small>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="col-md-6 col-xl-4">
                         <label class="form-label fw-bold d-block">&nbsp;</label>
@@ -148,7 +170,8 @@
                 type: 'POST',
                 data: {
                     id_paket: id_paket,
-                    qty: qty
+                    qty: qty,
+                    promo_cuci_3kg: $('#promo_cuci_3kg').is(':checked') ? 1 : 0
                 },
                 dataType: 'JSON',
                 success: function(response) {
@@ -156,6 +179,7 @@
                         loadCart();
                         $('#id_paket').val('').trigger('change');
                         $('#qty').val('');
+                        $('#promo_cuci_3kg').prop('checked', false);
                         Swal.fire({
                             icon: 'success',
                             title: 'Masuk Keranjang',
