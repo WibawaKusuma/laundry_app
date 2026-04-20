@@ -210,6 +210,25 @@ class Transaksi extends MY_Controller
         return implode(' | ', $notes);
     }
 
+    private function generate_unique_invoice_code()
+    {
+        $attempt = 0;
+
+        do {
+            $attempt++;
+            $invoice = 'INV-' . date('Ymd') . '-' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $exists = $this->db
+                ->where('kode_invoice', $invoice)
+                ->count_all_results('transaksi') > 0;
+        } while ($exists && $attempt < 20);
+
+        if ($exists) {
+            throw new RuntimeException('Gagal membuat nomor invoice unik.');
+        }
+
+        return $invoice;
+    }
+
     private function enrich_detail_rows($details)
     {
         foreach ($details as $detail) {
@@ -442,7 +461,7 @@ class Transaksi extends MY_Controller
         }
 
         $tgl_selesai = date('Y-m-d H:i:s', strtotime("+$max_jam hours"));
-        $invoice = 'INV-' . date('Ymd') . '-' . rand(100, 999);
+        $invoice = $this->generate_unique_invoice_code();
 
         $data_transaksi = [
             'kode_invoice' => $invoice,

@@ -4,10 +4,9 @@
         <!-- <h1 class="h2"><?= $title; ?></h1> -->
     </div>
 
-    <?php if (validation_errors()) : ?>
-        <div class="alert alert-danger" role="alert">
-            <?= validation_errors(); ?>
-        </div>
+    <?php $validation_error_text = trim(strip_tags(validation_errors("\n", "\n"))); ?>
+    <?php if (!empty($validation_error_text)) : ?>
+        <div id="validation-errors-pelanggan" data-errors="<?= htmlspecialchars($validation_error_text, ENT_QUOTES, 'UTF-8'); ?>" hidden></div>
     <?php endif; ?>
 
     <div class="row">
@@ -44,9 +43,9 @@
                                 <span class="input-group-text bg-light">+62</span>
                                 <input type="number" class="form-control" id="no_hp" name="no_hp"
                                     value="<?= $pelanggan->no_hp ?? ''; ?>"
-                                    placeholder="8123xxxx" required>
+                                    placeholder="8123xxxx">
                             </div>
-                            <small class="text-muted">Masukkan angka saja, tanpa 0 atau 62 di depan.</small>
+                            <small class="text-muted">Opsional. Jika dikosongkan, sistem otomatis menyimpan `99999999999` sebagai nomor placeholder.</small>
                         </div>
 
                         <div class="mb-4">
@@ -77,6 +76,29 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
+        var validationErrorEl = document.getElementById('validation-errors-pelanggan');
+        if (validationErrorEl) {
+            var errorText = validationErrorEl.getAttribute('data-errors') || '';
+            var errorHtml = errorText
+                .split('\n')
+                .map(function(line) {
+                    return line.trim();
+                })
+                .filter(function(line) {
+                    return line.length > 0;
+                })
+                .join('<br>');
+
+            if (errorHtml) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Data pelanggan belum valid',
+                    html: errorHtml,
+                    confirmButtonColor: '#1f297a'
+                });
+            }
+        }
+
         $('#form-pelanggan').on('submit', function(e) {
             e.preventDefault();
             Swal.fire({

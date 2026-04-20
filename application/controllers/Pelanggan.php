@@ -3,6 +3,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Pelanggan extends MY_Controller
 {
+    private $placeholder_phone = '99999999999';
+
     public function __construct()
     {
         parent::__construct();
@@ -11,6 +13,83 @@ class Pelanggan extends MY_Controller
         if (empty($this->session->userdata('role'))) {
             redirect('auth/login');
         }
+    }
+
+    private function normalize_customer_name($name)
+    {
+        $name = trim((string) $name);
+        $name = preg_replace('/\s+/', ' ', $name);
+        return $name;
+    }
+
+    private function normalize_phone_number($phone)
+    {
+        $phone = trim((string) $phone);
+
+        if ($phone === '') {
+            return $this->placeholder_phone;
+        }
+
+        return $phone;
+    }
+
+    private function is_duplicate_name($name, $exclude_id = null)
+    {
+        $normalized_name = mb_strtolower($this->normalize_customer_name($name), 'UTF-8');
+        $sql = 'SELECT COUNT(*) AS total FROM m_pelanggan WHERE LOWER(TRIM(nama)) = ?';
+        $params = [$normalized_name];
+
+        if (!empty($exclude_id)) {
+            $sql .= ' AND id != ?';
+            $params[] = (int) $exclude_id;
+        }
+
+        $row = $this->db->query($sql, $params)->row();
+        return !empty($row) && (int) $row->total > 0;
+    }
+
+    private function is_duplicate_phone($phone, $exclude_id = null)
+    {
+        $raw_phone = trim((string) $phone);
+
+        if ($raw_phone === '' || $raw_phone === $this->placeholder_phone) {
+            return false;
+        }
+
+        $phone = $this->normalize_phone_number($phone);
+
+        if ($phone === null || $phone === '' || $phone === $this->placeholder_phone) {
+            return false;
+        }
+
+        $this->db->from('m_pelanggan');
+        $this->db->where('no_hp', $phone);
+
+        if (!empty($exclude_id)) {
+            $this->db->where('id !=', (int) $exclude_id);
+        }
+
+        return $this->db->count_all_results() > 0;
+    }
+
+    public function unique_nama_check($nama, $id = null)
+    {
+        if ($this->is_duplicate_name($nama, $id)) {
+            $this->form_validation->set_message('unique_nama_check', 'Nama pelanggan sudah terdaftar.');
+            return false;
+        }
+
+        return true;
+    }
+
+    public function unique_no_hp_check($no_hp, $id = null)
+    {
+        if ($this->is_duplicate_phone($no_hp, $id)) {
+            $this->form_validation->set_message('unique_no_hp_check', 'Nomor HP ini sudah terdaftar!');
+            return false;
+        }
+
+        return true;
     }
 
     public function index()
@@ -59,18 +138,16 @@ class Pelanggan extends MY_Controller
 
     public function simpan()
     {
-        $this->form_validation->set_rules('nama', 'Nama', 'required|trim');
-        $this->form_validation->set_rules('no_hp', 'No HP', 'required|numeric|is_unique[m_pelanggan.no_hp]', [
-            'is_unique' => 'Nomor HP ini sudah terdaftar!'
-        ]);
+        $this->form_validation->set_rules('nama', 'Nama', 'required|trim|callback_unique_nama_check');
+        $this->form_validation->set_rules('no_hp', 'No HP', 'numeric|callback_unique_no_hp_check');
         $this->form_validation->set_rules('alamat', 'Alamat', 'required|trim');
 
         if ($this->form_validation->run() == FALSE) {
             $this->tambah();
         } else {
             $data = array(
-                'nama' => $this->input->post('nama', true),
-                'no_hp' => $this->input->post('no_hp', true),
+                'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
+                'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
                 'alamat' => $this->input->post('alamat', true)
             );
 
@@ -95,16 +172,16 @@ class Pelanggan extends MY_Controller
     {
         $id = $this->input->post('id');
 
-        $this->form_validation->set_rules('nama', 'Nama', 'required|trim');
-        $this->form_validation->set_rules('no_hp', 'No HP', 'required|numeric');
+        $this->form_validation->set_rules('nama', 'Nama', 'required|trim|callback_unique_nama_check[' . $id . ']');
+        $this->form_validation->set_rules('no_hp', 'No HP', 'numeric|callback_unique_no_hp_check[' . $id . ']');
         $this->form_validation->set_rules('alamat', 'Alamat', 'required|trim');
 
         if ($this->form_validation->run() == FALSE) {
             $this->edit($id);
         } else {
             $data = array(
-                'nama' => $this->input->post('nama', true),
-                'no_hp' => $this->input->post('no_hp', true),
+                'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
+                'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
                 'alamat' => $this->input->post('alamat', true)
             );
 
