@@ -73,6 +73,12 @@
                         <input type="number" id="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2">
                     </div>
 
+                    <div class="col-12 col-xl-8">
+                        <label class="form-label fw-bold">Catatan Barang Bawaan</label>
+                        <textarea id="customer_notes" class="form-control" rows="2" placeholder="Opsional. Contoh: celana 2 pcs, baju 3 pcs, sprei 1"></textarea>
+                        <small class="text-muted">Boleh diisi, boleh dikosongkan. Catatan ini masih bisa diedit lagi selama transaksi masih status Baru.</small>
+                    </div>
+
                     <?php if ($promo_enabled) : ?>
                         <div class="col-md-6 col-xl-4">
                             <label class="form-label fw-bold d-block">Promo Transaksi</label>
@@ -171,7 +177,8 @@
                 data: {
                     id_paket: id_paket,
                     qty: qty,
-                    promo_cuci_3kg: $('#promo_cuci_3kg').is(':checked') ? 1 : 0
+                    promo_cuci_3kg: $('#promo_cuci_3kg').is(':checked') ? 1 : 0,
+                    customer_notes: $('#customer_notes').val()
                 },
                 dataType: 'JSON',
                 success: function(response) {
@@ -179,6 +186,7 @@
                         loadCart();
                         $('#id_paket').val('').trigger('change');
                         $('#qty').val('');
+                        $('#customer_notes').val('');
                         $('#promo_cuci_3kg').prop('checked', false);
                         Swal.fire({
                             icon: 'success',

@@ -49,6 +49,7 @@
                                     <th>Paket</th>
                                     <th>Harga</th>
                                     <th class="text-center">Qty</th>
+                                    <th>Catatan Barang</th>
                                     <th class="text-end">Subtotal</th>
                                 </tr>
                             </thead>
@@ -72,13 +73,31 @@
                                         </td>
                                         <td>Rp <?= number_format($d->harga, 0, ',', '.'); ?></td>
                                         <td class="text-center"><?= $d->qty_label; ?><?= !empty($d->promo_applied) ? ' kg' : ''; ?></td>
+                                        <td style="min-width: 260px;">
+                                            <?php if ($transaksi->status === 'Baru') : ?>
+                                                <form action="<?= base_url('transaksi/update_catatan_item'); ?>" method="post">
+                                                    <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
+                                                    <input type="hidden" name="detail_id" value="<?= $d->id; ?>">
+                                                    <textarea name="customer_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Contoh: celana 2 pcs, baju 3 pcs"><?= htmlspecialchars($d->customer_notes ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-save me-1"></i> Simpan Catatan
+                                                    </button>
+                                                </form>
+                                            <?php else : ?>
+                                                <?php if (!empty($d->customer_notes)) : ?>
+                                                    <span class="text-muted small"><?= nl2br(htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8')); ?></span>
+                                                <?php else : ?>
+                                                    <span class="text-muted small">Tidak ada catatan.</span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-end">Rp <?= number_format($subtotal, 0, ',', '.'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
-                                    <td colspan="3" class="text-end fw-bold">TOTAL HARUS DIBAYAR</td>
+                                    <td colspan="4" class="text-end fw-bold">TOTAL HARUS DIBAYAR</td>
                                     <td class="text-end fw-bold fs-5 text-primary">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
                                 </tr>
                             </tfoot>

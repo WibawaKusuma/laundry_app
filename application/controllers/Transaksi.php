@@ -99,6 +99,7 @@ class Transaksi extends MY_Controller
         $item['promo_applied'] = $pricing['promo_applied'];
         $item['promo_label'] = $pricing['promo_label'];
         $item['subtotal'] = $pricing['subtotal'];
+        $item['customer_notes'] = trim((string) ($item['customer_notes'] ?? ''));
 
         return $item;
     }
@@ -125,18 +126,21 @@ class Transaksi extends MY_Controller
 
     private function build_promo_keterangan($item)
     {
-        if (empty($item['promo_applied'])) {
+        $catatan = trim((string) ($item['customer_notes'] ?? ''));
+
+        if (empty($item['promo_applied']) && $catatan === '') {
             return '';
         }
 
         return json_encode([
-            'promo_type' => 'free_3kg',
-            'promo_label' => $item['promo_label'] ?? 'Promo Gratis Cuci 3 Kg',
-            'actual_qty' => (float) ($item['qty'] ?? 0),
-            'rounded_qty' => (float) ($item['rounded_qty'] ?? 0),
-            'charged_qty' => (float) ($item['charged_qty'] ?? 0),
-            'free_qty' => (float) ($item['promo_free_qty'] ?? 0),
-            'unit' => strtolower((string) ($item['nama_satuan'] ?? 'kg')),
+            'promo_type' => !empty($item['promo_applied']) ? 'free_3kg' : null,
+            'promo_label' => !empty($item['promo_applied']) ? ($item['promo_label'] ?? 'Promo Gratis Cuci 3 Kg') : null,
+            'actual_qty' => !empty($item['promo_applied']) ? (float) ($item['qty'] ?? 0) : null,
+            'rounded_qty' => !empty($item['promo_applied']) ? (float) ($item['rounded_qty'] ?? 0) : null,
+            'charged_qty' => !empty($item['promo_applied']) ? (float) ($item['charged_qty'] ?? 0) : null,
+            'free_qty' => !empty($item['promo_applied']) ? (float) ($item['promo_free_qty'] ?? 0) : null,
+            'unit' => !empty($item['promo_applied']) ? strtolower((string) ($item['nama_satuan'] ?? 'kg')) : null,
+            'customer_notes' => $catatan !== '' ? $catatan : null,
         ]);
     }
 
@@ -147,11 +151,43 @@ class Transaksi extends MY_Controller
         }
 
         $decoded = json_decode($keterangan, true);
-        if (!is_array($decoded) || empty($decoded['promo_type'])) {
+        if (!is_array($decoded)) {
             return null;
         }
 
         return $decoded;
+    }
+
+    private function extract_customer_notes($keterangan)
+    {
+        $decoded = $this->parse_promo_keterangan($keterangan);
+
+        if (is_array($decoded) && isset($decoded['customer_notes'])) {
+            return trim((string) $decoded['customer_notes']);
+        }
+
+        return '';
+    }
+
+    private function merge_keterangan_notes($keterangan, $notes)
+    {
+        $notes = trim((string) $notes);
+        $decoded = $this->parse_promo_keterangan($keterangan);
+
+        if (!is_array($decoded)) {
+            return $notes;
+        }
+
+        $decoded['customer_notes'] = $notes !== '' ? $notes : null;
+
+        $has_promo = !empty($decoded['promo_type']);
+        $has_notes = !empty($decoded['customer_notes']);
+
+        if (!$has_promo && !$has_notes) {
+            return '';
+        }
+
+        return json_encode($decoded);
     }
 
     private function enrich_detail_rows($details)
@@ -167,16 +203,18 @@ class Transaksi extends MY_Controller
             $detail->promo_label = '';
             $detail->qty_label = rtrim(rtrim(number_format((float) $detail->qty, 2, '.', ''), '0'), '.');
             $detail->subtotal = (float) $detail->harga * (float) $detail->qty;
+            $detail->customer_notes = $this->extract_customer_notes($detail->keterangan ?? '');
 
             if ($promo) {
                 $detail->actual_qty = (float) ($promo['actual_qty'] ?? $detail->qty);
                 $detail->rounded_qty = (float) ($promo['rounded_qty'] ?? $detail->actual_qty);
                 $detail->charged_qty = (float) ($promo['charged_qty'] ?? $detail->qty);
                 $detail->promo_free_qty = (float) ($promo['free_qty'] ?? 0);
-                $detail->promo_applied = true;
+                $detail->promo_applied = !empty($promo['promo_type']);
                 $detail->promo_label = $promo['promo_label'] ?? 'Promo Gratis Cuci 3 Kg';
                 $detail->qty_label = rtrim(rtrim(number_format($detail->actual_qty, 2, '.', ''), '0'), '.');
                 $detail->subtotal = (float) $detail->harga * $detail->charged_qty;
+                $detail->customer_notes = trim((string) ($promo['customer_notes'] ?? $detail->customer_notes));
             }
         }
 
@@ -236,6 +274,7 @@ class Transaksi extends MY_Controller
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
         $promo_requested = $this->input->post('promo_cuci_3kg') == '1';
+        $customer_notes = trim((string) $this->input->post('customer_notes'));
 
         $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_tipe.nama_tipe');
         $this->db->from('m_paket_laundry');
@@ -261,6 +300,7 @@ class Transaksi extends MY_Controller
                 'promo_requested' => $pricing['promo_requested'],
                 'promo_applied' => $pricing['promo_applied'],
                 'promo_label' => $pricing['promo_label'],
+                'customer_notes' => $customer_notes,
                 'subtotal' => $pricing['subtotal']
             ];
 
@@ -303,6 +343,9 @@ class Transaksi extends MY_Controller
 
                 if (!empty($item['promo_applied'])) {
                     $promo_html = '<small class="d-block text-primary mt-1"><i class="fas fa-tags me-1"></i>' . $item['promo_label'] . ' aktif: berat asli ' . $qty_label . ' ' . $item['nama_satuan'] . ', dibulatkan ' . (float) $item['rounded_qty'] . ' ' . $item['nama_satuan'] . ', dibayar ' . (float) $item['charged_qty'] . ' ' . $item['nama_satuan'] . '.</small>';
+                }
+                if (!empty($item['customer_notes'])) {
+                    $promo_html .= '<small class="d-block text-muted mt-1"><i class="fas fa-clipboard-list me-1"></i>Catatan: ' . htmlspecialchars($item['customer_notes'], ENT_QUOTES, 'UTF-8') . '</small>';
                 }
 
                 $html .= '
@@ -406,6 +449,9 @@ class Transaksi extends MY_Controller
             $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($item['nama_paket']) . ', ' . (float) $item['qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
             if (!empty($item['promo_applied'])) {
                 $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $item['charged_qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
+            }
+            if (!empty($item['customer_notes'])) {
+                $list_item_wa .= '  Catatan: ' . rawurlencode($item['customer_notes']) . "%0A";
             }
             $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
             $list_item_wa .= "Ket : -%0A";
@@ -512,6 +558,46 @@ class Transaksi extends MY_Controller
         $this->load->view('templates/footer');
     }
 
+    public function update_catatan_item()
+    {
+        $kode_invoice = $this->input->post('kode_invoice');
+        $detail_id = (int) $this->input->post('detail_id');
+        $customer_notes = trim((string) $this->input->post('customer_notes'));
+
+        $this->db->select('id, kode_invoice, status');
+        $this->db->from('transaksi');
+        $this->db->where('kode_invoice', $kode_invoice);
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+            redirect('transaksi');
+        }
+
+        if ($trx->status !== 'Baru') {
+            $this->session->set_flashdata('error', 'Catatan item hanya bisa diedit saat status transaksi masih Baru.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $detail = $this->db->get_where('transaksi_detail', [
+            'id' => $detail_id,
+            'id_transaksi' => $trx->id
+        ])->row();
+
+        if (!$detail) {
+            $this->session->set_flashdata('error', 'Item transaksi tidak ditemukan.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $this->db->where('id', $detail_id);
+        $this->db->update('transaksi_detail', [
+            'keterangan' => $this->merge_keterangan_notes($detail->keterangan, $customer_notes)
+        ]);
+
+        $this->session->set_flashdata('success', 'Catatan item berhasil diperbarui.');
+        redirect('transaksi/detail/' . $kode_invoice);
+    }
+
     public function update_status()
     {
         $kode_invoice = $this->input->post('kode_invoice');
@@ -593,6 +679,9 @@ class Transaksi extends MY_Controller
                 $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . $d->qty_label . " Kg/Pcs%0A";
                 if (!empty($d->promo_applied)) {
                     $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $d->charged_qty . " Kg/Pcs%0A";
+                }
+                if (!empty($d->customer_notes)) {
+                    $list_item_wa .= '  Catatan: ' . rawurlencode($d->customer_notes) . "%0A";
                 }
             }
             $total_fmt = number_format($total_bayar, 0, ',', '.');
