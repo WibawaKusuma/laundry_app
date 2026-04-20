@@ -185,16 +185,9 @@
                     <tr>
                         <td class="item">
                             <?= $d->nama_paket; ?>
-                            <?php if (!empty($d->promo_applied)) : ?>
-                                <div style="font-size: 9pt; font-weight: normal;">
-                                    Promo 3 kg gratis, bayar <?= (float) $d->charged_qty; ?> kg
-                                </div>
-                            <?php endif; ?>
-                            <?php if (!empty($d->customer_notes)) : ?>
-                                <div style="font-size: 9pt; font-weight: normal;">
-                                    Catatan: <?= htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8'); ?>
-                                </div>
-                            <?php endif; ?>
+                            <div style="font-size: 9pt; font-weight: normal;">
+                                Ket: <?= htmlspecialchars($d->item_note_text ?? '-', ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
                         </td>
                         <td class="qty"><?= $d->qty_label; ?>kg</td>
                         <td class="price"><?= number_format($subtotal, 0, ',', '.'); ?></td>

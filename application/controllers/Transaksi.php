@@ -190,6 +190,26 @@ class Transaksi extends MY_Controller
         return json_encode($decoded);
     }
 
+    private function build_item_note_text($promo_applied, $charged_qty, $unit_name, $customer_notes = '')
+    {
+        $notes = [];
+
+        if ($promo_applied) {
+            $notes[] = 'Promo 3 Kg gratis, dibayar ' . (float) $charged_qty . ' ' . strtoupper((string) $unit_name);
+        }
+
+        $customer_notes = trim((string) $customer_notes);
+        if ($customer_notes !== '') {
+            $notes[] = $customer_notes;
+        }
+
+        if (empty($notes)) {
+            return '-';
+        }
+
+        return implode(' | ', $notes);
+    }
+
     private function enrich_detail_rows($details)
     {
         foreach ($details as $detail) {
@@ -204,6 +224,7 @@ class Transaksi extends MY_Controller
             $detail->qty_label = rtrim(rtrim(number_format((float) $detail->qty, 2, '.', ''), '0'), '.');
             $detail->subtotal = (float) $detail->harga * (float) $detail->qty;
             $detail->customer_notes = $this->extract_customer_notes($detail->keterangan ?? '');
+            $detail->item_note_text = '-';
 
             if ($promo) {
                 $detail->actual_qty = (float) ($promo['actual_qty'] ?? $detail->qty);
@@ -216,6 +237,13 @@ class Transaksi extends MY_Controller
                 $detail->subtotal = (float) $detail->harga * $detail->charged_qty;
                 $detail->customer_notes = trim((string) ($promo['customer_notes'] ?? $detail->customer_notes));
             }
+
+            $detail->item_note_text = $this->build_item_note_text(
+                !empty($detail->promo_applied),
+                $detail->charged_qty,
+                'Kg',
+                $detail->customer_notes
+            );
         }
 
         return $details;
@@ -445,16 +473,16 @@ class Transaksi extends MY_Controller
             $subtotal_item = isset($item['subtotal']) ? (float) $item['subtotal'] : 0;
             $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
             $nama_tipe = isset($item['nama_tipe']) ? strtoupper($item['nama_tipe']) : 'LAYANAN';
+            $item_note_text = $this->build_item_note_text(
+                !empty($item['promo_applied']),
+                $item['charged_qty'] ?? 0,
+                $satuan_wa,
+                $item['customer_notes'] ?? ''
+            );
 
             $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($item['nama_paket']) . ', ' . (float) $item['qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
-            if (!empty($item['promo_applied'])) {
-                $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $item['charged_qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
-            }
-            if (!empty($item['customer_notes'])) {
-                $list_item_wa .= '  Catatan: ' . rawurlencode($item['customer_notes']) . "%0A";
-            }
             $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
-            $list_item_wa .= "Ket : -%0A";
+            $list_item_wa .= 'Ket : ' . rawurlencode($item_note_text) . "%0A";
         }
 
         $this->db->insert_batch('transaksi_detail', $data_detail);
@@ -676,13 +704,15 @@ class Transaksi extends MY_Controller
             foreach ($details as $d) {
                 $subtotal = $d->subtotal;
                 $total_bayar += $subtotal;
+                $item_note_text = $this->build_item_note_text(
+                    !empty($d->promo_applied),
+                    $d->charged_qty ?? 0,
+                    'Kg/Pcs',
+                    $d->customer_notes ?? ''
+                );
+
                 $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . $d->qty_label . " Kg/Pcs%0A";
-                if (!empty($d->promo_applied)) {
-                    $list_item_wa .= '  Promo 3 Kg gratis, dibayar ' . (float) $d->charged_qty . " Kg/Pcs%0A";
-                }
-                if (!empty($d->customer_notes)) {
-                    $list_item_wa .= '  Catatan: ' . rawurlencode($d->customer_notes) . "%0A";
-                }
+                $list_item_wa .= 'Ket : ' . rawurlencode($item_note_text) . "%0A";
             }
             $total_fmt = number_format($total_bayar, 0, ',', '.');
 
