@@ -1,5 +1,87 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
+    <style>
+        .trx-detail-table {
+            table-layout: fixed;
+        }
+
+        .trx-detail-table .col-paket {
+            width: 40%;
+        }
+
+        .trx-detail-table .col-harga {
+            width: 11%;
+        }
+
+        .trx-detail-table .col-qty {
+            width: 8%;
+        }
+
+        .trx-detail-table .col-catatan {
+            width: 22%;
+        }
+
+        .trx-detail-table .col-subtotal {
+            width: 19%;
+        }
+
+        .trx-detail-table .paket-cell {
+            min-width: 280px;
+        }
+
+        .trx-detail-table .paket-title {
+            font-size: 1rem;
+            line-height: 1.35;
+        }
+
+        .trx-detail-table .paket-meta {
+            font-size: 0.8rem;
+            line-height: 1.45;
+        }
+
+        .trx-detail-table .catatan-cell {
+            min-width: 190px;
+        }
+
+        .trx-detail-table .catatan-text {
+            line-height: 1.45;
+        }
+
+        @media (min-width: 768px) and (max-width: 1199.98px) {
+            .trx-detail-table .col-paket {
+                width: 45%;
+            }
+
+            .trx-detail-table .col-harga {
+                width: 11%;
+            }
+
+            .trx-detail-table .col-qty {
+                width: 8%;
+            }
+
+            .trx-detail-table .col-catatan {
+                width: 16%;
+            }
+
+            .trx-detail-table .col-subtotal {
+                width: 20%;
+            }
+
+            .trx-detail-table .paket-cell {
+                min-width: 320px;
+            }
+
+            .trx-detail-table .catatan-cell {
+                min-width: 150px;
+            }
+
+            .trx-detail-table .paket-meta {
+                font-size: 0.77rem;
+            }
+        }
+    </style>
+
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">&nbsp;</h1>
         <div>
@@ -43,13 +125,20 @@
 
                     <h6 class="fw-bold mb-3">Rincian Paket Laundry</h6>
                     <div class="table-responsive">
-                        <table class="table table-bordered table-sm align-middle">
+                        <table class="table table-bordered table-sm align-middle trx-detail-table">
+                            <colgroup>
+                                <col class="col-paket">
+                                <col class="col-harga">
+                                <col class="col-qty">
+                                <col class="col-catatan">
+                                <col class="col-subtotal">
+                            </colgroup>
                             <thead class="table-light">
                                 <tr>
                                     <th>Paket</th>
                                     <th>Harga</th>
                                     <th class="text-center">Qty</th>
-                                    <th>Catatan Barang</th>
+                                    <th>Catatan</th>
                                     <th class="text-end">Subtotal</th>
                                 </tr>
                             </thead>
@@ -62,15 +151,15 @@
                                     $item_label = !empty($d->nama_tipe) ? $d->nama_tipe : $d->nama_paket;
                                 ?>
                                     <tr>
-                                        <td>
-                                            <span class="fw-semibold"><?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <td class="paket-cell">
+                                            <span class="fw-semibold d-block paket-title"><?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?></span>
                                             <?php if (!empty($d->nama_paket) && strcasecmp($d->nama_paket, $item_label) !== 0) : ?>
-                                                <small class="d-block text-muted mt-1">
+                                                <small class="d-block text-muted mt-1 paket-meta">
                                                     Paket: <?= htmlspecialchars($d->nama_paket, ENT_QUOTES, 'UTF-8'); ?>
                                                 </small>
                                             <?php endif; ?>
                                             <?php if (!empty($d->promo_applied)) : ?>
-                                                <small class="d-block text-primary mt-1">
+                                                <small class="d-block text-primary mt-2 paket-meta">
                                                     <i class="fas fa-tags me-1"></i><?= $d->promo_label; ?>:
                                                     berat asli <?= $d->qty_label; ?> kg, dibulatkan <?= (float) $d->rounded_qty; ?> kg,
                                                     dibayar <?= (float) $d->charged_qty; ?> kg.
@@ -79,7 +168,7 @@
                                         </td>
                                         <td>Rp <?= number_format($d->harga, 0, ',', '.'); ?></td>
                                         <td class="text-center"><?= $d->qty_label; ?><?= !empty($d->promo_applied) ? ' kg' : ''; ?></td>
-                                        <td style="min-width: 260px;">
+                                        <td class="catatan-cell">
                                             <?php if ($transaksi->status === 'Baru') : ?>
                                                 <form action="<?= base_url('transaksi/update_catatan_item'); ?>" method="post">
                                                     <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
@@ -91,9 +180,9 @@
                                                 </form>
                                             <?php else : ?>
                                                 <?php if (!empty($d->customer_notes)) : ?>
-                                                    <span class="text-muted small"><?= nl2br(htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8')); ?></span>
+                                                    <span class="text-muted small catatan-text"><?= nl2br(htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8')); ?></span>
                                                 <?php else : ?>
-                                                    <span class="text-muted small">Tidak ada catatan.</span>
+                                                    <span class="text-muted small catatan-text">Tidak ada catatan.</span>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
