@@ -54,18 +54,22 @@
                         <i class="fas fa-file-alt me-2"></i> Laporan
                     </a>
                 </li>
+            <?php endif; ?>
+
+            <?php if (in_array($this->session->userdata('role'), ['admin', 'kasir'], true)) : ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'keuangan' ? 'active' : '' ?>" href="<?= base_url('keuangan') ?>">
                         <i class="fas fa-wallet me-2"></i> Keuangan
                     </a>
                 </li>
+            <?php endif; ?>
+
+            <?php if ($this->session->userdata('role') === 'admin') : ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'dashboard_omset' ? 'active' : '' ?>" href="<?= base_url('dashboard_omset') ?>">
                         <i class="fas fa-chart-line me-2"></i> Omset
                     </a>
                 </li>
-
-
             <?php endif; ?>
             <hr class="sidebar-divider">
             <li class="nav-item">

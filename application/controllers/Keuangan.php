@@ -1,11 +1,18 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Keuangan extends Admin_Controller
+class Keuangan extends MY_Controller
 {
     public function __construct()
     {
         parent::__construct();
+
+        $allowed_roles = ['admin', 'kasir'];
+        if (!in_array($this->session->userdata('role'), $allowed_roles, true)) {
+            redirect('auth/login');
+        }
+
+        $this->preventPageCache();
         $this->load->model('Keuangan_model');
     }
 
