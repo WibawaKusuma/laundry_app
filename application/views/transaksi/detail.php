@@ -3,6 +3,107 @@
     <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
 
     <style>
+        .trx-payment-summary {
+            border: 1px solid rgba(31, 41, 122, 0.12);
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(180deg, #f8faff 0%, #eef3ff 100%);
+            box-shadow: 0 10px 26px rgba(31, 41, 122, 0.08);
+        }
+
+        .trx-payment-summary-label {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: #58627f;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.45rem;
+        }
+
+        .trx-payment-summary-value {
+            color: #1f297a;
+            font-size: clamp(1.8rem, 2.6vw, 2.25rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+
+        .trx-payment-summary-note {
+            margin-top: 0.45rem;
+            color: #69738f;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .trx-payment-status {
+            border-radius: 16px;
+            margin-bottom: 1rem;
+        }
+
+        .trx-method-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .trx-method-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border: 1px solid #dbe3f3;
+            border-radius: 14px;
+            padding: 0.8rem 0.9rem;
+            transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .trx-method-option:hover {
+            background: #f8faff;
+            border-color: rgba(31, 41, 122, 0.24);
+        }
+
+        .trx-method-option:focus-within {
+            background: #f8faff;
+            border-color: #1f297a;
+            box-shadow: 0 0 0 0.2rem rgba(31, 41, 122, 0.12);
+        }
+
+        .trx-method-option .form-check-input {
+            margin-top: 0;
+            flex-shrink: 0;
+        }
+
+        .trx-method-option .form-check-input:checked {
+            background-color: #1f297a;
+            border-color: #1f297a;
+        }
+
+        .trx-method-option .form-check-label {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 0;
+            width: 100%;
+            color: #24304f;
+            font-weight: 600;
+        }
+
+        .trx-payment-hint {
+            color: #667085;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            margin: 0.95rem 0 0.9rem;
+        }
+
+        .trx-pay-button {
+            min-height: 48px;
+            border-radius: 14px;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(25, 135, 84, 0.18);
+        }
+
         .trx-detail-table {
             min-width: 940px;
         }
@@ -445,35 +546,50 @@
                     <i class="fas fa-money-bill-wave me-2"></i> Pembayaran
                 </div>
                 <div class="card-body text-center">
+                    <div class="trx-payment-summary">
+                        <div class="trx-payment-summary-label">
+                            <i class="fas fa-receipt"></i>
+                            <span>Total Harus Dibayar</span>
+                        </div>
+                        <div class="trx-payment-summary-value">Rp <?= number_format($grand_total, 0, ',', '.'); ?></div>
+                        <div class="trx-payment-summary-note">
+                            Nominal ini harus cocok!.
+                        </div>
+                    </div>
 
                     <?php if ($transaksi->dibayar == 'Belum Dibayar') : ?>
-                        <div class="alert alert-danger mb-3">
+                        <div class="alert alert-danger trx-payment-status">
                             Status: <strong>BELUM LUNAS</strong>
                         </div>
 
                         <form id="formBayar" action="<?= base_url('transaksi/bayar_tagihan/' . $transaksi->kode_invoice); ?>" method="post">
                             <div class="mb-3 text-start">
                                 <label class="form-label small text-muted fw-bold">Pilih Metode Pembayaran</label>
-                                <?php foreach ($metode_bayar as $mb) : ?>
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="radio" name="id_metode_bayar" id="metode_<?= $mb->id; ?>" value="<?= $mb->id; ?>" <?= $mb->nama == 'Tunai' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="metode_<?= $mb->id; ?>">
-                                            <?php if ($mb->nama == 'Tunai') : ?>
-                                                <i class="fas fa-money-bill-wave text-success me-1"></i>
-                                            <?php elseif ($mb->nama == 'QRIS') : ?>
-                                                <i class="fas fa-qrcode text-primary me-1"></i>
-                                            <?php elseif ($mb->nama == 'Transfer') : ?>
-                                                <i class="fas fa-university text-info me-1"></i>
-                                            <?php endif; ?>
-                                            <?= $mb->nama; ?>
-                                        </label>
-                                    </div>
-                                <?php endforeach; ?>
+                                <div class="trx-method-list">
+                                    <?php foreach ($metode_bayar as $mb) : ?>
+                                        <div class="form-check trx-method-option mb-0">
+                                            <input class="form-check-input" type="radio" name="id_metode_bayar" id="metode_<?= $mb->id; ?>" value="<?= $mb->id; ?>" <?= $mb->nama == 'Tunai' ? 'checked' : ''; ?>>
+                                            <label class="form-check-label" for="metode_<?= $mb->id; ?>">
+                                                <?php if ($mb->nama == 'Tunai') : ?>
+                                                    <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                                <?php elseif ($mb->nama == 'QRIS') : ?>
+                                                    <i class="fas fa-qrcode text-primary me-1"></i>
+                                                <?php elseif ($mb->nama == 'Transfer') : ?>
+                                                    <i class="fas fa-university text-info me-1"></i>
+                                                <?php endif; ?>
+                                                <?= $mb->nama; ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
 
-                            <p class="small text-muted">Pastikan uang sudah diterima sebelum konfirmasi.</p>
+                            <p class="trx-payment-hint">Pastikan uang sudah diterima penuh sesuai total tagihan sebelum konfirmasi.</p>
 
-                            <button type="button" class="btn btn-success w-100 btn-bayar">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-success w-100 btn-bayar trx-pay-button"
+                                data-total="Rp <?= number_format($grand_total, 0, ',', '.'); ?>">
                                 <i class="fas fa-check-circle me-2"></i> Bayar Sekarang
                             </button>
                         </form>
@@ -565,15 +681,36 @@
         if (btnBayar) {
             btnBayar.addEventListener('click', function(e) {
                 e.preventDefault();
+                var metodeTerpilih = document.querySelector('input[name="id_metode_bayar"]:checked');
+                var labelMetode = metodeTerpilih ? document.querySelector('label[for="' + metodeTerpilih.id + '"]').innerText.trim() : '-';
+                var totalBayar = btnBayar.getAttribute('data-total') || '-';
 
                 Swal.fire({
                     title: 'Konfirmasi Pembayaran',
-                    text: "Apakah pelanggan sudah membayar tagihan lunas?",
+                    html: `
+                        <div style="padding-top:.25rem;">
+                            <div style="font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#69738f;margin-bottom:.5rem;">
+                                Total yang harus dibayar
+                            </div>
+                            <div style="font-size:2rem;font-weight:800;line-height:1.05;color:#1f297a;margin-bottom:.75rem;">
+                                ${totalBayar}
+                            </div>
+                            <div style="display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;background:#f5f7ff;color:#334155;font-size:.9rem;font-weight:600;border:1px solid #dbe3f3;">
+                                <span>Metode bayar:</span>
+                                <span>${labelMetode}</span>
+                            </div>
+                            <div style="margin-top:1rem;color:#4b5563;line-height:1.6;">
+                                Apakah pelanggan sudah membayar sesuai total tagihan ini?
+                            </div>
+                        </div>
+                    `,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#198754',
                     cancelButtonColor: '#d33',
-                    confirmButtonText: 'Ya, Sudah Bayar!'
+                    confirmButtonText: 'Ya, Sudah Bayar!',
+                    cancelButtonText: 'Batal',
+                    focusCancel: true
                 }).then(function(result) {
                     if (result.isConfirmed) {
                         document.getElementById('formBayar').submit();
