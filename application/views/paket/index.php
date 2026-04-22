@@ -21,42 +21,21 @@
                 </div>
 
                 <div class="card-body">
-                    <form action="<?= base_url('paket'); ?>" method="get" class="mb-4">
-                        <div class="row g-2 align-items-center">
-                            <div class="col-12 col-lg-6">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="fas fa-search text-muted"></i>
-                                    </span>
-                                    <input
-                                        type="text"
-                                        name="q"
-                                        value="<?= html_escape($keyword ?? ''); ?>"
-                                        class="form-control border-start-0"
-                                        placeholder="Cari paket, tipe, kategori, atau satuan...">
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-auto">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-filter me-1"></i> Cari
-                                </button>
-                            </div>
-                            <?php if (!empty($keyword)) : ?>
-                                <div class="col-6 col-md-auto">
-                                    <a href="<?= base_url('paket'); ?>" class="btn btn-outline-secondary w-100">
-                                        Reset
-                                    </a>
-                                </div>
-                                <div class="col-12">
-                                    <small class="text-muted">Hasil pencarian untuk: <span class="fw-semibold text-dark"><?= html_escape($keyword); ?></span></small>
-                                </div>
-                            <?php else : ?>
-                                <div class="col-12">
-                                    <small class="text-muted">Gunakan pencarian untuk cepat menemukan paket yang ingin diperbaiki.</small>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </form>
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input
+                            type="text"
+                            id="searchPaket"
+                            value="<?= html_escape($keyword ?? ''); ?>"
+                            class="form-control border-start-0"
+                            placeholder="Cari paket, tipe, kategori, atau satuan...">
+                        <button class="btn btn-outline-secondary d-none" type="button" id="btnClearPaketSearch" title="Hapus pencarian">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mb-3">Ketik nama paket atau kata kunci lain, hasil akan muncul otomatis.</small>
 
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
@@ -72,7 +51,7 @@
                                     <th width="15%" class="text-center">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tabelPaket">
                                 <?php if (empty($paket)) : ?>
                                     <tr>
                                         <td colspan="8" class="text-center py-5 text-muted">
@@ -112,3 +91,88 @@
         </div>
     </div>
 </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchInput = document.getElementById('searchPaket');
+        var btnClear = document.getElementById('btnClearPaketSearch');
+        var tableBody = document.getElementById('tabelPaket');
+
+        if (!searchInput || !btnClear || !tableBody) {
+            return;
+        }
+
+        var rows = Array.prototype.slice.call(tableBody.querySelectorAll('tr'));
+
+        function getEmptyRow() {
+            return tableBody.querySelector('.paket-empty-search');
+        }
+
+        function renderNoResult(keyword) {
+            var existingRow = getEmptyRow();
+            if (existingRow) {
+                existingRow.remove();
+            }
+
+            var row = document.createElement('tr');
+            row.className = 'paket-empty-search';
+            row.innerHTML =
+                '<td colspan="8" class="text-center py-5 text-muted">' +
+                '<i class="fas fa-search fa-2x mb-3 opacity-50"></i>' +
+                '<p class="mb-1">Paket tidak ditemukan.</p>' +
+                '<small>Coba kata kunci lain untuk "' + keyword.replace(/"/g, '&quot;') + '".</small>' +
+                '</td>';
+            tableBody.appendChild(row);
+        }
+
+        function applyFilter() {
+            var keyword = searchInput.value.trim().toLowerCase();
+            var visibleCount = 0;
+
+            btnClear.classList.toggle('d-none', keyword.length === 0);
+
+            var existingRow = getEmptyRow();
+            if (existingRow) {
+                existingRow.remove();
+            }
+
+            rows.forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 8) {
+                    row.style.display = '';
+                    return;
+                }
+
+                var searchableText = [
+                    cells[1].textContent,
+                    cells[2].textContent,
+                    cells[3].textContent,
+                    cells[4].textContent,
+                    cells[5].textContent,
+                    cells[6].textContent
+                ].join(' ').toLowerCase();
+
+                var isMatch = keyword === '' || searchableText.indexOf(keyword) > -1;
+                row.style.display = isMatch ? '' : 'none';
+
+                if (isMatch) {
+                    visibleCount++;
+                }
+            });
+
+            if (keyword !== '' && visibleCount === 0 && rows.length > 0) {
+                renderNoResult(searchInput.value.trim());
+            }
+        }
+
+        searchInput.addEventListener('input', applyFilter);
+
+        btnClear.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            applyFilter();
+        });
+
+        applyFilter();
+    });
+</script>
