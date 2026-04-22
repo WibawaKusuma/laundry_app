@@ -229,6 +229,100 @@ class Transaksi extends MY_Controller
         return $invoice;
     }
 
+    private function normalize_whatsapp_number($phone_number)
+    {
+        $nomor = trim((string) $phone_number);
+        $nomor = str_replace([' ', '-', '+'], '', $nomor);
+
+        if ($nomor === '') {
+            return '';
+        }
+
+        if (substr($nomor, 0, 1) === '0') {
+            return '62' . substr($nomor, 1);
+        }
+
+        if (substr($nomor, 0, 2) !== '62') {
+            return '62' . $nomor;
+        }
+
+        return $nomor;
+    }
+
+    private function build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan)
+    {
+        $list_item_wa = '';
+
+        foreach ($details as $item) {
+            $nama_tipe = strtoupper(trim((string) ($item->nama_tipe ?? $item['nama_tipe'] ?? '')));
+            $nama_paket = trim((string) ($item->nama_paket ?? $item['nama_paket'] ?? ''));
+            $harga_satuan = (float) ($item->harga ?? $item['harga'] ?? 0);
+            $satuan_wa = trim((string) ($item->nama_satuan ?? $item['nama_satuan'] ?? ''));
+            $item_note_text = trim((string) ($item->item_note_text ?? $item['item_note_text'] ?? '-'));
+            $qty_for_message = $item->qty_label ?? $item['qty_label'] ?? $item->qty ?? $item['qty'] ?? 0;
+            $subtotal_item = (float) ($item->subtotal ?? $item['subtotal'] ?? ($harga_satuan * $qty_for_message));
+
+            $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($nama_paket) . ', ' . $qty_for_message . ' ' . strtoupper($satuan_wa) . "%0A";
+            $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
+            $list_item_wa .= 'Ket : ' . rawurlencode($item_note_text) . "%0A";
+        }
+
+        $tgl_terima_fmt = date('d/m/Y H:i', strtotime($tgl_terima));
+        $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
+        $total_fmt = number_format((float) $total_tagihan, 0, ',', '.');
+
+        $company_name = $this->company['company_name'] ?? 'APP Laundry';
+        $company_address = $this->company['company_address'] ?? 'Jalan';
+        $company_phone = $this->company['company_phone'] ?? '08000000000';
+
+        $pesan = "FAKTUR ELEKTRONIK TRANSAKSI REGULER%0A";
+        $pesan .= "{$company_name}%0A";
+        $pesan .= "{$company_address}%0A";
+        $pesan .= "{$company_phone}%0A%0A";
+        $pesan .= "Nomor Nota :%0A";
+        $pesan .= "$invoice%0A%0A";
+        $pesan .= "Pelanggan Yth :%0A";
+        $pesan .= "$pelanggan_nama%0A%0A";
+        $pesan .= "Terima : $tgl_terima_fmt%0A";
+        $pesan .= "Selesai : $tgl_selesai_fmt%0A";
+        $pesan .= "%0A======================%0A";
+        $pesan .= "Detail pesanan:%0A";
+        $pesan .= "Layanan:%0A";
+        $pesan .= $list_item_wa;
+        $pesan .= "%0A==============%0A";
+        $pesan .= "Detail biaya :%0A";
+        $pesan .= "Total tagihan : Rp$total_fmt%0A";
+        $pesan .= "Grand total : Rp$total_fmt%0A%0A";
+        $pesan .= "Pembayaran:%0A";
+        $pesan .= "Sisa tagihan : Rp$total_fmt%0A";
+        $pesan .= "Status: Belum lunas%0A%0A";
+        $pesan .= "=================%0A";
+        $pesan .= "Syarat dan ketentuan:%0A";
+        $pesan .= "PERHATIAN :%0A";
+        $pesan .= "1. Pengambilan barang harap disertai nota%0A";
+        $pesan .= "2. Barang yang tidak diambil selama 1 bulan, hilang / rusak tidak diganti%0A";
+        $pesan .= "3. Barang hilang/rusak karena proses pengerjaan diganti maksimal 5x biaya.%0A";
+        $pesan .= "4. Klaim luntur tidak dipisah diluar tanggungan%0A";
+        $pesan .= "5. Hak klaim berlaku 2 jam setelah barang diambil%0A";
+        $pesan .= "6. Setiap konsumen dianggap setuju dengan isi perhitungan tersebut diatas%0A";
+        $pesan .= "%0ATerima kasih";
+
+        return $pesan;
+    }
+
+    private function build_confirmation_wa_link($phone_number, $invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan)
+    {
+        $nomor = $this->normalize_whatsapp_number($phone_number);
+
+        if ($nomor === '') {
+            return '';
+        }
+
+        $pesan = $this->build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan);
+
+        return "https://wa.me/$nomor?text=$pesan";
+    }
+
     private function enrich_detail_rows($details)
     {
         foreach ($details as $detail) {
@@ -477,7 +571,6 @@ class Transaksi extends MY_Controller
         $id_transaksi = $this->db->insert_id();
 
         $data_detail = [];
-        $list_item_wa = "";
 
         foreach ($cart as $item) {
             $data_detail[] = [
@@ -487,21 +580,6 @@ class Transaksi extends MY_Controller
                 'harga' => $item['harga'],
                 'keterangan' => $this->build_promo_keterangan($item)
             ];
-
-            $harga_satuan = isset($item['harga']) ? $item['harga'] : 0;
-            $subtotal_item = isset($item['subtotal']) ? (float) $item['subtotal'] : 0;
-            $satuan_wa = isset($item['nama_satuan']) ? $item['nama_satuan'] : 'Unit';
-            $nama_tipe = isset($item['nama_tipe']) ? strtoupper($item['nama_tipe']) : 'LAYANAN';
-            $item_note_text = $this->build_item_note_text(
-                !empty($item['promo_applied']),
-                $item['charged_qty'] ?? 0,
-                $satuan_wa,
-                $item['customer_notes'] ?? ''
-            );
-
-            $list_item_wa .= '- ' . $nama_tipe . ' / ' . strtoupper($item['nama_paket']) . ', ' . (float) $item['qty'] . ' ' . strtoupper($satuan_wa) . "%0A";
-            $list_item_wa .= '@ Rp' . number_format($harga_satuan, 0, ',', '.') . ', Total Rp' . number_format($subtotal_item, 0, ',', '.') . "%0A";
-            $list_item_wa .= 'Ket : ' . rawurlencode($item_note_text) . "%0A";
         }
 
         $this->db->insert_batch('transaksi_detail', $data_detail);
@@ -510,55 +588,15 @@ class Transaksi extends MY_Controller
         $wa_link = "";
 
         if ($pelanggan && !empty($pelanggan->no_hp)) {
-            $nomor = trim($pelanggan->no_hp);
-            $nomor = str_replace([' ', '-', '+'], '', $nomor);
-            if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);
-            } elseif (substr($nomor, 0, 2) != '62') {
-                $nomor = '62' . $nomor;
-            }
-
-            $tgl_terima_fmt = date('d/m/Y H:i');
-            $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
-            $total_fmt = number_format($total_tagihan, 0, ',', '.');
-
-            $company_name = $this->company['company_name'] ?? 'APP Laundry';
-            $company_address = $this->company['company_address'] ?? 'Jalan';
-            $company_phone = $this->company['company_phone'] ?? '08000000000';
-
-            $pesan = "FAKTUR ELEKTRONIK TRANSAKSI REGULER%0A";
-            $pesan .= "{$company_name}%0A";
-            $pesan .= "{$company_address}%0A";
-            $pesan .= "{$company_phone}%0A%0A";
-            $pesan .= "Nomor Nota :%0A";
-            $pesan .= "$invoice%0A%0A";
-            $pesan .= "Pelanggan Yth :%0A";
-            $pesan .= "$pelanggan->nama%0A%0A";
-            $pesan .= "Terima : $tgl_terima_fmt%0A";
-            $pesan .= "Selesai : $tgl_selesai_fmt%0A";
-            $pesan .= "%0A======================%0A";
-            $pesan .= "Detail pesanan:%0A";
-            $pesan .= "Layanan:%0A";
-            $pesan .= $list_item_wa;
-            $pesan .= "%0A==============%0A";
-            $pesan .= "Detail biaya :%0A";
-            $pesan .= "Total tagihan : Rp$total_fmt%0A";
-            $pesan .= "Grand total : Rp$total_fmt%0A%0A";
-            $pesan .= "Pembayaran:%0A";
-            $pesan .= "Sisa tagihan : Rp$total_fmt%0A";
-            $pesan .= "Status: Belum lunas%0A%0A";
-            $pesan .= "=================%0A";
-            $pesan .= "Syarat dan ketentuan:%0A";
-            $pesan .= "PERHATIAN :%0A";
-            $pesan .= "1. Pengambilan barang harap disertai nota%0A";
-            $pesan .= "2. Barang yang tidak diambil selama 1 bulan, hilang / rusak tidak diganti%0A";
-            $pesan .= "3. Barang hilang/rusak karena proses pengerjaan diganti maksimal 5x biaya.%0A";
-            $pesan .= "4. Klaim luntur tidak dipisah diluar tanggungan%0A";
-            $pesan .= "5. Hak klaim berlaku 2 jam setelah barang diambil%0A";
-            $pesan .= "6. Setiap konsumen dianggap setuju dengan isi perhitungan tersebut diatas%0A";
-            $pesan .= "%0ATerima kasih";
-
-            $wa_link = "https://wa.me/$nomor?text=$pesan";
+            $wa_link = $this->build_confirmation_wa_link(
+                $pelanggan->no_hp,
+                $invoice,
+                $pelanggan->nama,
+                date('Y-m-d H:i:s'),
+                $tgl_selesai,
+                $cart,
+                $total_tagihan
+            );
         }
 
         $this->session->unset_userdata('cart');
@@ -597,6 +635,27 @@ class Transaksi extends MY_Controller
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->enrich_detail_rows($this->db->get()->result());
+
+        $data['wa_contact_link'] = '';
+        $normalized_phone = $this->normalize_whatsapp_number($data['transaksi']->no_hp ?? '');
+        if ($normalized_phone !== '') {
+            $data['wa_contact_link'] = 'https://wa.me/' . $normalized_phone;
+        }
+
+        $total_tagihan = 0;
+        foreach ($data['detail'] as $detail_row) {
+            $total_tagihan += (float) ($detail_row->subtotal ?? 0);
+        }
+
+        $data['wa_confirmation_link'] = $this->build_confirmation_wa_link(
+            $data['transaksi']->no_hp ?? '',
+            $data['transaksi']->kode_invoice,
+            $data['transaksi']->nama_pelanggan,
+            $data['transaksi']->tgl_masuk,
+            $data['transaksi']->batas_waktu,
+            $data['detail'],
+            $total_tagihan
+        );
 
         $this->db->where('is_active', 1);
         $data['metode_bayar'] = $this->db->get('m_metode_bayar')->result();

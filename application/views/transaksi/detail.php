@@ -46,6 +46,36 @@
         .trx-detail-table .catatan-text {
             line-height: 1.45;
         }
+
+        .customer-wa-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .customer-wa-actions .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            line-height: 1.2;
+            padding: 0.4rem 0.75rem;
+            flex: 0 0 auto;
+        }
+
+        @media (max-width: 1199.98px) {
+            .customer-wa-actions {
+                gap: 0.4rem;
+            }
+
+            .customer-wa-actions .btn {
+                font-size: 0.76rem;
+                padding: 0.38rem 0.65rem;
+            }
+        }
     </style>
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -75,9 +105,20 @@
                         <div class="col-md-6">
                             <small class="text-muted d-block">Nama Pelanggan</small>
                             <h6 class="fw-bold"><?= $transaksi->nama_pelanggan; ?></h6>
-                            <a href="https://wa.me/62<?= $transaksi->no_hp; ?>" target="_blank" class="text-success text-decoration-none small">
-                                <i class="fab fa-whatsapp me-1"></i> Hubungi via WA
-                            </a>
+                            <?php if (!empty($wa_contact_link) || !empty($wa_confirmation_link)) : ?>
+                                <div class="customer-wa-actions">
+                                    <?php if (!empty($wa_contact_link)) : ?>
+                                        <a href="<?= $wa_contact_link; ?>" target="_blank" class="btn btn-sm btn-outline-success">
+                                            <i class="fab fa-whatsapp me-1"></i> Hubungi via WA
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if (!empty($wa_confirmation_link)) : ?>
+                                        <a href="<?= $wa_confirmation_link; ?>" target="_blank" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-receipt me-1"></i> Kirim Nota
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-6 text-md-end">
                             <small class="text-muted d-block">Tanggal Masuk</small>
