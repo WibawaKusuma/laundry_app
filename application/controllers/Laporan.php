@@ -3,6 +3,14 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Laporan extends Admin_Controller
 {
+    private function normalize_payment_filter($status_bayar)
+    {
+        $allowed = ['semua', 'lunas', 'belum'];
+        $status_bayar = strtolower(trim((string) $status_bayar));
+
+        return in_array($status_bayar, $allowed, true) ? $status_bayar : 'semua';
+    }
+
     public function __construct()
     {
         parent::__construct();
@@ -14,6 +22,7 @@ class Laporan extends Admin_Controller
     {
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
+        $status_bayar = $this->normalize_payment_filter($this->input->get('status_bayar'));
 
         // Default tanggal: Awal bulan ini s/d Hari ini
         if (empty($tgl_awal)) {
@@ -26,7 +35,8 @@ class Laporan extends Admin_Controller
 
         $data['tgl_awal']  = $tgl_awal;
         $data['tgl_akhir'] = $tgl_akhir;
-        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir);
+        $data['status_bayar'] = $status_bayar;
+        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir, $status_bayar);
 
         // Load View dengan Layout Header/Sidebar/Footer yang benar
         $this->load->view('templates/header');
@@ -41,6 +51,7 @@ class Laporan extends Admin_Controller
         // Ambil filter tanggal dari URL
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
+        $status_bayar = $this->normalize_payment_filter($this->input->get('status_bayar'));
 
         // Validasi jika user main tembak URL tanpa tanggal
         if (empty($tgl_awal) || empty($tgl_akhir)) {
@@ -50,7 +61,8 @@ class Laporan extends Admin_Controller
 
         $data['tgl_awal']  = $tgl_awal;
         $data['tgl_akhir'] = $tgl_akhir;
-        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir);
+        $data['status_bayar'] = $status_bayar;
+        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir, $status_bayar);
 
         // Load View Khusus Cetak (Tanpa Header/Sidebar Admin)
         $data['company'] = $this->company;
@@ -62,6 +74,7 @@ class Laporan extends Admin_Controller
     {
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
+        $status_bayar = $this->normalize_payment_filter($this->input->get('status_bayar'));
 
         if (empty($tgl_awal) || empty($tgl_akhir)) {
             $tgl_awal = date('Y-m-01');
@@ -70,7 +83,8 @@ class Laporan extends Admin_Controller
 
         $data['tgl_awal']  = $tgl_awal;
         $data['tgl_akhir'] = $tgl_akhir;
-        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir);
+        $data['status_bayar'] = $status_bayar;
+        $data['laporan']   = $this->Transaksi_model->get_laporan($tgl_awal, $tgl_akhir, $status_bayar);
 
         // Load View Khusus Excel
         $this->load->view('laporan/excel', $data);

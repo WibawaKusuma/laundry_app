@@ -1,3 +1,16 @@
+<?php
+$status_labels = [
+    'semua' => 'Semua status bayar',
+    'lunas' => 'Hanya yang sudah lunas',
+    'belum' => 'Hanya yang belum lunas',
+];
+$active_status_label = isset($status_labels[$status_bayar]) ? $status_labels[$status_bayar] : $status_labels['semua'];
+$filter_query = http_build_query([
+    'tgl_awal' => $tgl_awal,
+    'tgl_akhir' => $tgl_akhir,
+    'status_bayar' => $status_bayar,
+]);
+?>
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
@@ -31,6 +44,17 @@
                                 </div>
                             </div>
 
+                            <div class="col-12 col-md-auto">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-wallet"></i></span>
+                                    <select name="status_bayar" class="form-select">
+                                        <option value="semua" <?= $status_bayar == 'semua' ? 'selected' : '' ?>>Semua Status</option>
+                                        <option value="lunas" <?= $status_bayar == 'lunas' ? 'selected' : '' ?>>Lunas</option>
+                                        <option value="belum" <?= $status_bayar == 'belum' ? 'selected' : '' ?>>Belum Lunas</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="col-12 col-md-auto d-grid">
                                 <button type="submit" class="btn btn-sm btn-primary px-4" title="Tampilkan Data">
                                     <i class="fas fa-filter me-1"></i> Filter
@@ -40,14 +64,14 @@
                             <div class="col-auto d-none d-md-block border-start mx-2"></div>
 
                             <div class="col-6 col-md-auto d-grid">
-                                <a href="<?= base_url('laporan/excel?tgl_awal=' . $tgl_awal . '&tgl_akhir=' . $tgl_akhir); ?>" target="_blank" class="btn btn-success btn-sm px-3">
-                                    <i class="fas fa-file-excel me-1"></i> Excel
+                                <a href="<?= base_url('laporan/excel?' . $filter_query); ?>" target="_blank" class="btn btn-success btn-sm px-3">
+                                    <i class="fas fa-file-excel me-1"></i>
                                 </a>
                             </div>
 
                             <div class="col-6 col-md-auto d-grid">
-                                <a href="<?= base_url('laporan/cetak?tgl_awal=' . $tgl_awal . '&tgl_akhir=' . $tgl_akhir); ?>" target="_blank" class="btn btn-warning btn-sm px-3">
-                                    <i class="fas fa-print me-1"></i> PDF
+                                <a href="<?= base_url('laporan/cetak?' . $filter_query); ?>" target="_blank" class="btn btn-warning btn-sm px-3">
+                                    <i class="fas fa-print me-1"></i>
                                 </a>
                             </div>
 
@@ -62,9 +86,13 @@
             <?php if (empty($laporan)) : ?>
                 <div class="text-center py-5">
                     <i class="fas fa-search fa-3x text-muted mb-3 opacity-50"></i>
-                    <p class="text-muted">Tidak ada data transaksi pada periode ini.</p>
+                    <p class="text-muted mb-1">Tidak ada data transaksi pada periode ini.</p>
+                    <small class="text-muted">Filter aktif: <?= $active_status_label; ?></small>
                 </div>
             <?php else : ?>
+                <div class="px-4 pt-3 pb-2 border-bottom bg-light-subtle">
+                    <small class="text-muted">Filter aktif: <span class="fw-semibold text-dark"><?= $active_status_label; ?></span></small>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">

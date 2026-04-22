@@ -4,6 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Laporan Keuangan</title>
+    <?php
+    $status_labels = [
+        'semua' => 'Semua Status',
+        'lunas' => 'Lunas',
+        'belum' => 'Belum Lunas',
+    ];
+    $status_label = isset($status_labels[$status_bayar]) ? $status_labels[$status_bayar] : $status_labels['semua'];
+    ?>
     <style>
         /* CSS KHUSUS CETAK A4 */
         body {
@@ -115,6 +123,7 @@
     <div class="judul">
         <h3>LAPORAN PENDAPATAN</h3>
         <p>Periode: <?= date('d F Y', strtotime($tgl_awal)) ?> s/d <?= date('d F Y', strtotime($tgl_akhir)) ?></p>
+        <p>Filter Status Bayar: <?= $status_label; ?></p>
     </div>
 
     <table>

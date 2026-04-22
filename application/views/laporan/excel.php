@@ -1,6 +1,16 @@
 <?php
 // Skrip untuk memaksa download file Excel
-$filename = "Laporan_Laundry_" . $tgl_awal . "_sd_" . $tgl_akhir . ".xls";
+$status_labels = [
+    'semua' => 'Semua Status',
+    'lunas' => 'Lunas',
+    'belum' => 'Belum Lunas',
+];
+$status_label = isset($status_labels[$status_bayar]) ? $status_labels[$status_bayar] : $status_labels['semua'];
+$filename = "Laporan_Laundry_" . $tgl_awal . "_sd_" . $tgl_akhir;
+if ($status_bayar !== 'semua') {
+    $filename .= "_" . str_replace(' ', '_', $status_label);
+}
+$filename .= ".xls";
 
 header("Content-type: application/vnd-ms-excel");
 header("Content-Disposition: attachment; filename=$filename");
@@ -46,6 +56,7 @@ header("Expires: 0");
 
     <h3 style="text-align: center;">LAPORAN PENDAPATAN LAUNDRY</h3>
     <p style="text-align: center;">Periode: <?= date('d F Y', strtotime($tgl_awal)) ?> - <?= date('d F Y', strtotime($tgl_akhir)) ?></p>
+    <p style="text-align: center;">Filter Status Bayar: <?= $status_label; ?></p>
 
     <table>
         <thead>
@@ -70,7 +81,7 @@ header("Expires: 0");
                         <td class="text-center"><?= date('d/m/Y', strtotime($row->tgl_masuk)); ?></td>
                         <td style="mso-number-format:'\@';"><?= $row->kode_invoice; ?></td>
                         <td><?= $row->nama_pelanggan; ?></td>
-                        <td class="text-center"><?= $row->dibayar; ?></td>
+                        <td class="text-center"><?= $row->dibayar == 'Sudah Dibayar' ? 'Lunas' : 'Belum Lunas'; ?></td>
                         <td class="text-end"><?= $row->total_harga; ?></td>
                     </tr>
                 <?php endforeach; ?>

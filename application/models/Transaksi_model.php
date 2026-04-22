@@ -61,13 +61,20 @@ class Transaksi_model extends CI_Model
         return $results;
     }
 
-    public function get_laporan($tgl_awal, $tgl_akhir)
+    public function get_laporan($tgl_awal, $tgl_akhir, $status_bayar = 'semua')
     {
         $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan');
         $this->db->from('transaksi');
         $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
+
+        if ($status_bayar === 'lunas') {
+            $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
+        } elseif ($status_bayar === 'belum') {
+            $this->db->where('transaksi.dibayar', 'Belum Dibayar');
+        }
+
         $this->db->order_by('transaksi.id', 'ASC');
         $transaksi = $this->db->get()->result();
 

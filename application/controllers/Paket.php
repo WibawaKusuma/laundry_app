@@ -12,12 +12,24 @@ class Paket extends Admin_Controller
 
     public function index()
     {
+        $keyword = trim((string) $this->input->get('q', true));
+
         $this->db->select('m_paket_laundry.*, m_kategori.nama_kategori, m_tipe.nama_tipe, m_satuan.nama_satuan');
         $this->db->from('m_paket_laundry');
         $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
         $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        if ($keyword !== '') {
+            $this->db->group_start();
+            $this->db->like('m_paket_laundry.nama_paket', $keyword);
+            $this->db->or_like('m_tipe.nama_tipe', $keyword);
+            $this->db->or_like('m_kategori.nama_kategori', $keyword);
+            $this->db->or_like('m_satuan.nama_satuan', $keyword);
+            $this->db->group_end();
+        }
+        $this->db->order_by('m_paket_laundry.id_paket_laundry', 'ASC');
         $data['paket'] = $this->db->get()->result();
+        $data['keyword'] = $keyword;
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
