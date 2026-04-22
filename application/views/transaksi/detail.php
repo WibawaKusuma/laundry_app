@@ -1,5 +1,7 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
+    <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
+
     <style>
         .trx-detail-table {
             min-width: 940px;
@@ -76,6 +78,102 @@
                 padding: 0.38rem 0.65rem;
             }
         }
+
+        .trx-add-item-card {
+            border: 1px solid rgba(31, 41, 122, 0.1);
+            background: #fbfcff;
+            box-shadow: 0 10px 30px rgba(31, 41, 122, 0.05);
+        }
+
+        .trx-add-item-title {
+            color: #1f297a;
+        }
+
+        .trx-add-item-hint {
+            font-size: 0.82rem;
+            color: #5f688b;
+            line-height: 1.5;
+        }
+
+        .trx-add-item-card .form-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #344054;
+            margin-bottom: 0.45rem;
+        }
+
+        .trx-add-item-card .form-control,
+        .trx-add-item-card .form-select {
+            border-color: #d8def0;
+            min-height: calc(1.5em + 0.75rem + 2px);
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 0.375rem;
+            background: #fff;
+        }
+
+        .trx-add-item-card .form-control:focus,
+        .trx-add-item-card .form-select:focus {
+            border-color: #1f297a;
+            box-shadow: 0 0 0 0.2rem rgba(31, 41, 122, 0.12);
+        }
+
+        .trx-add-item-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            border-radius: 999px;
+            padding-inline: 1rem;
+        }
+
+        .trx-add-item-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .trx-add-item-panel {
+            border: 1px solid #e6ebf7;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            background: #fff;
+            min-height: 100%;
+        }
+
+        .trx-add-item-submit {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1.25rem;
+        }
+
+        .trx-add-item-note {
+            font-size: 0.8rem;
+            color: #667085;
+        }
+
+        .trx-lock-note {
+            border: 1px dashed rgba(31, 41, 122, 0.18);
+            background: #f8f9fd;
+            color: #4f5b86;
+            border-radius: 16px;
+            padding: 0.9rem 1rem;
+        }
+
+        .trx-add-item-card textarea.form-control {
+            min-height: 76px;
+            resize: vertical;
+        }
+
+        @media (max-width: 991.98px) {
+            .trx-add-item-head {
+                flex-direction: column;
+            }
+        }
     </style>
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -91,6 +189,7 @@
     </div>
 
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
+    <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
 
     <div class="row">
 
@@ -182,7 +281,7 @@
                                                     <input type="hidden" name="detail_id" value="<?= $d->id; ?>">
                                                     <textarea name="customer_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Contoh: celana 2 pcs, baju 3 pcs"><?= htmlspecialchars($d->customer_notes ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                                                     <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-save me-1"></i> Simpan Catatan
+                                                        <i class="fas fa-save me-1"></i> Simpan
                                                     </button>
                                                 </form>
                                             <?php else : ?>
@@ -205,6 +304,113 @@
                             </tfoot>
                         </table>
                     </div>
+
+                    <?php if ($can_add_items) : ?>
+                        <div class="mt-4 pt-2 border-top">
+                            <button class="btn btn-sm btn-outline-primary trx-add-item-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTambahItem" aria-expanded="false" aria-controls="collapseTambahItem">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Tambah Item Laundry</span>
+                            </button>
+
+                            <div class="collapse mt-3" id="collapseTambahItem">
+                                <div class="trx-add-item-card rounded-4 p-3 p-lg-4">
+                                    <div class="trx-add-item-head">
+                                        <div>
+                                            <h6 class="fw-bold mb-1 trx-add-item-title">Koreksi Item yang Tertinggal</h6>
+                                            <p class="mb-0 trx-add-item-hint">
+                                                Gunakan form ini jika ada item pelanggan yang tadi belum sempat diinput. Item baru tetap masuk ke nota yang sama dan isi tombol Kirim Nota akan ikut diperbarui.
+                                            </p>
+                                        </div>
+                                        <span class="badge rounded-pill text-bg-light border text-primary px-3 py-2">Hanya saat status masih Baru</span>
+                                    </div>
+
+                                    <form action="<?= base_url('transaksi/tambah_item/' . $transaksi->kode_invoice); ?>" method="post">
+                                        <div class="row g-3 align-items-start">
+                                            <div class="col-md-6 col-xl-4">
+                                                <label class="form-label">Kategori Layanan</label>
+                                                <select id="detail_filter_kategori" class="form-select">
+                                                    <option value="">-- Semua Kategori --</option>
+                                                    <?php foreach ($kategori as $kat) : ?>
+                                                        <option value="<?= $kat->id_kategori; ?>"><?= $kat->nama_kategori; ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-6 col-xl-4">
+                                                <label class="form-label">Tipe Laundry</label>
+                                                <select id="detail_filter_tipe" class="form-select">
+                                                    <option value="">-- Semua Tipe --</option>
+                                                    <?php foreach ($tipe as $tp) : ?>
+                                                        <option value="<?= $tp->id_tipe; ?>"><?= $tp->nama_tipe; ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-6 col-xl-4">
+                                                <label class="form-label">Paket Laundry</label>
+                                                <select name="id_paket" id="detail_id_paket" class="form-select" required>
+                                                    <option value="">-- Pilih Paket --</option>
+                                                    <?php foreach ($paket as $pk) : ?>
+                                                        <option value="<?= $pk->id_paket_laundry; ?>"
+                                                            data-kategori="<?= $pk->id_kat; ?>"
+                                                            data-tipe="<?= $pk->id_tp; ?>">
+                                                            <?= $pk->nama_tipe; ?> - <?= $pk->nama_paket; ?> - Rp <?= number_format($pk->harga, 0, ',', '.'); ?> / <?= strtoupper($pk->nama_satuan ?? '-'); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <small class="text-muted d-none" id="detail_info_paket_kosong">Tidak ada paket untuk kombinasi kategori dan tipe ini.</small>
+                                            </div>
+
+                                            <div class="col-md-6 col-xl-4">
+                                                <label class="form-label">Jumlah Bawaan (Qty)</label>
+                                                <input type="number" name="qty" class="form-control" value="" min="0.1" step="0.01" placeholder="Contoh: 1.5 atau 2" required>
+                                            </div>
+
+                                            <div class="col-md-6 col-xl-8">
+                                                <label class="form-label">Catatan Barang Bawaan</label>
+                                                <textarea name="customer_notes" class="form-control" rows="3" placeholder="Opsional. Contoh: rok 2 pcs, selimut 1, baju putih dipisah"></textarea>
+                                                <small class="text-muted">Catatan item ini masih bisa diedit selama transaksi tetap berstatus Baru.</small>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label">Promo Transaksi</label>
+                                                <div class="trx-add-item-panel">
+                                                    <?php if ($promo_enabled) : ?>
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="checkbox" value="1" id="detail_promo_cuci_3kg" name="promo_cuci_3kg">
+                                                            <label class="form-check-label fw-semibold" for="detail_promo_cuci_3kg">
+                                                                Aktifkan <?= $promo_settings['label']; ?>
+                                                            </label>
+                                                        </div>
+                                                        <small class="text-muted d-block">
+                                                            Berlaku untuk layanan kiloan tipe Cuci Komplit dan Cuci Setrika. Berat dibulatkan ke atas lalu <?= $promo_settings['free_qty']; ?> kg pertama gratis.
+                                                        </small>
+                                                        <small class="text-primary d-block mt-2">
+                                                            Contoh: 3.8 kg dihitung 4 kg, yang dibayar hanya 1 kg. Layanan Setrika saja tidak mendapat promo.
+                                                        </small>
+                                                    <?php else : ?>
+                                                        <small class="text-muted d-block">Promo tidak aktif untuk transaksi ini.</small>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="trx-add-item-submit">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-plus me-2"></i>Tambah ke Nota Ini
+                                            </button>
+                                            <span class="trx-add-item-note">Total nota dan isi pesan WhatsApp akan ikut diperbarui.</span>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else : ?>
+                        <div class="trx-lock-note mt-4">
+                            <div class="fw-semibold mb-1"><i class="fas fa-lock me-2"></i>Tambah Item Dinonaktifkan</div>
+                            <div class="small mb-0"><?= htmlspecialchars($add_item_block_reason, ENT_QUOTES, 'UTF-8'); ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -299,6 +505,58 @@
         </div>
     </div>
 </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.jQuery === 'undefined' || !document.getElementById('detail_id_paket')) {
+            return;
+        }
+
+        const $ = window.jQuery;
+        const $paket = $('#detail_id_paket');
+        const semuaOpsiPaket = $paket.find('option').not(':first').clone();
+
+        function initSelect2PaketDetail() {
+            $paket.select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Ketik untuk mencari paket...',
+                allowClear: true,
+                width: '100%'
+            });
+        }
+
+        function filterPaketDetail() {
+            const selectedKat = $('#detail_filter_kategori').val();
+            const selectedTipe = $('#detail_filter_tipe').val();
+
+            if ($paket.hasClass('select2-hidden-accessible')) {
+                $paket.select2('destroy');
+            }
+
+            $paket.find('option:not(:first)').remove();
+            $paket.val('');
+
+            const filtered = semuaOpsiPaket.filter(function() {
+                const cocokKategori = selectedKat === '' || $(this).data('kategori') == selectedKat;
+                const cocokTipe = selectedTipe === '' || $(this).data('tipe') == selectedTipe;
+                return cocokKategori && cocokTipe;
+            });
+
+            if (filtered.length > 0) {
+                $paket.append(filtered.clone());
+                $('#detail_info_paket_kosong').addClass('d-none');
+            } else {
+                $('#detail_info_paket_kosong').removeClass('d-none');
+            }
+
+            initSelect2PaketDetail();
+        }
+
+        initSelect2PaketDetail();
+        $('#detail_filter_kategori').on('change', filterPaketDetail);
+        $('#detail_filter_tipe').on('change', filterPaketDetail);
+    });
+</script>
 
 <script>
     // SweetAlert untuk Konfirmasi Bayar (submit form POST)

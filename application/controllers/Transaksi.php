@@ -323,6 +323,78 @@ class Transaksi extends MY_Controller
         return "https://wa.me/$nomor?text=$pesan";
     }
 
+    private function load_package_form_data()
+    {
+        $data = [];
+        $data['promo_settings'] = $this->get_promo_settings();
+        $data['kategori'] = $this->db->get('m_kategori')->result();
+        $data['tipe'] = $this->db->get('m_tipe')->result();
+
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat, m_tipe.nama_tipe, m_tipe.id_tipe as id_tp');
+        $this->db->from('m_paket_laundry');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
+        $data['paket'] = $this->db->get()->result();
+
+        return $data;
+    }
+
+    private function can_add_items_to_transaction($transaksi)
+    {
+        if (!$transaksi) {
+            return false;
+        }
+
+        return (string) $transaksi->status === 'Baru'
+            && (string) $transaksi->dibayar === 'Belum Dibayar';
+    }
+
+    private function get_add_item_block_reason($transaksi)
+    {
+        if (!$transaksi) {
+            return 'Transaksi tidak ditemukan.';
+        }
+
+        if ((string) $transaksi->dibayar !== 'Belum Dibayar') {
+            return 'Item baru hanya bisa ditambahkan jika transaksi belum dibayar.';
+        }
+
+        if ((string) $transaksi->status !== 'Baru') {
+            return 'Item baru hanya bisa ditambahkan saat status transaksi masih Baru, sebelum laundry mulai diproses.';
+        }
+
+        return 'Transaksi ini sudah tidak bisa ditambahkan item.';
+    }
+
+    private function sync_transaction_deadline($transaksi_id)
+    {
+        $this->db->select('transaksi.id, transaksi.tgl_masuk');
+        $this->db->from('transaksi');
+        $this->db->where('transaksi.id', $transaksi_id);
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            return;
+        }
+
+        $this->db->select_max('m_paket_laundry.durasi_jam', 'max_jam');
+        $this->db->from('transaksi_detail');
+        $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
+        $this->db->where('transaksi_detail.id_transaksi', $transaksi_id);
+        $result = $this->db->get()->row();
+
+        $max_jam = (int) ($result->max_jam ?? 0);
+        if ($max_jam <= 0) {
+            $max_jam = 24;
+        }
+
+        $batas_waktu = date('Y-m-d H:i:s', strtotime($trx->tgl_masuk . " +$max_jam hours"));
+
+        $this->db->where('id', $transaksi_id);
+        $this->db->update('transaksi', ['batas_waktu' => $batas_waktu]);
+    }
+
     private function enrich_detail_rows($details)
     {
         foreach ($details as $detail) {
@@ -392,17 +464,12 @@ class Transaksi extends MY_Controller
     public function baru()
     {
         $data['title'] = 'Input Transaksi Baru';
-        $data['promo_settings'] = $this->get_promo_settings();
+        $package_data = $this->load_package_form_data();
+        $data['promo_settings'] = $package_data['promo_settings'];
         $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
-        $data['kategori'] = $this->db->get('m_kategori')->result();
-        $data['tipe'] = $this->db->get('m_tipe')->result();
-
-        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_kategori.id_kategori as id_kat, m_tipe.nama_tipe, m_tipe.id_tipe as id_tp');
-        $this->db->from('m_paket_laundry');
-        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
-        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
-        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
-        $data['paket'] = $this->db->get()->result();
+        $data['kategori'] = $package_data['kategori'];
+        $data['tipe'] = $package_data['tipe'];
+        $data['paket'] = $package_data['paket'];
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -635,6 +702,8 @@ class Transaksi extends MY_Controller
         $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
         $this->db->where('transaksi_detail.id_transaksi', $data['transaksi']->id);
         $data['detail'] = $this->enrich_detail_rows($this->db->get()->result());
+        $data['can_add_items'] = $this->can_add_items_to_transaction($data['transaksi']);
+        $data['add_item_block_reason'] = $this->get_add_item_block_reason($data['transaksi']);
 
         $data['wa_contact_link'] = '';
         $normalized_phone = $this->normalize_whatsapp_number($data['transaksi']->no_hp ?? '');
@@ -656,6 +725,12 @@ class Transaksi extends MY_Controller
             $data['detail'],
             $total_tagihan
         );
+
+        $package_data = $this->load_package_form_data();
+        $data['promo_settings'] = $package_data['promo_settings'];
+        $data['kategori'] = $package_data['kategori'];
+        $data['tipe'] = $package_data['tipe'];
+        $data['paket'] = $package_data['paket'];
 
         $this->db->where('is_active', 1);
         $data['metode_bayar'] = $this->db->get('m_metode_bayar')->result();
@@ -703,6 +778,92 @@ class Transaksi extends MY_Controller
         ]);
 
         $this->session->set_flashdata('success', 'Catatan item berhasil diperbarui.');
+        redirect('transaksi/detail/' . $kode_invoice);
+    }
+
+    public function tambah_item($kode_invoice)
+    {
+        $this->db->select('transaksi.id, transaksi.kode_invoice, transaksi.status, transaksi.dibayar');
+        $this->db->from('transaksi');
+        $this->db->where('transaksi.kode_invoice', $kode_invoice);
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+            redirect('transaksi');
+        }
+
+        if (!$this->can_add_items_to_transaction($trx)) {
+            $this->session->set_flashdata('error', $this->get_add_item_block_reason($trx));
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $id_paket = (int) $this->input->post('id_paket');
+        $qty = $this->input->post('qty');
+        $promo_requested = $this->input->post('promo_cuci_3kg') == '1';
+        $customer_notes = trim((string) $this->input->post('customer_notes'));
+
+        if ($id_paket <= 0 || $qty === null || $qty === '') {
+            $this->session->set_flashdata('error', 'Pilih paket laundry dan isi jumlah bawaan terlebih dahulu.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $this->db->select('m_paket_laundry.*, m_satuan.nama_satuan, m_kategori.nama_kategori, m_tipe.nama_tipe');
+        $this->db->from('m_paket_laundry');
+        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
+        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
+        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
+        $this->db->where('id_paket_laundry', $id_paket);
+        $paket = $this->db->get()->row();
+
+        if (!$paket) {
+            $this->session->set_flashdata('error', 'Paket laundry tidak ditemukan.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $pricing = $this->calculate_cart_pricing(
+            $paket->harga,
+            $qty,
+            $paket->nama_satuan,
+            $promo_requested,
+            $paket->nama_tipe,
+            $paket->nama_paket
+        );
+
+        if ((float) $pricing['actual_qty'] <= 0) {
+            $this->session->set_flashdata('error', 'Jumlah bawaan harus lebih dari 0.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $item = [
+            'id' => $paket->id_paket_laundry,
+            'nama_paket' => $paket->nama_paket,
+            'nama_satuan' => $paket->nama_satuan,
+            'nama_kategori' => $paket->nama_kategori,
+            'nama_tipe' => $paket->nama_tipe,
+            'harga' => $paket->harga,
+            'qty' => $pricing['actual_qty'],
+            'rounded_qty' => $pricing['rounded_qty'],
+            'charged_qty' => $pricing['charged_qty'],
+            'promo_free_qty' => $pricing['free_qty'],
+            'promo_requested' => $pricing['promo_requested'],
+            'promo_applied' => $pricing['promo_applied'],
+            'promo_label' => $pricing['promo_label'],
+            'customer_notes' => $customer_notes,
+            'subtotal' => $pricing['subtotal']
+        ];
+
+        $this->db->insert('transaksi_detail', [
+            'id_transaksi' => $trx->id,
+            'id_paket' => $paket->id_paket_laundry,
+            'qty' => $item['charged_qty'],
+            'harga' => $item['harga'],
+            'keterangan' => $this->build_promo_keterangan($item)
+        ]);
+
+        $this->sync_transaction_deadline($trx->id);
+
+        $this->session->set_flashdata('success', 'Item laundry berhasil ditambahkan ke nota ini.');
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
