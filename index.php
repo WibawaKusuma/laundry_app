@@ -56,6 +56,9 @@
  */
 define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
 
+// Samakan waktu aplikasi dengan zona waktu operasional Bali/WITA.
+date_default_timezone_set('Asia/Makassar');
+
 /*
  *---------------------------------------------------------------
  * MULTI-SITE HOST CONFIG
