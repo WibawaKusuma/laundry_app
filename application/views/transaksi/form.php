@@ -12,9 +12,9 @@
     <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
 
     <form action="<?= base_url('transaksi/simpan'); ?>" method="post">
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-primary text-white">
-                <h6 class="mb-0"><i class="fas fa-user me-2"></i> Data Pelanggan & Paket</h6>
+        <div class="card shadow-sm border-0 mb-4 app-section-card">
+            <div class="card-header app-section-header">
+                <h6 class="mb-0"><i class="fas fa-user me-2 app-section-header-icon"></i> Data Pelanggan & Paket</h6>
             </div>
             <div class="card-body p-4">
                 <div class="row g-3 align-items-start">
@@ -110,8 +110,8 @@
         </div>
 
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="fas fa-shopping-cart me-2"></i> Keranjang Cucian</h6>
+            <div class="card-header app-section-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Keranjang Cucian</h6>
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="fas fa-save me-2"></i> Simpan
                 </button>

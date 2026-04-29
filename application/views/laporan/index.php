@@ -17,12 +17,12 @@ $filter_query = http_build_query([
 
     <div class="card shadow-sm border-0 rounded-4 mb-4">
 
-        <div class="card-header bg-white py-3">
+        <div class="card-header app-section-header py-3">
             <div class="row align-items-center g-3">
 
                 <div class="col-12 col-xl-3">
                     <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2"></i> Laporan Omset
+                        <i class="fas fa-chart-line me-2"></i> Pendapatan
                     </h5>
                 </div>
 

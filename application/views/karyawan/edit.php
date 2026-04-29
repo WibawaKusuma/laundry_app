@@ -15,7 +15,7 @@
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
 
-                <div class="card-header bg-white py-3">
+                <div class="card-header app-section-header py-3">
                     <h5 class="mb-0">
                         <i class="fas fa-user-edit me-2"></i> Form Data Karyawan
                     </h5>

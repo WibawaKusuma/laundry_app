@@ -10,10 +10,10 @@
     ?>
 
     <div class="row">
-        <div class="col-md-8 mx-auto">
+        <div class="col-md-10 mx-auto">
             <div class="card border-0 shadow-sm rounded-4">
 
-                <div class="card-header bg-white py-3">
+                <div class="card-header app-section-header py-3">
                     <h5 class="mb-0">
                         <i class="<?= $is_edit ? 'fas fa-edit' : 'fas fa-plus-circle'; ?> me-2"></i>
                         <?= $is_edit ? 'Edit Pengeluaran' : 'Form Pengeluaran Baru'; ?>

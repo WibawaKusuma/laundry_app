@@ -9,7 +9,7 @@
         <div class="col-md-12">
 
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
+                <div class="card-header app-section-header py-3">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <h5 class="mb-0">
                             <i class="fas fa-box me-2"></i> Daftar Paket

@@ -8,7 +8,7 @@
     <div class="row">
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div class="card-header app-section-header py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-users me-2"></i> Data Pelanggan
                     </h5>
@@ -34,13 +34,14 @@
                                     <th>Nama</th>
                                     <th>No HP</th>
                                     <th>Alamat</th>
+                                    <th>Status</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelPelanggan">
                                 <?php if (empty($pelanggan)) : ?>
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">
+                                        <td colspan="6" class="text-center py-5 text-muted">
                                             <p>Belum ada data pelanggan.</p>
                                         </td>
                                     </tr>
@@ -56,6 +57,13 @@
                                                 </a>
                                             </td>
                                             <td><?= $row->alamat; ?></td>
+                                            <td>
+                                                <?php if ((int) ($row->aktif ?? 1) === 1) : ?>
+                                                    <span class="badge bg-success">Aktif</span>
+                                                <?php else : ?>
+                                                    <span class="badge bg-secondary">Non Aktif</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-center">
                                                 <a href="<?= base_url('pelanggan/edit/' . $row->id); ?>" class="btn btn-sm btn-outline-warning" title="Edit">
                                                     <i class="fas fa-edit"></i>
@@ -122,7 +130,7 @@
 
         function loadPelanggan(keyword) {
             tabelBody.innerHTML =
-                '<tr><td colspan="5" class="text-center py-4">' +
+                '<tr><td colspan="6" class="text-center py-4">' +
                 '<i class="fas fa-spinner fa-spin me-2"></i>Mencari...</td></tr>';
 
             var xhr = new XMLHttpRequest();
@@ -134,17 +142,21 @@
                     var response = JSON.parse(xhr.responseText);
                     var html = '';
                     if (response.length === 0) {
-                        html = '<tr><td colspan="5" class="text-center py-5 text-muted">' +
+                        html = '<tr><td colspan="6" class="text-center py-5 text-muted">' +
                             '<p>Data pelanggan tidak ditemukan.</p></td></tr>';
                     } else {
                         for (var i = 0; i < response.length; i++) {
                             var row = response[i];
+                            var statusBadge = parseInt(row.aktif || 0, 10) === 1
+                                ? '<span class="badge bg-success">Aktif</span>'
+                                : '<span class="badge bg-secondary">Non Aktif</span>';
                             html += '<tr>';
                             html += '<td>' + (i + 1) + '</td>';
                             html += '<td>' + row.nama + '</td>';
                             html += '<td><a href="https://wa.me/62' + row.no_hp + '" target="_blank" class="text-decoration-none">';
                             html += '<i class="fab fa-whatsapp text-success me-1"></i> ' + row.no_hp + '</a></td>';
                             html += '<td>' + row.alamat + '</td>';
+                            html += '<td>' + statusBadge + '</td>';
                             html += '<td class="text-center">';
                             html += '<a href="' + baseUrl + 'pelanggan/edit/' + row.id + '" class="btn btn-sm btn-outline-warning" title="Edit">';
                             html += '<i class="fas fa-edit"></i></a> ';
@@ -157,14 +169,14 @@
                     tabelBody.innerHTML = html;
                 } else {
                     tabelBody.innerHTML =
-                        '<tr><td colspan="5" class="text-center py-5 text-danger">' +
+                        '<tr><td colspan="6" class="text-center py-5 text-danger">' +
                         '<p>Gagal memuat data. Silakan coba lagi.</p></td></tr>';
                 }
             };
 
             xhr.onerror = function() {
                 tabelBody.innerHTML =
-                    '<tr><td colspan="5" class="text-center py-5 text-danger">' +
+                    '<tr><td colspan="6" class="text-center py-5 text-danger">' +
                     '<p>Gagal memuat data. Silakan coba lagi.</p></td></tr>';
             };
 

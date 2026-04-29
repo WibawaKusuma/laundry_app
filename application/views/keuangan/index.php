@@ -32,7 +32,7 @@
 
     <div class="card border-0 shadow-sm rounded-4 mb-5">
 
-        <div class="card-header bg-white py-3">
+        <div class="card-header app-section-header py-3">
             <div class="row align-items-center g-3">
 
                 <div class="col-12 col-lg me-auto">

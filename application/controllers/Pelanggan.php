@@ -94,6 +94,8 @@ class Pelanggan extends MY_Controller
 
     public function index()
     {
+        $this->db->order_by('aktif', 'DESC');
+        $this->db->order_by('nama', 'ASC');
         $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
 
         $this->load->view('templates/header');
@@ -113,6 +115,8 @@ class Pelanggan extends MY_Controller
             $this->db->group_end();
         }
 
+        $this->db->order_by('aktif', 'DESC');
+        $this->db->order_by('nama', 'ASC');
         $result = $this->db->get('m_pelanggan')->result();
 
         $this->output
@@ -127,7 +131,8 @@ class Pelanggan extends MY_Controller
             'id' => '',
             'nama' => '',
             'no_hp' => '',
-            'alamat' => ''
+            'alamat' => '',
+            'aktif' => 1
         ];
 
         $this->load->view('templates/header');
@@ -148,7 +153,8 @@ class Pelanggan extends MY_Controller
             $data = array(
                 'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
                 'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
-                'alamat' => $this->input->post('alamat', true)
+                'alamat' => $this->input->post('alamat', true),
+                'aktif' => (int) $this->input->post('aktif')
             );
 
             $this->db->insert('m_pelanggan', $data);
@@ -175,6 +181,7 @@ class Pelanggan extends MY_Controller
         $this->form_validation->set_rules('nama', 'Nama', 'required|trim|callback_unique_nama_check[' . $id . ']');
         $this->form_validation->set_rules('no_hp', 'No HP', 'numeric|callback_unique_no_hp_check[' . $id . ']');
         $this->form_validation->set_rules('alamat', 'Alamat', 'required|trim');
+        $this->form_validation->set_rules('aktif', 'Status pelanggan', 'required|in_list[0,1]');
 
         if ($this->form_validation->run() == FALSE) {
             $this->edit($id);
@@ -182,7 +189,8 @@ class Pelanggan extends MY_Controller
             $data = array(
                 'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
                 'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
-                'alamat' => $this->input->post('alamat', true)
+                'alamat' => $this->input->post('alamat', true),
+                'aktif' => (int) $this->input->post('aktif')
             );
 
             $this->db->where('id', $id);

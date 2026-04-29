@@ -26,7 +26,8 @@
 
         .trx-payment-summary-value {
             color: #1f297a;
-            font-size: clamp(1.8rem, 2.6vw, 2.25rem);
+            /* font-size: clamp(1.8rem, 2.6vw, 2.25rem); */
+            font-size: clamp(1.2rem, 2vw, 1.6rem);
             font-weight: 800;
             line-height: 1.05;
             letter-spacing: -0.03em;
@@ -99,21 +100,25 @@
 
         .trx-pay-button {
             min-height: 48px;
-            border-radius: 14px;
+            /* border-radius: 14px; */
             font-weight: 700;
             box-shadow: 0 10px 24px rgba(25, 135, 84, 0.18);
         }
 
         .trx-detail-table {
-            min-width: 940px;
+            min-width: 860px;
+        }
+
+        .trx-detail-table .col-aksi {
+            width: 9%;
         }
 
         .trx-detail-table .col-paket {
-            width: 38%;
+            width: 24%;
         }
 
         .trx-detail-table .col-harga {
-            width: 13%;
+            width: 16%;
         }
 
         .trx-detail-table .col-qty {
@@ -121,15 +126,15 @@
         }
 
         .trx-detail-table .col-catatan {
-            width: 20%;
+            width: 18%;
         }
 
         .trx-detail-table .col-subtotal {
-            width: 20%;
+            width: 24%;
         }
 
         .trx-detail-table .paket-cell {
-            min-width: 320px;
+            min-width: 220px;
         }
 
         .trx-detail-table .paket-title {
@@ -143,11 +148,80 @@
         }
 
         .trx-detail-table .catatan-cell {
-            min-width: 180px;
+            min-width: 140px;
         }
 
         .trx-detail-table .catatan-text {
             line-height: 1.45;
+        }
+
+        .trx-detail-action-stack {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .trx-detail-action-stack form {
+            margin: 0;
+        }
+
+
+        .trx-detail-edit-modal .modal-content {
+            border: 1px solid rgba(31, 41, 122, 0.12);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 18px 42px rgba(31, 41, 122, 0.16);
+        }
+
+        .trx-detail-edit-modal .modal-header {
+            background: linear-gradient(135deg, #f7f9ff 0%, #eef3ff 100%);
+            border-bottom: 1px solid rgba(31, 41, 122, 0.08);
+            padding: 1rem 1.25rem;
+        }
+
+        .trx-detail-edit-modal .modal-title {
+            color: #1f297a;
+        }
+
+        .trx-detail-edit-modal .modal-body {
+            padding: 1.2rem 1.25rem 1.35rem;
+        }
+
+        .trx-detail-edit-modal .modal-footer {
+            border-top: 1px solid rgba(31, 41, 122, 0.08);
+            padding: 1rem 1.25rem 1.15rem;
+        }
+
+        .trx-detail-edit-modal .form-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #46506f;
+            margin-bottom: 0.4rem;
+        }
+
+        .trx-detail-edit-modal .form-control {
+            border-color: #d8def0;
+        }
+
+        .trx-detail-edit-modal .form-control:focus {
+            border-color: #1f297a;
+            box-shadow: 0 0 0 0.2rem rgba(31, 41, 122, 0.12);
+        }
+
+        .trx-detail-edit-meta {
+            color: #5f688b;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .trx-detail-edit-summary {
+            border: 1px solid rgba(31, 41, 122, 0.1);
+            border-radius: 16px;
+            background: #f8faff;
+            padding: 0.95rem 1rem;
         }
 
         .customer-wa-actions {
@@ -295,9 +369,9 @@
     <div class="row">
 
         <div class="col-md-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <span class="fw-bold"><i class="fas fa-info-circle me-2"></i> Info Invoice</span>
+            <div class="card shadow-sm border-0 mb-4 app-section-card">
+                <div class="card-header app-section-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="fas fa-info-circle me-2 app-section-header-icon"></i> Info Invoice</span>
                     <span class="badge bg-light text-primary"><?= $transaksi->kode_invoice; ?></span>
                 </div>
                 <div class="card-body">
@@ -334,6 +408,7 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-sm align-middle trx-detail-table">
                             <colgroup>
+                                <col class="col-aksi">
                                 <col class="col-paket">
                                 <col class="col-harga">
                                 <col class="col-qty">
@@ -342,6 +417,7 @@
                             </colgroup>
                             <thead class="table-light">
                                 <tr>
+                                    <th class="text-center">Aksi</th>
                                     <th>Paket</th>
                                     <th>Harga</th>
                                     <th class="text-center">Qty</th>
@@ -352,12 +428,44 @@
                             <tbody>
                                 <?php
                                 $grand_total = 0;
-                                foreach ($detail as $d) :
+                                foreach (($active_detail ?? $detail) as $d) :
                                     $subtotal = $d->subtotal;
                                     $grand_total += $subtotal;
                                     $item_label = !empty($d->nama_tipe) ? $d->nama_tipe : $d->nama_paket;
+                                    $unit_label = strtoupper($d->nama_satuan ?? '');
                                 ?>
                                     <tr>
+                                        <td class="text-center text-nowrap">
+                                            <?php if (!empty($can_modify_items)) : ?>
+                                                <div class="trx-detail-action-stack">
+                                                    <button
+                                                        class="btn btn-sm btn-outline-primary js-edit-detail"
+                                                        type="button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#modalEditDetailItem"
+                                                        data-detail-id="<?= (int) $d->id; ?>"
+                                                        data-item-label="<?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-paket-label="<?= htmlspecialchars($d->nama_paket ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-qty="<?= htmlspecialchars($d->qty_label, ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-unit="<?= htmlspecialchars($unit_label, ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-customer-notes="<?= htmlspecialchars($d->customer_notes ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-harga="<?= number_format($d->harga, 0, ',', '.'); ?>"
+                                                        data-promo-applied="<?= !empty($d->promo_applied) ? '1' : '0'; ?>"
+                                                        data-promo-label="<?= htmlspecialchars($d->promo_label ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <i class="fas fa-pen me-1"></i>
+                                                    </button>
+                                                    <form action="<?= base_url('transaksi/batal_detail_item'); ?>" method="post" class="js-cancel-detail-form">
+                                                        <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
+                                                        <input type="hidden" name="detail_id" value="<?= (int) $d->id; ?>">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="fas fa-trash-can me-1"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            <?php else : ?>
+                                                <span class="text-muted small">Terkunci</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="paket-cell">
                                             <span class="fw-semibold d-block paket-title"><?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?></span>
                                             <?php if (!empty($d->nama_paket) && strcasecmp($d->nama_paket, $item_label) !== 0) : ?>
@@ -376,21 +484,10 @@
                                         <td>Rp <?= number_format($d->harga, 0, ',', '.'); ?></td>
                                         <td class="text-center"><?= $d->qty_label; ?><?= !empty($d->promo_applied) ? ' kg' : ''; ?></td>
                                         <td class="catatan-cell">
-                                            <?php if ($transaksi->status === 'Baru') : ?>
-                                                <form action="<?= base_url('transaksi/update_catatan_item'); ?>" method="post">
-                                                    <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
-                                                    <input type="hidden" name="detail_id" value="<?= $d->id; ?>">
-                                                    <textarea name="customer_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Contoh: celana 2 pcs, baju 3 pcs"><?= htmlspecialchars($d->customer_notes ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
-                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-save me-1"></i> Simpan
-                                                    </button>
-                                                </form>
+                                            <?php if (!empty($d->customer_notes)) : ?>
+                                                <span class="text-muted small catatan-text"><?= nl2br(htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8')); ?></span>
                                             <?php else : ?>
-                                                <?php if (!empty($d->customer_notes)) : ?>
-                                                    <span class="text-muted small catatan-text"><?= nl2br(htmlspecialchars($d->customer_notes, ENT_QUOTES, 'UTF-8')); ?></span>
-                                                <?php else : ?>
-                                                    <span class="text-muted small catatan-text">Tidak ada catatan.</span>
-                                                <?php endif; ?>
+                                                <span class="text-muted small catatan-text">-</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end text-nowrap">Rp <?= number_format($subtotal, 0, ',', '.'); ?></td>
@@ -399,12 +496,61 @@
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
-                                    <td colspan="4" class="text-end fw-bold">TOTAL HARUS DIBAYAR</td>
+                                    <td colspan="5" class="text-end fw-bold">TOTAL</td>
                                     <td class="text-end fw-bold fs-5 text-primary text-nowrap">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
+
+                    <?php if (!empty($can_modify_items)) : ?>
+                        <div class="modal fade trx-detail-edit-modal" id="modalEditDetailItem" tabindex="-1" aria-labelledby="modalEditDetailItemLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form action="<?= base_url('transaksi/update_detail_item'); ?>" method="post">
+                                        <div class="modal-header">
+                                            <div>
+                                                <h5 class="modal-title fw-bold mb-1" id="modalEditDetailItemLabel">Edit Item Laundry</h5>
+                                                <div class="small text-muted" id="modalEditDetailSubtitle">Perbarui qty dan catatan item yang dipilih.</div>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
+                                            <input type="hidden" name="detail_id" id="modalEditDetailId" value="">
+
+                                            <div class="trx-detail-edit-summary mb-3">
+                                                <div class="fw-semibold text-dark mb-1" id="modalEditDetailItemLabelText">-</div>
+                                                <div class="trx-detail-edit-meta" id="modalEditDetailPackageText">-</div>
+                                                <div class="trx-detail-edit-meta mt-2" id="modalEditDetailPricingText">Harga satuan: -</div>
+                                                <div class="trx-detail-edit-meta mt-2" id="modalEditDetailPromoText">Subtotal akan menyesuaikan qty terbaru.</div>
+                                            </div>
+
+                                            <div class="row g-3 align-items-start">
+                                                <div class="col-md-4">
+                                                    <label class="form-label" for="modalEditDetailQty">Jumlah Bawaan</label>
+                                                    <input type="number" name="qty" id="modalEditDetailQty" class="form-control" min="0.1" step="0.01" required>
+                                                    <div class="trx-detail-edit-meta mt-2" id="modalEditDetailUnitText">Satuan item ini: -.</div>
+                                                </div>
+
+                                                <div class="col-md-8">
+                                                    <label class="form-label" for="modalEditDetailNotes">Catatan Barang Bawaan</label>
+                                                    <textarea name="customer_notes" id="modalEditDetailNotes" class="form-control" rows="2" placeholder="Contoh: celana 2 pcs, baju 3 pcs"></textarea>
+                                                    <!-- <div class="trx-detail-edit-meta mt-2">Perubahan disimpan per item berdasarkan ID detail transaksi.</div> -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-save me-1"></i>Simpan
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($can_add_items) : ?>
                         <div class="mt-4 pt-2 border-top">
@@ -518,9 +664,9 @@
 
         <div class="col-md-4">
 
-            <div class="card shadow-sm border-0 mb-3">
-                <div class="card-header bg-primary text-white fw-bold">
-                    <i class="fas fa-tshirt me-2"></i> Status Laundry
+            <div class="card shadow-sm border-0 mb-3 app-section-card">
+                <div class="card-header app-section-header fw-bold">
+                    <i class="fas fa-tshirt me-2 app-section-header-icon"></i> Status Laundry
                 </div>
                 <div class="card-body">
                     <form action="<?= base_url('transaksi/update_status'); ?>" method="post">
@@ -534,16 +680,16 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 btn-sm">
+                        <button type="submit" class="btn btn-success w-100 btn-sm">
                             Update Status
                         </button>
                     </form>
                 </div>
             </div>
 
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-primary text-white fw-bold">
-                    <i class="fas fa-money-bill-wave me-2"></i> Pembayaran
+            <div class="card shadow-sm border-0 app-section-card">
+                <div class="card-header app-section-header fw-bold">
+                    <i class="fas fa-money-bill-wave me-2 app-section-header-icon"></i> Pembayaran
                 </div>
                 <div class="card-body text-center">
                     <div class="trx-payment-summary">
@@ -584,7 +730,7 @@
                                 </div>
                             </div>
 
-                            <p class="trx-payment-hint">Pastikan uang sudah diterima penuh sesuai total tagihan sebelum konfirmasi.</p>
+                            <!-- <p class="trx-payment-hint">Pastikan uang sudah diterima penuh sesuai total tagihan sebelum konfirmasi.</p> -->
 
                             <button
                                 type="button"
@@ -675,8 +821,85 @@
 </script>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modalEl = document.getElementById('modalEditDetailItem');
+        if (!modalEl) {
+            return;
+        }
+
+        var detailIdInput = document.getElementById('modalEditDetailId');
+        var qtyInput = document.getElementById('modalEditDetailQty');
+        var notesInput = document.getElementById('modalEditDetailNotes');
+        var itemLabelText = document.getElementById('modalEditDetailItemLabelText');
+        var packageText = document.getElementById('modalEditDetailPackageText');
+        var pricingText = document.getElementById('modalEditDetailPricingText');
+        var promoText = document.getElementById('modalEditDetailPromoText');
+        var unitText = document.getElementById('modalEditDetailUnitText');
+        var subtitleText = document.getElementById('modalEditDetailSubtitle');
+
+        document.querySelectorAll('.js-edit-detail').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var detailId = button.getAttribute('data-detail-id') || '';
+                var itemLabel = button.getAttribute('data-item-label') || '-';
+                var paketLabel = button.getAttribute('data-paket-label') || '';
+                var qty = button.getAttribute('data-qty') || '';
+                var unit = button.getAttribute('data-unit') || '-';
+                var customerNotes = button.getAttribute('data-customer-notes') || '';
+                var harga = button.getAttribute('data-harga') || '-';
+                var promoApplied = button.getAttribute('data-promo-applied') === '1';
+                var promoLabel = button.getAttribute('data-promo-label') || 'Promo';
+
+                detailIdInput.value = detailId;
+                qtyInput.value = qty;
+                notesInput.value = customerNotes;
+                itemLabelText.textContent = itemLabel;
+                packageText.textContent = paketLabel && paketLabel !== itemLabel ? 'Paket: ' + paketLabel : 'Paket detail mengikuti item yang dipilih.';
+                pricingText.textContent = 'Harga satuan: Rp ' + harga;
+                unitText.textContent = 'Satuan item ini: ' + unit + '.';
+                subtitleText.textContent = 'Perbarui qty dan catatan untuk item transaksi #' + detailId + '.';
+
+                if (promoApplied) {
+                    promoText.textContent = promoLabel + ' aktif. Total akan dihitung ulang otomatis saat qty diubah.';
+                } else {
+                    promoText.textContent = 'Item ini tanpa promo. Subtotal akan mengikuti qty terbaru.';
+                }
+            });
+        });
+    });
+</script>
+
+<script>
     // SweetAlert untuk Konfirmasi Bayar (submit form POST)
     document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.js-cancel-detail-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                Swal.fire({
+                    title: 'Batalkan Item Ini?',
+                    html: `
+                        <div style="padding-top:.25rem;">
+                            <div style="display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;background:#fff4f4;color:#b42318;font-size:.88rem;font-weight:700;border:1px solid #f5c2c7;">
+                                <i class="fas fa-ban"></i>
+                                <span>Item ini tidak akan dihitung ke total</span>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Batalkan',
+                    cancelButtonText: 'Kembali',
+                    focusCancel: true
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+
         var btnBayar = document.querySelector('.btn-bayar');
         if (btnBayar) {
             btnBayar.addEventListener('click', function(e) {

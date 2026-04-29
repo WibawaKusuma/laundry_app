@@ -7,10 +7,10 @@
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3"></div>
 
     <div class="row">
-        <div class="col-md-8 mx-auto">
+        <div class="col-md-10 mx-auto">
 
             <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-white py-3">
+                <div class="card-header app-section-header py-3">
                     <h5 class="mb-0">
                         <i class="fas fa-edit me-2"></i> <?= $title; ?>
                     </h5>

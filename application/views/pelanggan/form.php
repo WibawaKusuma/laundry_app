@@ -10,10 +10,10 @@
     <?php endif; ?>
 
     <div class="row">
-        <div class="col-md-8 mx-auto">
+        <div class="col-md-10 mx-auto">
             <div class="card border-0 shadow-sm rounded-4">
 
-                <div class="card-header bg-white py-3">
+                <div class="card-header app-section-header py-3">
                     <h5 class="mb-0">
                         <i class="fas fa-user-tag me-2"></i> Form Pelanggan
                     </h5>
@@ -30,28 +30,38 @@
 
                         <input type="hidden" name="id" value="<?= $pelanggan->id ?? ''; ?>">
 
-                        <div class="mb-3">
-                            <label for="nama" class="form-label fw-bold">Nama Lengkap</label>
-                            <input type="text" class="form-control" id="nama" name="nama"
-                                value="<?= $pelanggan->nama ?? ''; ?>"
-                                placeholder="Nama Pelanggan" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="no_hp" class="form-label fw-bold">No HP (WhatsApp)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">+62</span>
-                                <input type="number" class="form-control" id="no_hp" name="no_hp"
-                                    value="<?= $pelanggan->no_hp ?? ''; ?>"
-                                    placeholder="8123xxxx">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="nama" class="form-label fw-bold">Nama Lengkap</label>
+                                <input type="text" class="form-control" id="nama" name="nama"
+                                    value="<?= $pelanggan->nama ?? ''; ?>"
+                                    placeholder="Nama Pelanggan" required>
                             </div>
-                            <small class="text-muted">Opsional. Jika dikosongkan, sistem otomatis menyimpan `99999999999` sebagai nomor placeholder.</small>
-                        </div>
 
-                        <div class="mb-4">
-                            <label for="alamat" class="form-label fw-bold">Alamat Lengkap</label>
-                            <textarea class="form-control" id="alamat" name="alamat" rows="3"
-                                placeholder="Alamat domisili..." required><?= $pelanggan->alamat ?? ''; ?></textarea>
+                            <div class="col-md-6">
+                                <label for="no_hp" class="form-label fw-bold">No HP (WhatsApp)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">+62</span>
+                                    <input type="number" class="form-control" id="no_hp" name="no_hp"
+                                        value="<?= $pelanggan->no_hp ?? ''; ?>"
+                                        placeholder="8123xxxx">
+                                </div>
+                                <!-- <small class="text-muted">Opsional. Jika dikosongkan, sistem otomatis menyimpan `99999999999`.</small> -->
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="alamat" class="form-label fw-bold">Alamat Lengkap</label>
+                                <textarea class="form-control" id="alamat" name="alamat" rows="3"
+                                    placeholder="Alamat domisili..." required><?= $pelanggan->alamat ?? ''; ?></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="aktif" class="form-label fw-bold">Status Pelanggan</label>
+                                <select class="form-select" id="aktif" name="aktif" required>
+                                    <option value="1" <?= (!isset($pelanggan->aktif) || (int) $pelanggan->aktif === 1) ? 'selected' : ''; ?>>Aktif</option>
+                                    <option value="0" <?= (isset($pelanggan->aktif) && (int) $pelanggan->aktif === 0) ? 'selected' : ''; ?>>Non Aktif</option>
+                                </select>
+                            </div>
                         </div>
 
                         <hr>

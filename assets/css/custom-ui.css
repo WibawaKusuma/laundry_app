@@ -60,6 +60,33 @@ p, h1, h2, h3, h4, h5 {
     box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
 }
 
+/* Shared section/panel styling so headers stay distinct from action buttons */
+.app-section-card {
+    border: 1px solid rgba(31, 41, 122, 0.08) !important;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 14px 34px rgba(31, 41, 122, 0.06) !important;
+}
+
+.app-section-header {
+    background: linear-gradient(180deg, #f4f7ff 0%, #edf2ff 100%) !important;
+    color: var(--bs-primary) !important;
+    border-bottom: 1px solid rgba(31, 41, 122, 0.08) !important;
+    padding: 0.95rem 1.2rem;
+}
+
+.app-section-header .badge {
+    background: #fff !important;
+    color: var(--bs-primary) !important;
+    border: 1px solid rgba(31, 41, 122, 0.14);
+    box-shadow: 0 8px 18px rgba(31, 41, 122, 0.06);
+}
+
+.app-section-header-icon {
+    color: var(--bs-primary);
+    opacity: 0.9;
+}
+
 /* Sidebar Styling */
 .sidebar {
     min-height: 100vh;
