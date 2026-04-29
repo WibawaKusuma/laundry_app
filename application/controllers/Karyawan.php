@@ -5,7 +5,7 @@ class Karyawan extends Admin_Controller
 {
     private $allowed_roles = [
         'admin' => 'Admin (Full Akses)',
-        'kasir' => 'Kasir (Transaksi Saja)',
+        'kasir' => 'Kasir (Dashboard, Pelanggan, Transaksi, Paket, Keuangan)',
     ];
 
     public function __construct()

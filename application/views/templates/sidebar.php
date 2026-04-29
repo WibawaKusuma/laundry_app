@@ -31,7 +31,7 @@
                 </a>
             </li>
 
-            <?php if ($this->session->userdata('role') === 'admin') : ?>
+            <?php if (in_array($this->session->userdata('role'), ['admin', 'kasir'], true)) : ?>
 
                 <!-- <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                     <span>Admin Area</span>
@@ -43,17 +43,19 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link <?= $uri == 'karyawan' ? 'active' : '' ?>" href="<?= base_url('karyawan') ?>">
-                        <i class="fas fa-user-tie me-2"></i> Karyawan
-                    </a>
-                </li>
+                <?php if ($this->session->userdata('role') === 'admin') : ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $uri == 'karyawan' ? 'active' : '' ?>" href="<?= base_url('karyawan') ?>">
+                            <i class="fas fa-user-tie me-2"></i> Karyawan
+                        </a>
+                    </li>
 
-                <li class="nav-item">
-                    <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
-                        <i class="fas fa-file-alt me-2"></i> Laporan
-                    </a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
+                            <i class="fas fa-file-alt me-2"></i> Laporan
+                        </a>
+                    </li>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if (in_array($this->session->userdata('role'), ['admin', 'kasir'], true)) : ?>

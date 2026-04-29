@@ -96,7 +96,7 @@
                 </p>
                 <hr>
                 <p class="mb-0 small">
-                    <strong>Kasir:</strong> Hanya memiliki akses ke menu Transaksi, Pelanggan, dan Dashboard.
+                    <strong>Kasir:</strong> Memiliki akses ke menu Dashboard, Pelanggan, Transaksi, Paket, dan Keuangan.
                 </p>
             </div>
         </div>
