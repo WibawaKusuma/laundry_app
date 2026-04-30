@@ -254,7 +254,22 @@ class Transaksi extends MY_Controller
 
     private function get_transaction_details($transaksi_id, $include_cancelled = false)
     {
-        $this->db->select('transaksi_detail.*, m_paket_laundry.nama_paket, m_paket_laundry.harga, m_tipe.nama_tipe, m_satuan.nama_satuan');
+        $this->db->select('
+            transaksi_detail.id,
+            transaksi_detail.id_transaksi,
+            transaksi_detail.id_paket,
+            transaksi_detail.qty,
+            transaksi_detail.harga,
+            transaksi_detail.keterangan,
+            transaksi_detail.batal,
+            transaksi_detail.batal_at,
+            transaksi_detail.batal_by,
+            transaksi_detail.alasan_batal,
+            m_paket_laundry.nama_paket,
+            m_paket_laundry.harga AS harga_master,
+            m_tipe.nama_tipe,
+            m_satuan.nama_satuan
+        ');
         $this->db->from('transaksi_detail');
         $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
         $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
@@ -926,6 +941,8 @@ class Transaksi extends MY_Controller
             $this->session->set_flashdata('error', 'Paket laundry untuk item ini tidak ditemukan.');
             redirect('transaksi/detail/' . $kode_invoice);
         }
+
+        $paket->harga = (int) $detail->harga;
 
         $promo = $this->parse_promo_keterangan($detail->keterangan ?? '');
         $promo_requested = is_array($promo) && !empty($promo['promo_type']);

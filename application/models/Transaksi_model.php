@@ -40,9 +40,8 @@ class Transaksi_model extends CI_Model
         $this->db->where('DATE(t.tgl_masuk) <=', $tgl_akhir);
         $this->db->order_by('t.id', 'DESC');
 
-        $subquery = $this->db->query('SELECT SUM(dt.qty * pl.harga) AS grand_total, dt.id_transaksi 
+        $subquery = $this->db->query('SELECT SUM(dt.qty * dt.harga) AS grand_total, dt.id_transaksi 
                                     FROM transaksi_detail dt 
-                                    JOIN m_paket_laundry pl ON dt.id_paket = pl.id_paket_laundry 
                                     WHERE COALESCE(dt.batal, 0) = 0
                                     GROUP BY dt.id_transaksi');
         $results = $subquery->result();
@@ -80,9 +79,8 @@ class Transaksi_model extends CI_Model
         $transaksi = $this->db->get()->result();
 
         foreach ($transaksi as $tr) {
-            $this->db->select('SUM(transaksi_detail.qty * m_paket_laundry.harga) as total_harga');
+            $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_harga');
             $this->db->from('transaksi_detail');
-            $this->db->join('m_paket_laundry', 'm_paket_laundry.id_paket_laundry = transaksi_detail.id_paket');
             $this->db->where('transaksi_detail.id_transaksi', $tr->id);
             $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
             $query = $this->db->get()->row();
