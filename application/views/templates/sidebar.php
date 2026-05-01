@@ -50,11 +50,11 @@
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
-                            <i class="fas fa-file-alt me-2"></i> Laporan
-                        </a>
-                    </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
+                        <i class="fas fa-file-alt me-2"></i> Laporan Bisnis
+                    </a>
+                </li>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -69,7 +69,7 @@
             <?php if ($this->session->userdata('role') === 'admin') : ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $uri == 'dashboard_omset' ? 'active' : '' ?>" href="<?= base_url('dashboard_omset') ?>">
-                        <i class="fas fa-chart-line me-2"></i> Omset
+                        <i class="fas fa-chart-line me-2"></i> Omset Order
                     </a>
                 </li>
             <?php endif; ?>

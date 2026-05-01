@@ -14,17 +14,20 @@ class Keuangan extends MY_Controller
 
         $this->preventPageCache();
         $this->load->model('Keuangan_model');
+        $this->load->model('Transaksi_model');
     }
 
     public function index()
     {
+        $is_admin = $this->session->userdata('role') === 'admin';
+
         // 1. Ambil Filter Tanggal
         $tgl_awal  = $this->input->get('tgl_awal');
         $tgl_akhir = $this->input->get('tgl_akhir');
 
         // 2. Default ke Bulan Ini jika kosong
         if (empty($tgl_awal) || empty($tgl_akhir)) {
-            $tgl_awal  = date('Y-m-d');
+            $tgl_awal  = date('Y-m-01');
             $tgl_akhir = date('Y-m-d');
         }
 
@@ -34,9 +37,16 @@ class Keuangan extends MY_Controller
         $data['pengeluaran'] = $this->Keuangan_model->get_all($tgl_awal, $tgl_akhir);
 
         // 4. Hitung Total (Otomatis sesuai data yang difilter)
-        $data['total_pengeluaran'] = 0;
-        foreach ($data['pengeluaran'] as $row) {
-            $data['total_pengeluaran'] += $row->nominal;
+        $data['total_pengeluaran'] = $this->Keuangan_model->sum_pengeluaran($tgl_awal, $tgl_akhir);
+        $data['is_admin'] = $is_admin;
+        $data['total_kas_masuk'] = 0;
+        $data['total_piutang'] = 0;
+        $data['saldo_operasional'] = 0;
+
+        if ($is_admin) {
+            $data['total_kas_masuk'] = $this->Transaksi_model->sum_kas_masuk($tgl_awal, $tgl_akhir);
+            $data['total_piutang'] = $this->Transaksi_model->sum_piutang($tgl_awal, $tgl_akhir);
+            $data['saldo_operasional'] = $data['total_kas_masuk'] - $data['total_pengeluaran'];
         }
 
         // Kirim balik tanggal ke view

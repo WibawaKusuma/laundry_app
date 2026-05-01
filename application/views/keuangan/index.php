@@ -4,20 +4,76 @@
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h5 class="">
-            <i class="fas fa-money-bill-wave me-2"></i> Manajemen Keuangan
+            <i class="fas fa-money-bill-wave me-2"></i> Ringkasan Kas dan Pengeluaran
         </h5>
     </div>
 
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
 
-    <div class="row mb-4">
-        <div class="col-12 col-md-6 col-xl-4">
+    <div class="row mb-4 g-3">
+        <?php if (!empty($is_admin)) : ?>
+            <div class="col-12 col-md-6 col-xl-6">
+                <div class="card shadow-sm rounded-4 finance-summary-card" style="border: 0; border-left: 5px solid #1f297a;">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex align-items-center justify-content-between finance-summary-content">
+                            <div class="finance-summary-text">
+                                <p class="text-muted fw-bold text-uppercase small mb-1 finance-summary-label">Kas Masuk</p>
+                                <h3 class="mb-0" style="color:#1f297a;">
+                                    Rp <?= number_format($total_kas_masuk, 0, ',', '.'); ?>
+                                </h3>
+                            </div>
+                            <div class="rounded-3 p-3 d-flex align-items-center justify-content-center finance-summary-icon" style="width: 60px; height: 60px; background: rgba(31,41,122,0.1); color:#1f297a;">
+                                <i class="fas fa-wallet fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-6">
+                <div class="card shadow-sm rounded-4 finance-summary-card" style="border: 0; border-left: 5px solid #b7791f;">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex align-items-center justify-content-between finance-summary-content">
+                            <div class="finance-summary-text">
+                                <p class="text-muted fw-bold text-uppercase small mb-1 finance-summary-label">Piutang Periode</p>
+                                <h3 class="mb-0" style="color:#b7791f;">
+                                    Rp <?= number_format($total_piutang, 0, ',', '.'); ?>
+                                </h3>
+                            </div>
+                            <div class="rounded-3 p-3 d-flex align-items-center justify-content-center finance-summary-icon" style="width: 60px; height: 60px; background: rgba(255,193,7,0.16); color:#b7791f;">
+                                <i class="fas fa-file-invoice-dollar fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-6">
+                <div class="card shadow-sm rounded-4 finance-summary-card" style="border: 0; border-left: 5px solid #198754;">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="d-flex align-items-center justify-content-between finance-summary-content">
+                            <div class="finance-summary-text">
+                                <p class="text-muted fw-bold text-uppercase small mb-1 finance-summary-label">Saldo Operasional</p>
+                                <h3 class="mb-0" style="color:#198754;">
+                                    Rp <?= number_format($saldo_operasional, 0, ',', '.'); ?>
+                                </h3>
+                            </div>
+                            <div class="rounded-3 p-3 d-flex align-items-center justify-content-center finance-summary-icon" style="width: 60px; height: 60px; background: rgba(25,135,84,0.1); color:#198754;">
+                                <i class="fas fa-scale-balanced fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <div class="col-12 col-md-6 col-xl-6">
             <div class="card shadow-sm rounded-4 finance-summary-card" style="border: 0; border-left: 5px solid #dc3545;">
                 <div class="card-body p-3 p-md-4">
                     <div class="d-flex align-items-center justify-content-between finance-summary-content">
                         <div class="finance-summary-text">
                             <p class="text-muted fw-bold text-uppercase small mb-1 finance-summary-label">Total Pengeluaran</p>
-                            <h3 class="text-danger mb-0 finance-summary-value">
+                            <h3 class="text-danger mb-0">
                                 Rp <?= number_format($total_pengeluaran, 0, ',', '.'); ?>
                             </h3>
                         </div>
@@ -30,6 +86,19 @@
         </div>
     </div>
 
+    <div class="alert alert-light border rounded-4 mb-4">
+        <div class="fw-semibold mb-1">Cara membaca angka di halaman ini</div>
+        <?php if (!empty($is_admin)) : ?>
+            <small class="text-muted">
+                Kas masuk dihitung dari transaksi yang sudah lunas berdasarkan tanggal bayar. Pengeluaran berasal dari data pengeluaran yang Anda input manual. Saldo operasional adalah selisih kas masuk dan pengeluaran pada periode aktif.
+            </small>
+        <?php else : ?>
+            <small class="text-muted">
+                Card ini menampilkan total pengeluaran yang sudah dicatat pada periode aktif berdasarkan filter tanggal yang sedang digunakan.
+            </small>
+        <?php endif; ?>
+    </div>
+
     <div class="card border-0 shadow-sm rounded-4 mb-5">
 
         <div class="card-header app-section-header py-3">
@@ -37,7 +106,7 @@
 
                 <div class="col-12 col-lg me-auto">
                     <h6 class="mb-0 text-danger">
-                        <i class="fas fa-history me-2"></i> Riwayat Transaksi Keluar
+                        <i class="fas fa-history me-2"></i> Riwayat Pengeluaran
                     </h6>
                 </div>
 

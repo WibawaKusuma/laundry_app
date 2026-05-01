@@ -1,5 +1,17 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
+    <?php
+    /** @var object $transaksi */
+    /** @var array $detail */
+    /** @var array $active_detail */
+    /** @var array $status_options */
+    /** @var bool $can_add_items */
+    /** @var bool $can_modify_items */
+    /** @var string $add_item_block_reason */
+    /** @var string $wa_contact_link */
+    /** @var array $promo_settings */
+    ?>
+
     <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
 
     <style>
@@ -43,6 +55,42 @@
         .trx-payment-status {
             border-radius: 16px;
             margin-bottom: 1rem;
+        }
+
+        .trx-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.9rem;
+        }
+
+        .trx-status-box {
+            border: 1px solid rgba(31, 41, 122, 0.12);
+            border-radius: 16px;
+            padding: 0.9rem 1rem;
+            background: #fbfcff;
+        }
+
+        .trx-status-box small {
+            display: block;
+            color: #69738f;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+
+        .trx-status-box .badge {
+            font-size: 0.8rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 999px;
+        }
+
+        .trx-status-meta {
+            margin-top: 0.5rem;
+            color: #52607e;
+            font-size: 0.82rem;
+            line-height: 1.5;
         }
 
         .trx-method-list {
@@ -402,6 +450,66 @@
                         </div>
                     </div>
 
+                    <div class="trx-status-grid mb-3">
+                        <div class="trx-status-box">
+                            <small>Status Laundry</small>
+                            <?php
+                            $operational_badge = 'bg-secondary';
+                            if ($transaksi->status == 'Proses') {
+                                $operational_badge = 'bg-info text-dark';
+                            } elseif ($transaksi->status == 'Selesai') {
+                                $operational_badge = 'bg-warning text-dark';
+                            } elseif ($transaksi->status == 'Diambil') {
+                                $operational_badge = 'bg-success';
+                            }
+                            ?>
+                            <span class="badge <?= $operational_badge; ?>"><?= strtoupper($transaksi->status); ?></span>
+                            <!-- <div class="trx-status-meta">
+                                <?php if (!empty($transaksi->tgl_selesai)) : ?>
+                                    Selesai dicatat pada <?= date('d/m/Y H:i', strtotime($transaksi->tgl_selesai)); ?>
+                                <?php else : ?>
+                                    Progres pengerjaan masih mengikuti status operasional aktif.
+                                <?php endif; ?>
+                            </div> -->
+                        </div>
+
+                        <div class="trx-status-box">
+                            <small>Status Pembayaran</small>
+                            <?php if ($transaksi->dibayar == 'Sudah Dibayar') : ?>
+                                <span class="badge bg-success">LUNAS</span>
+                            <?php else : ?>
+                                <span class="badge bg-danger">BELUM DIBAYAR</span>
+                            <?php endif; ?>
+                            <!-- <div class="trx-status-meta">
+                                <?php if (!empty($transaksi->tgl_bayar)) : ?>
+                                    Pembayaran diterima pada <?= date('d/m/Y H:i', strtotime($transaksi->tgl_bayar)); ?>
+                                <?php else : ?>
+                                    Belum ada pembayaran yang tercatat untuk nota ini.
+                                <?php endif; ?>
+                            </div> -->
+                        </div>
+
+                        <div class="trx-status-box">
+                            <small>Status Pengambilan</small>
+                            <?php if ($transaksi->status == 'Diambil') : ?>
+                                <span class="badge bg-primary">SUDAH DIAMBIL</span>
+                            <?php else : ?>
+                                <span class="badge bg-light text-dark border">BELUM DIAMBIL</span>
+                            <?php endif; ?>
+                            <!-- <div class="trx-status-meta">
+                                <?php if (!empty($transaksi->tgl_diambil)) : ?>
+                                    Diambil pada <?= date('d/m/Y H:i', strtotime($transaksi->tgl_diambil)); ?>
+                                <?php elseif ($transaksi->dibayar != 'Sudah Dibayar') : ?>
+                                    Pengambilan akan dibuka setelah transaksi lunas.
+                                <?php elseif ($transaksi->status != 'Selesai') : ?>
+                                    Menunggu laundry selesai sebelum bisa diambil.
+                                <?php else : ?>
+                                    Sudah siap dikonfirmasi saat customer mengambil laundry.
+                                <?php endif; ?>
+                            </div> -->
+                        </div>
+                    </div>
+
                     <hr>
 
                     <h6 class="fw-bold mb-3">Rincian Paket Laundry</h6>
@@ -669,21 +777,27 @@
                     <i class="fas fa-tshirt me-2 app-section-header-icon"></i> Status Laundry
                 </div>
                 <div class="card-body">
-                    <form action="<?= base_url('transaksi/update_status'); ?>" method="post">
-                        <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
-
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Update Status Pengerjaan</label>
-                            <select name="status" class="form-select">
-                                <?php foreach ($status_options as $value => $label) : ?>
-                                    <option value="<?= $value; ?>" <?= $transaksi->status == $value ? 'selected' : ''; ?>><?= $label; ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                    <?php if ($transaksi->status === 'Diambil') : ?>
+                        <div class="alert alert-success mb-0">
+                            Laundry sudah selesai seluruh proses dan telah diambil customer.
                         </div>
-                        <button type="submit" class="btn btn-success w-100 btn-sm">
-                            Update Status
-                        </button>
-                    </form>
+                    <?php else : ?>
+                        <form action="<?= base_url('transaksi/update_status'); ?>" method="post">
+                            <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Update Status Pengerjaan</label>
+                                <select name="status" class="form-select">
+                                    <?php foreach ($status_options as $value => $label) : ?>
+                                        <option value="<?= $value; ?>" <?= $transaksi->status == $value ? 'selected' : ''; ?>><?= $label; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 btn-sm">
+                                Update Status
+                            </button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -698,9 +812,9 @@
                             <span>Total Harus Dibayar</span>
                         </div>
                         <div class="trx-payment-summary-value">Rp <?= number_format($grand_total, 0, ',', '.'); ?></div>
-                        <div class="trx-payment-summary-note">
-                            Nominal ini harus cocok!.
-                        </div>
+                        <!-- <div class="trx-payment-summary-note">
+                            Pastikan nominal yang diterima sesuai dengan total tagihan nota ini.
+                        </div> -->
                     </div>
 
                     <?php if ($transaksi->dibayar == 'Belum Dibayar') : ?>
@@ -736,7 +850,7 @@
                                 type="button"
                                 class="btn btn-sm btn-success w-100 btn-bayar trx-pay-button"
                                 data-total="Rp <?= number_format($grand_total, 0, ',', '.'); ?>">
-                                <i class="fas fa-check-circle me-2"></i> Bayar Sekarang
+                                <i class="fas fa-check-circle me-2"></i> Catat Pembayaran
                             </button>
                         </form>
 
@@ -759,6 +873,28 @@
                         <?php endif; ?>
                         <small class="text-muted d-block mt-2">Dibayar pada:</small>
                         <span class="fw-bold"><?= date('d/m/Y H:i', strtotime($transaksi->tgl_bayar)); ?></span>
+
+                        <?php if ($transaksi->status === 'Selesai') : ?>
+                            <form id="formAmbil" action="<?= base_url('transaksi/tandai_diambil/' . $transaksi->kode_invoice); ?>" method="post" class="mt-3">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-primary w-100 btn-ambil"
+                                    data-invoice="<?= htmlspecialchars($transaksi->kode_invoice, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <i class="fas fa-box-open me-2"></i> Tandai Sudah Diambil
+                                </button>
+                            </form>
+                            <small class="text-muted d-block mt-2">
+                                Gunakan tombol ini saat cucian benar-benar sudah diserahkan ke customer.
+                            </small>
+                        <?php elseif ($transaksi->status === 'Diambil') : ?>
+                            <div class="alert alert-primary mt-3 mb-0">
+                                Cucian sudah diambil pada <?= !empty($transaksi->tgl_diambil) ? date('d/m/Y H:i', strtotime($transaksi->tgl_diambil)) : '-'; ?>.
+                            </div>
+                        <?php else : ?>
+                            <div class="alert alert-light border mt-3 mb-0 text-start">
+                                Pembayaran sudah lunas. Pengambilan akan aktif setelah status laundry diubah ke <strong>Selesai</strong>.
+                            </div>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                 </div>
@@ -937,6 +1073,40 @@
                 }).then(function(result) {
                     if (result.isConfirmed) {
                         document.getElementById('formBayar').submit();
+                    }
+                });
+            });
+        }
+
+        var btnAmbil = document.querySelector('.btn-ambil');
+        if (btnAmbil) {
+            btnAmbil.addEventListener('click', function(e) {
+                e.preventDefault();
+                var invoice = btnAmbil.getAttribute('data-invoice') || '-';
+
+                Swal.fire({
+                    title: 'Konfirmasi Pengambilan',
+                    html: `
+                        <div style="padding-top:.25rem;">
+                            <div style="font-size:.85rem;color:#52607e;line-height:1.6;margin-bottom:.85rem;">
+                                Pastikan cucian untuk nota <strong>${invoice}</strong> benar-benar sudah diserahkan ke customer.
+                            </div>
+                            <div style="display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;background:#eef3ff;color:#1f297a;font-size:.88rem;font-weight:700;border:1px solid #cfdbff;">
+                                <i class="fas fa-box-open"></i>
+                                <span>Status akan berubah menjadi Diambil</span>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#1f297a',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Sudah Diambil',
+                    cancelButtonText: 'Kembali',
+                    focusCancel: true
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        document.getElementById('formAmbil').submit();
                     }
                 });
             });

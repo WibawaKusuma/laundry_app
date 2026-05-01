@@ -539,7 +539,7 @@ class Transaksi extends MY_Controller
         $tgl_akhir = $this->input->get('tgl_akhir');
 
         if (empty($tgl_awal) || empty($tgl_akhir)) {
-            $tgl_awal  = date('Y-m-d', strtotime('-2 days'));
+            $tgl_awal  = date('Y-m-01');
             $tgl_akhir = date('Y-m-d');
         }
 
@@ -551,8 +551,36 @@ class Transaksi extends MY_Controller
         $this->db->order_by('transaksi.id', 'DESC');
         $data['transaksi'] = $this->db->get()->result();
 
+        $ringkasan = [
+            'total' => count($data['transaksi']),
+            'belum_lunas' => 0,
+            'siap_diambil' => 0,
+            'lunas_belum_diambil' => 0,
+            'terlambat' => 0,
+        ];
+
+        $now = time();
+        foreach ($data['transaksi'] as $trx) {
+            if ((string) $trx->dibayar !== 'Sudah Dibayar') {
+                $ringkasan['belum_lunas']++;
+            }
+
+            if ((string) $trx->status === 'Selesai') {
+                $ringkasan['siap_diambil']++;
+            }
+
+            if ((string) $trx->status === 'Selesai' && (string) $trx->dibayar === 'Sudah Dibayar') {
+                $ringkasan['lunas_belum_diambil']++;
+            }
+
+            if ((string) $trx->status !== 'Diambil' && !empty($trx->batas_waktu) && strtotime($trx->batas_waktu) < $now) {
+                $ringkasan['terlambat']++;
+            }
+        }
+
         $data['tgl_awal']  = $tgl_awal;
         $data['tgl_akhir'] = $tgl_akhir;
+        $data['ringkasan'] = $ringkasan;
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -792,7 +820,6 @@ class Transaksi extends MY_Controller
             'Baru' => 'Baru Masuk',
             'Proses' => 'Sedang Dicuci',
             'Selesai' => 'Selesai (Siap Ambil)',
-            'Diambil' => 'Sudah Diambil',
         ];
 
         $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_metode_bayar.nama as nama_metode_bayar');
@@ -1076,15 +1103,40 @@ class Transaksi extends MY_Controller
     {
         $kode_invoice = $this->input->post('kode_invoice');
         $status_baru  = $this->input->post('status');
+        $manual_statuses = ['Baru', 'Proses', 'Selesai'];
 
-        if (!in_array($status_baru, $this->allowed_statuses, true)) {
+        if (!in_array($status_baru, $manual_statuses, true)) {
             $this->session->set_flashdata('error', 'Status laundry tidak valid.');
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
-        $this->db->set('status', $status_baru);
+        $this->db->select('id, status, dibayar, tgl_selesai, tgl_diambil');
+        $this->db->from('transaksi');
         $this->db->where('kode_invoice', $kode_invoice);
-        $this->db->update('transaksi');
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+            redirect('transaksi');
+        }
+
+        if ((string) $trx->status === 'Diambil') {
+            $this->session->set_flashdata('error', 'Transaksi yang sudah diambil tidak bisa diubah status pengerjaannya lagi.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $data_update = ['status' => $status_baru];
+
+        if ($status_baru === 'Selesai') {
+            if (empty($trx->tgl_selesai)) {
+                $data_update['tgl_selesai'] = date('Y-m-d H:i:s');
+            }
+        } elseif (!empty($trx->tgl_selesai)) {
+            $data_update['tgl_selesai'] = null;
+        }
+
+        $this->db->where('kode_invoice', $kode_invoice);
+        $this->db->update('transaksi', $data_update);
 
         $this->session->set_flashdata('success', 'Status Laundry berhasil diupdate menjadi: ' . strtoupper($status_baru));
         redirect('transaksi/detail/' . $kode_invoice);
@@ -1095,12 +1147,75 @@ class Transaksi extends MY_Controller
         $id_metode_bayar = $this->input->post('id_metode_bayar');
         $tgl_bayar = date('Y-m-d H:i:s');
 
+        $this->db->select('id, kode_invoice, status, dibayar, tgl_bayar');
+        $this->db->from('transaksi');
+        $this->db->where('kode_invoice', $kode_invoice);
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+            redirect('transaksi');
+        }
+
+        if ((string) $trx->dibayar === 'Sudah Dibayar') {
+            $this->session->set_flashdata('error', 'Transaksi ini sudah tercatat lunas.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        if (empty($id_metode_bayar)) {
+            $this->session->set_flashdata('error', 'Pilih metode pembayaran terlebih dahulu.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
         $data_update = [
-            'status' => 'Diambil',
             'dibayar' => $this->allowed_payment_statuses[1],
             'tgl_bayar' => $tgl_bayar,
             'id_metode_bayar' => $id_metode_bayar
         ];
+
+        $this->db->where('kode_invoice', $kode_invoice);
+        $this->db->update('transaksi', $data_update);
+
+        $this->session->set_flashdata('success', 'Pembayaran berhasil dicatat. Status pengambilan tetap terpisah.');
+        redirect('transaksi/detail/' . $kode_invoice);
+    }
+
+    public function tandai_diambil($kode_invoice)
+    {
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp');
+        $this->db->from('transaksi');
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->where('transaksi.kode_invoice', $kode_invoice);
+        $trx = $this->db->get()->row();
+
+        if (!$trx) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+            redirect('transaksi');
+        }
+
+        if ((string) $trx->dibayar !== 'Sudah Dibayar') {
+            $this->session->set_flashdata('error', 'Transaksi harus lunas terlebih dahulu sebelum ditandai sudah diambil.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        if ((string) $trx->status !== 'Selesai' && (string) $trx->status !== 'Diambil') {
+            $this->session->set_flashdata('error', 'Laundry hanya bisa ditandai diambil setelah status pengerjaan selesai.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        if ((string) $trx->status === 'Diambil') {
+            $this->session->set_flashdata('success', 'Transaksi ini sudah lebih dulu ditandai diambil.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $data_update = [
+            'status' => 'Diambil',
+            'tgl_diambil' => date('Y-m-d H:i:s')
+        ];
+
+        if (empty($trx->tgl_selesai)) {
+            $data_update['tgl_selesai'] = date('Y-m-d H:i:s');
+        }
 
         $this->db->where('kode_invoice', $kode_invoice);
         $this->db->update('transaksi', $data_update);
@@ -1189,7 +1304,7 @@ class Transaksi extends MY_Controller
         }
 
         $this->session->set_flashdata('wa_link', $wa_link);
-        $this->session->set_flashdata('success', 'Pembayaran Berhasil! Cucian Diambil.');
+        $this->session->set_flashdata('success', 'Cucian berhasil ditandai sudah diambil.');
 
         redirect('transaksi/detail/' . $kode_invoice);
     }

@@ -4,7 +4,7 @@
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h5 class="">
-            <i class="fas fa-chart-line me-2"></i> Dashboard Omset
+            <i class="fas fa-chart-line me-2"></i> Dashboard Omset Order
         </h5>
     </div>
 
@@ -16,7 +16,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <p class="text-muted small mb-1">Omset Bulan Ini</p>
+                            <p class="text-muted small mb-1">Omset Order Bulan Ini</p>
                             <h4 class="fw-bold text-primary mb-0">Rp <?= number_format($bulan_ini['total_omset'], 0, ',', '.'); ?></h4>
                             <small class="text-muted"><?= $bulan_ini['label']; ?></small>
                         </div>
@@ -34,7 +34,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <p class="text-muted small mb-1">Omset Bulan Lalu</p>
+                            <p class="text-muted small mb-1">Omset Order Bulan Lalu</p>
                             <h4 class="fw-bold text-secondary mb-0">Rp <?= number_format($bulan_lalu['total_omset'], 0, ',', '.'); ?></h4>
                             <small class="text-muted"><?= $bulan_lalu['label']; ?></small>
                         </div>
@@ -52,7 +52,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <p class="text-muted small mb-1">Perubahan</p>
+                            <p class="text-muted small mb-1">Perubahan Omset</p>
                             <?php
                             $persen = $bulan_ini['persentase'];
                             $trend  = $bulan_ini['trend'];
@@ -94,9 +94,10 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white fw-bold py-3">
-                    <i class="fas fa-chart-area me-2 text-primary"></i> Tren Omset 12 Bulan Terakhir
+                    <i class="fas fa-chart-area me-2 text-primary"></i> Tren Omset Order 12 Bulan Terakhir
                 </div>
                 <div class="card-body">
+                    <p class="text-muted small mb-3">Perhitungan memakai tanggal order masuk (`tgl_masuk`), bukan tanggal bayar.</p>
                     <canvas id="chartOmset" height="100"></canvas>
                 </div>
             </div>
@@ -116,8 +117,8 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Bulan</th>
-                                    <th class="text-center">Jumlah Transaksi</th>
-                                    <th class="text-end">Total Omset</th>
+                                    <th class="text-center">Jumlah Order</th>
+                                    <th class="text-end">Total Omset Order</th>
                                     <th class="text-center">Perubahan</th>
                                 </tr>
                             </thead>
@@ -182,7 +183,7 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Omset (Rp)',
+                    label: 'Omset Order (Rp)',
                     data: dataOmset,
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.08)',

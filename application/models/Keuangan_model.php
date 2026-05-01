@@ -60,4 +60,15 @@ class Keuangan_model extends CI_Model
 
         return $this->db->get()->result();
     }
+
+    public function sum_pengeluaran($tgl_awal, $tgl_akhir)
+    {
+        $this->db->select_sum('nominal', 'total_pengeluaran');
+        $this->db->from('pengeluaran');
+        $this->db->where('tgl_pengeluaran >=', $tgl_awal);
+        $this->db->where('tgl_pengeluaran <=', $tgl_akhir);
+        $result = $this->db->get()->row();
+
+        return (float) ($result->total_pengeluaran ?? 0);
+    }
 }
