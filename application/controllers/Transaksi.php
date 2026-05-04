@@ -1292,7 +1292,10 @@ class Transaksi extends MY_Controller
             $pesan .= "Diserahkan, $hari_ini, $tgl_jam%0A";
             $pesan .= "Oleh: $nama_kasir%0A%0A%0A";
             $pesan .= "Pembayaran:%0A";
-            $metode = $this->db->get_where('m_metode_bayar', ['id' => $id_metode_bayar])->row();
+            $metode = null;
+            if (!empty($trx->id_metode_bayar)) {
+                $metode = $this->db->get_where('m_metode_bayar', ['id' => $trx->id_metode_bayar])->row();
+            }
             $nama_metode = $metode ? $metode->nama : 'Tunai';
             $pesan .= "$nama_metode Rp$total_fmt%0A%0A";
             $pesan .= "Status: Lunas%0A";
