@@ -346,7 +346,7 @@ class Transaksi extends MY_Controller
         return $nomor;
     }
 
-    private function build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan)
+    private function build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan, $payment_meta = [])
     {
         $list_item_wa = '';
 
@@ -355,7 +355,18 @@ class Transaksi extends MY_Controller
             $nama_paket = trim((string) ($item->nama_paket ?? $item['nama_paket'] ?? ''));
             $harga_satuan = (float) ($item->harga ?? $item['harga'] ?? 0);
             $satuan_wa = trim((string) ($item->nama_satuan ?? $item['nama_satuan'] ?? ''));
-            $item_note_text = trim((string) ($item->item_note_text ?? $item['item_note_text'] ?? '-'));
+            $promo_applied = !empty($item->promo_applied ?? $item['promo_applied'] ?? false);
+            $charged_qty = (float) ($item->charged_qty ?? $item['charged_qty'] ?? $item->qty ?? $item['qty'] ?? 0);
+            $customer_notes = trim((string) ($item->customer_notes ?? $item['customer_notes'] ?? ''));
+            $item_note_text = trim((string) ($item->item_note_text ?? $item['item_note_text'] ?? ''));
+            if ($item_note_text === '') {
+                $item_note_text = $this->build_item_note_text(
+                    $promo_applied,
+                    $charged_qty,
+                    $satuan_wa !== '' ? $satuan_wa : 'Kg/Pcs',
+                    $customer_notes
+                );
+            }
             $qty_for_message = $item->qty_label ?? $item['qty_label'] ?? $item->qty ?? $item['qty'] ?? 0;
             $subtotal_item = (float) ($item->subtotal ?? $item['subtotal'] ?? ($harga_satuan * $qty_for_message));
 
@@ -367,6 +378,11 @@ class Transaksi extends MY_Controller
         $tgl_terima_fmt = date('d/m/Y H:i', strtotime($tgl_terima));
         $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
         $total_fmt = number_format((float) $total_tagihan, 0, ',', '.');
+        $is_paid = (string) ($payment_meta['dibayar'] ?? '') === 'Sudah Dibayar';
+        $paid_amount_fmt = number_format($is_paid ? (float) $total_tagihan : 0, 0, ',', '.');
+        $remaining_amount_fmt = number_format($is_paid ? 0 : (float) $total_tagihan, 0, ',', '.');
+        $payment_method = trim((string) ($payment_meta['nama_metode_bayar'] ?? ''));
+        $paid_at = !empty($payment_meta['tgl_bayar']) ? date('d/m/Y H:i', strtotime($payment_meta['tgl_bayar'])) : '';
 
         $company_name = $this->company['company_name'] ?? 'APP Laundry';
         $company_address = $this->company['company_address'] ?? 'Jalan';
@@ -391,8 +407,20 @@ class Transaksi extends MY_Controller
         $pesan .= "Total tagihan : Rp$total_fmt%0A";
         $pesan .= "Grand total : Rp$total_fmt%0A%0A";
         $pesan .= "Pembayaran:%0A";
-        $pesan .= "Sisa tagihan : Rp$total_fmt%0A";
-        $pesan .= "Status: Belum lunas%0A%0A";
+        if ($is_paid) {
+            $pesan .= "Dibayar : Rp$paid_amount_fmt%0A";
+            if ($payment_method !== '') {
+                $pesan .= "Metode : $payment_method%0A";
+            }
+            if ($paid_at !== '') {
+                $pesan .= "Tanggal bayar : $paid_at%0A";
+            }
+            $pesan .= "Sisa tagihan : Rp$remaining_amount_fmt%0A";
+            $pesan .= "Status: Lunas%0A%0A";
+        } else {
+            $pesan .= "Sisa tagihan : Rp$remaining_amount_fmt%0A";
+            $pesan .= "Status: Belum lunas%0A%0A";
+        }
         $pesan .= "=================%0A";
         $pesan .= "Syarat dan ketentuan:%0A";
         $pesan .= "PERHATIAN :%0A";
@@ -407,7 +435,7 @@ class Transaksi extends MY_Controller
         return $pesan;
     }
 
-    private function build_confirmation_wa_link($phone_number, $invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan)
+    private function build_confirmation_wa_link($phone_number, $invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan, $payment_meta = [])
     {
         $nomor = $this->normalize_whatsapp_number($phone_number);
 
@@ -415,7 +443,7 @@ class Transaksi extends MY_Controller
             return '';
         }
 
-        $pesan = $this->build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan);
+        $pesan = $this->build_confirmation_message($invoice, $pelanggan_nama, $tgl_terima, $tgl_selesai, $details, $total_tagihan, $payment_meta);
 
         return "https://wa.me/$nomor?text=$pesan";
     }
@@ -863,7 +891,12 @@ class Transaksi extends MY_Controller
             $data['transaksi']->tgl_masuk,
             $data['transaksi']->batas_waktu,
             $data['active_detail'],
-            $total_tagihan
+            $total_tagihan,
+            [
+                'dibayar' => $data['transaksi']->dibayar ?? '',
+                'nama_metode_bayar' => $data['transaksi']->nama_metode_bayar ?? '',
+                'tgl_bayar' => $data['transaksi']->tgl_bayar ?? '',
+            ]
         );
 
         $package_data = $this->load_package_form_data();
