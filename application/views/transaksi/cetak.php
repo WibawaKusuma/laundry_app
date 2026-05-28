@@ -210,10 +210,50 @@
         </table>
 
         <div class="summary">
-            <div class="summary-row">
-                <span>TOTAL:</span>
-                <span>Rp <?= number_format($grand_total, 0, ',', '.'); ?></span>
-            </div>
+            <?php if (!empty($ringkasan_pembayaran['reward_dipakai'])) : ?>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Subtotal Normal:</span>
+                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Reward Member:</span>
+                    <span>Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Reg/Satu Hari</span>
+                </div>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Potongan Reward:</span>
+                    <span>- Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+                <div class="summary-row">
+                    <span>TOTAL AKHIR:</span>
+                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+            <?php elseif (!empty($ringkasan_pembayaran['promo_dipakai'])) : ?>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Subtotal Normal:</span>
+                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Promo Gratis:</span>
+                    <span><?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_keterangan'] ?: ($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis'), ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Gratis Promo:</span>
+                    <span><?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</span>
+                </div>
+                <div class="summary-row" style="font-size: 9pt;">
+                    <span>Potongan Promo:</span>
+                    <span>- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+                <div class="summary-row">
+                    <span>TOTAL AKHIR:</span>
+                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+            <?php else : ?>
+                <div class="summary-row">
+                    <span>TOTAL:</span>
+                    <span>Rp <?= number_format($grand_total, 0, ',', '.'); ?></span>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div class="status-bayar">

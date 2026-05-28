@@ -10,6 +10,8 @@
     /** @var string $add_item_block_reason */
     /** @var string $wa_contact_link */
     /** @var array $promo_settings */
+    /** @var array $ringkasan_pembayaran */
+    /** @var array|null $benefit_badge */
     ?>
 
     <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
@@ -55,6 +57,36 @@
         .trx-payment-status {
             border-radius: 16px;
             margin-bottom: 1rem;
+        }
+
+        .trx-payment-breakdown {
+            margin-bottom: 0.95rem;
+            text-align: left;
+            border: 1px solid rgba(31, 41, 122, 0.1);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.72);
+            padding: 0.8rem 0.9rem;
+        }
+
+        .trx-payment-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.92rem;
+        }
+
+        .trx-payment-breakdown-row+.trx-payment-breakdown-row {
+            margin-top: 0.45rem;
+            padding-top: 0.45rem;
+            border-top: 1px dashed rgba(31, 41, 122, 0.12);
+        }
+
+        .trx-payment-breakdown-note {
+            margin-top: 0.6rem;
+            color: #4f5d7a;
+            font-size: 0.82rem;
+            line-height: 1.5;
         }
 
         .trx-status-grid {
@@ -273,32 +305,87 @@
         }
 
         .customer-wa-actions {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            flex-wrap: nowrap;
+            gap: 0.6rem;
             margin-top: 0.5rem;
-            white-space: nowrap;
+            max-width: 100%;
         }
 
-        .customer-wa-actions .btn {
+        .customer-wa-actions .btn,
+        .customer-wa-actions .trx-benefit-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .customer-wa-actions .btn {
             border-radius: 999px;
             font-size: 0.8125rem;
             line-height: 1.2;
             padding: 0.4rem 0.75rem;
-            flex: 0 0 auto;
+        }
+
+        .trx-benefit-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.42rem;
+            border-radius: 999px;
+            padding: 0.42rem 0.78rem;
+            font-size: 0.78rem;
+            line-height: 1.2;
+            font-weight: 700;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .trx-benefit-badge-success {
+            color: #166534;
+            background: #ecfdf3;
+            border-color: #bbf7d0;
+        }
+
+        .trx-benefit-badge-warning {
+            color: #b45309;
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+
+        .trx-benefit-badge-info {
+            color: #0f766e;
+            background: #ecfeff;
+            border-color: #a5f3fc;
+        }
+
+        .trx-benefit-badge-primary {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .trx-benefit-badge-stored {
+            color: #6d28d9;
+            background: #f5f3ff;
+            border-color: #ddd6fe;
         }
 
         @media (max-width: 1199.98px) {
             .customer-wa-actions {
-                gap: 0.4rem;
+                gap: 0.45rem;
             }
 
             .customer-wa-actions .btn {
                 font-size: 0.76rem;
                 padding: 0.38rem 0.65rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .customer-wa-actions {
+                display: flex;
+                flex-wrap: wrap;
             }
         }
 
@@ -439,6 +526,19 @@
                                             <i class="fas fa-receipt me-1"></i> Kirim Nota
                                         </a>
                                     <?php endif; ?>
+                                    <?php if (!empty($benefit_badge)) : ?>
+                                        <span class="trx-benefit-badge <?= htmlspecialchars($benefit_badge['class'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                            <i class="<?= htmlspecialchars($benefit_badge['icon'] ?? 'fas fa-info-circle', ENT_QUOTES, 'UTF-8'); ?>"></i>
+                                            <span><?= htmlspecialchars($benefit_badge['label'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif (!empty($benefit_badge)) : ?>
+                                <div class="customer-wa-actions">
+                                    <span class="trx-benefit-badge <?= htmlspecialchars($benefit_badge['class'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                        <i class="<?= htmlspecialchars($benefit_badge['icon'] ?? 'fas fa-info-circle', ENT_QUOTES, 'UTF-8'); ?>"></i>
+                                        <span><?= htmlspecialchars($benefit_badge['label'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -510,6 +610,24 @@
                         </div>
                     </div>
 
+                    <?php if (!empty($ringkasan_pembayaran['reward_dipakai'])) : ?>
+                        <div class="alert alert-success d-flex flex-column gap-1 mb-3">
+                            <div><i class="fas fa-gift me-2"></i><strong>Reward Member:</strong> Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit Reguler / Satu Hari</div>
+                            <div><strong>Subtotal Normal:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></div>
+                            <div><strong>Potongan Reward:</strong> Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></div>
+                            <div><strong>Total Akhir:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></div>
+                        </div>
+                    <?php elseif (!empty($ringkasan_pembayaran['promo_dipakai'])) : ?>
+                        <div class="alert alert-warning d-flex flex-column gap-1 mb-3">
+                            <div><i class="fas fa-tags me-2"></i><strong>Promo Gratis:</strong> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_keterangan'] ?: ($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis'), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div><strong>Total Cuci Komplit:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</div>
+                            <div><strong>Gratis Promo:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</div>
+                            <div><strong>Potongan Promo:</strong> Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></div>
+                            <div><strong>Total Akhir:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></div>
+                            <small class="text-muted">Promo berlaku kelipatan sesuai total kg Cuci Komplit yang memenuhi syarat.</small>
+                        </div>
+                    <?php endif; ?>
+
                     <hr>
 
                     <h6 class="fw-bold mb-3">Rincian Paket Laundry</h6>
@@ -547,7 +665,7 @@
                                             <?php if (!empty($can_modify_items)) : ?>
                                                 <div class="trx-detail-action-stack">
                                                     <button
-                                                        class="btn btn-sm btn-outline-primary js-edit-detail"
+                                                        class="btn btn-sm btn-outline-warning js-edit-detail"
                                                         type="button"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#modalEditDetailItem"
@@ -584,8 +702,8 @@
                                             <?php if (!empty($d->promo_applied)) : ?>
                                                 <small class="d-block text-primary mt-2 paket-meta">
                                                     <i class="fas fa-tags me-1"></i><?= $d->promo_label; ?>:
-                                                    berat asli <?= $d->qty_label; ?> kg, dibulatkan <?= (float) $d->rounded_qty; ?> kg,
-                                                    dibayar <?= (float) $d->charged_qty; ?> kg.
+                                                    berat asli <?= $d->qty_label; ?> kg, dibulatkan <?= rtrim(rtrim(number_format((float) $d->rounded_qty, 2, '.', ''), '0'), '.'); ?> kg,
+                                                    dibayar <?= rtrim(rtrim(number_format((float) $d->charged_qty, 2, '.', ''), '0'), '.'); ?> kg.
                                                 </small>
                                             <?php endif; ?>
                                         </td>
@@ -603,10 +721,40 @@
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot class="bg-light">
-                                <tr>
-                                    <td colspan="5" class="text-end fw-bold">TOTAL</td>
-                                    <td class="text-end fw-bold fs-5 text-primary text-nowrap">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
-                                </tr>
+                                <?php if (!empty($ringkasan_pembayaran['reward_tersedia']) || !empty($ringkasan_pembayaran['promo_tersedia'])) : ?>
+                                    <tr>
+                                        <td colspan="5" class="text-end fw-semibold">Subtotal Normal</td>
+                                        <td class="text-end fw-semibold text-nowrap">Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? $grand_total), 0, ',', '.'); ?></td>
+                                    </tr>
+                                    <?php if (!empty($ringkasan_pembayaran['reward_tersedia'])) : ?>
+                                        <tr>
+                                            <td colspan="5" class="text-end text-success">
+                                                <?= !empty($ringkasan_pembayaran['reward_preview']) ? 'Preview Reward Member' : 'Reward Member'; ?>:
+                                                Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit Reguler / Satu Hari
+                                            </td>
+                                            <td class="text-end fw-semibold text-success text-nowrap">- Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <?php if (!empty($ringkasan_pembayaran['promo_tersedia'])) : ?>
+                                        <tr>
+                                            <td colspan="5" class="text-end text-success">
+                                                <?= !empty($ringkasan_pembayaran['promo_preview']) ? 'Preview Promo Gratis' : 'Promo Gratis'; ?>:
+                                                <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>
+                                                (<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit, gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg)
+                                            </td>
+                                            <td class="text-end fw-semibold text-warning text-nowrap">- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <tr>
+                                        <td colspan="5" class="text-end fw-bold"><?= (!empty($ringkasan_pembayaran['reward_preview']) || !empty($ringkasan_pembayaran['promo_preview'])) ? 'ESTIMASI TOTAL BAYAR' : 'TOTAL AKHIR'; ?></td>
+                                        <td class="text-end fw-bold fs-5 text-primary text-nowrap">Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? $grand_total), 0, ',', '.'); ?></td>
+                                    </tr>
+                                <?php else : ?>
+                                    <tr>
+                                        <td colspan="5" class="text-end fw-bold">TOTAL</td>
+                                        <td class="text-end fw-bold fs-5 text-primary text-nowrap">Rp <?= number_format($grand_total, 0, ',', '.'); ?></td>
+                                    </tr>
+                                <?php endif; ?>
                             </tfoot>
                         </table>
                     </div>
@@ -811,10 +959,48 @@
                             <i class="fas fa-receipt"></i>
                             <span>Total Harus Dibayar</span>
                         </div>
-                        <div class="trx-payment-summary-value">Rp <?= number_format($grand_total, 0, ',', '.'); ?></div>
-                        <!-- <div class="trx-payment-summary-note">
-                            Pastikan nominal yang diterima sesuai dengan total tagihan nota ini.
-                        </div> -->
+                        <?php if (!empty($ringkasan_pembayaran['reward_tersedia']) || !empty($ringkasan_pembayaran['promo_tersedia'])) : ?>
+                            <div class="trx-payment-breakdown">
+                                <div class="trx-payment-breakdown-row">
+                                    <span>Total Sebelum Potongan</span>
+                                    <strong>Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? $grand_total), 0, ',', '.'); ?></strong>
+                                </div>
+                                <?php if (!empty($ringkasan_pembayaran['reward_tersedia'])) : ?>
+                                    <div class="trx-payment-breakdown-row text-success">
+                                        <span><?= !empty($ringkasan_pembayaran['reward_preview']) ? 'Preview Reward Member' : 'Reward Member'; ?></span>
+                                        <strong>- Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></strong>
+                                    </div>
+                                    <div class="trx-payment-breakdown-note">
+                                        Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit Reguler atau Satu Hari
+                                        <?php if (!empty($ringkasan_pembayaran['reward_preview'])) : ?>
+                                            dan akan dikunci saat pembayaran dicatat.
+                                        <?php else : ?>
+                                            sudah dipakai pada transaksi ini.
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($ringkasan_pembayaran['promo_tersedia'])) : ?>
+                                    <div class="trx-payment-breakdown-row text-success">
+                                        <span><?= !empty($ringkasan_pembayaran['promo_preview']) ? 'Preview Promo Gratis' : 'Promo Gratis'; ?></span>
+                                        <strong>- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></strong>
+                                    </div>
+                                    <div class="trx-payment-breakdown-note">
+                                        <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>.
+                                        Total Cuci Komplit <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg,
+                                        gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg dan berlaku kelipatan
+                                        <?php if (!empty($ringkasan_pembayaran['promo_preview'])) : ?>
+                                            dan akan dikunci saat pembayaran dicatat.
+                                        <?php else : ?>
+                                            sudah dipakai pada transaksi ini.
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        <div class="trx-payment-summary-value">Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? $grand_total), 0, ',', '.'); ?></div>
+                        <div class="trx-payment-summary-note">
+                            <?= (!empty($ringkasan_pembayaran['reward_preview']) || !empty($ringkasan_pembayaran['promo_preview'])) ? 'Gunakan total akhir ini saat konfirmasi pembayaran.' : 'Pastikan nominal yang diterima sesuai dengan total tagihan transaksi ini.'; ?>
+                        </div>
                     </div>
 
                     <?php if ($transaksi->dibayar == 'Belum Dibayar') : ?>
@@ -849,7 +1035,16 @@
                             <button
                                 type="button"
                                 class="btn btn-sm btn-success w-100 btn-bayar trx-pay-button"
-                                data-total="Rp <?= number_format($grand_total, 0, ',', '.'); ?>">
+                                data-total="Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? $grand_total), 0, ',', '.'); ?>"
+                                data-subtotal="Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? $grand_total), 0, ',', '.'); ?>"
+                                data-reward-gratis="<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?>"
+                                data-reward-potongan="Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?>"
+                                data-reward-potongan-value="<?= (int) ($ringkasan_pembayaran['reward_potongan'] ?? 0); ?>"
+                                data-promo-gratis="<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?>"
+                                data-promo-potongan="Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?>"
+                                data-promo-potongan-value="<?= (int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0); ?>"
+                                data-promo-label="<?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>"
+                                data-promo-total-kg="<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?>">
                                 <i class="fas fa-check-circle me-2"></i> Catat Pembayaran
                             </button>
                         </form>
@@ -1043,23 +1238,67 @@
                 var metodeTerpilih = document.querySelector('input[name="id_metode_bayar"]:checked');
                 var labelMetode = metodeTerpilih ? document.querySelector('label[for="' + metodeTerpilih.id + '"]').innerText.trim() : '-';
                 var totalBayar = btnBayar.getAttribute('data-total') || '-';
+                var subtotalNormal = btnBayar.getAttribute('data-subtotal') || '-';
+                var rewardGratis = btnBayar.getAttribute('data-reward-gratis') || '0';
+                var rewardPotongan = btnBayar.getAttribute('data-reward-potongan') || 'Rp 0';
+                var rewardGratisValue = parseFloat(rewardGratis || '0');
+                var rewardPotonganValue = parseInt(btnBayar.getAttribute('data-reward-potongan-value') || '0', 10);
+                var promoGratis = btnBayar.getAttribute('data-promo-gratis') || '0';
+                var promoPotongan = btnBayar.getAttribute('data-promo-potongan') || 'Rp 0';
+                var promoLabel = btnBayar.getAttribute('data-promo-label') || 'Promo Gratis';
+                var promoTotalKg = btnBayar.getAttribute('data-promo-total-kg') || '0';
+                var promoGratisValue = parseFloat(promoGratis || '0');
+                var promoPotonganValue = parseInt(btnBayar.getAttribute('data-promo-potongan-value') || '0', 10);
+                var detailPotonganHtml = '';
+                var labelTotal = 'Total yang harus dibayar';
+
+                if (rewardGratisValue > 0) {
+                    labelTotal = 'Total setelah reward';
+                    detailPotonganHtml = `
+                        <div style="margin:.9rem 0 0.35rem;padding:.85rem .95rem;border-radius:1rem;background:#f8fbff;border:1px solid #dbe6ff;text-align:left;">
+                            <div style="display:flex;justify-content:space-between;gap:.8rem;font-size:.9rem;color:#334155;">
+                                <span>Total sebelum reward</span>
+                                <strong>${subtotalNormal}</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;gap:.8rem;font-size:.9rem;color:#15803d;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed #cbd5e1;">
+                                <span>Reward Member (${rewardGratis} kg Reg/Satu Hari)</span>
+                                <strong>- ${rewardPotongan}</strong>
+                            </div>
+                        </div>
+                    `;
+                } else if (promoGratisValue > 0) {
+                    labelTotal = 'Total setelah promo';
+                    detailPotonganHtml = `
+                        <div style="margin:.9rem 0 0.35rem;padding:.85rem .95rem;border-radius:1rem;background:#fff9ef;border:1px solid #fde0a8;text-align:left;">
+                            <div style="display:flex;justify-content:space-between;gap:.8rem;font-size:.9rem;color:#334155;">
+                                <span>Total sebelum promo</span>
+                                <strong>${subtotalNormal}</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;gap:.8rem;font-size:.9rem;color:#b45309;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed #e5c48a;">
+                                <span>${promoLabel} <br> (${promoTotalKg} kg Cuci Komplit, gratis ${promoGratis} kg)</span>
+                                <strong>- ${promoPotongan}</strong>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 Swal.fire({
                     title: 'Konfirmasi Pembayaran',
                     html: `
                         <div style="padding-top:.25rem;">
                             <div style="font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#69738f;margin-bottom:.5rem;">
-                                Total yang harus dibayar
+                                ${labelTotal}
                             </div>
                             <div style="font-size:2rem;font-weight:800;line-height:1.05;color:#1f297a;margin-bottom:.75rem;">
                                 ${totalBayar}
                             </div>
+                            ${detailPotonganHtml}
                             <div style="display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;background:#f5f7ff;color:#334155;font-size:.9rem;font-weight:600;border:1px solid #dbe3f3;">
                                 <span>Metode bayar:</span>
                                 <span>${labelMetode}</span>
                             </div>
                             <div style="margin-top:1rem;color:#4b5563;line-height:1.6;">
-                                Apakah pelanggan sudah membayar sesuai total tagihan ini?
+                                Pelanggan sudah membayar sesuai total?
                             </div>
                         </div>
                     `,

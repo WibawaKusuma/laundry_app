@@ -136,6 +136,24 @@
             background: rgba(15, 23, 42, 0.08);
         }
 
+        .metric-card.metric-finance-reward .metric-value,
+        .metric-card.metric-finance-reward .metric-icon {
+            color: #b45309;
+        }
+
+        .metric-card.metric-finance-reward .metric-icon {
+            background: rgba(245, 158, 11, 0.14);
+        }
+
+        .metric-card.metric-finance-promo .metric-value,
+        .metric-card.metric-finance-promo .metric-icon {
+            color: #c2410c;
+        }
+
+        .metric-card.metric-finance-promo .metric-icon {
+            background: rgba(249, 115, 22, 0.14);
+        }
+
         .metric-card.metric-ops-secondary .metric-value,
         .metric-card.metric-ops-secondary .metric-icon {
             color: #475467;
@@ -283,7 +301,7 @@
             border-color: rgba(31, 41, 122, 0.12);
             background: #f8faff;
             color: #1f297a;
-            font-weight: 600;
+            /* font-weight: 600; */
             padding-inline: 0.85rem;
         }
 
@@ -327,7 +345,7 @@
                 <span class="dashboard-kicker"><i class="fas fa-water"></i> Ringkasan Laundry</span>
                 <h4 class="dashboard-hero-title fw-bold mt-3 mb-2">Dashboard operasional dan bisnis dalam satu periode.</h4>
                 <p class="dashboard-hero-note mb-0">
-                    Omset dihitung dari order masuk, kas masuk dihitung dari pembayaran yang benar-benar diterima, dan piutang menunjukkan nilai order yang masih belum lunas.
+                    Omset dihitung dari order masuk, kas masuk dihitung dari pembayaran yang benar-benar diterima, dan piutang menunjukkan nilai order yang masih belum lunas. Seluruh angka bersih sudah memperhitungkan potongan reward member dan promo gratis umum.
                 </p>
             </div>
             <div class="col-12 col-xl-5">
@@ -363,7 +381,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h5 class="dashboard-section-title fw-bold mb-1">Ringkasan Bisnis</h5>
-                <small class="text-muted">Blok ini membantu owner membaca posisi order, kas, dan piutang tanpa angka campuran.</small>
+                <small class="text-muted">Blok ini membantu owner membaca posisi order, kas, piutang, serta nilai potongan reward member dan promo gratis pada periode aktif.</small>
             </div>
         </div>
 
@@ -374,7 +392,7 @@
                         <div>
                             <p class="metric-label">Omset Periode</p>
                             <h3 class="metric-value">Rp <?= number_format($omset_periode, 0, ',', '.'); ?></h3>
-                            <p class="metric-note">Nilai semua order yang masuk berdasarkan tanggal order diterima.</p>
+                            <p class="metric-note">Nilai semua order yang masuk berdasarkan tanggal order diterima, setelah potongan reward member dan promo gratis umum.</p>
                         </div>
                         <span class="metric-icon"><i class="fas fa-chart-line"></i></span>
                     </div>
@@ -387,7 +405,7 @@
                         <div>
                             <p class="metric-label">Kas Masuk</p>
                             <h3 class="metric-value">Rp <?= number_format($kas_masuk_periode, 0, ',', '.'); ?></h3>
-                            <p class="metric-note">Uang yang benar-benar diterima pada periode ini berdasarkan tanggal bayar.</p>
+                            <p class="metric-note">Uang yang benar-benar diterima pada periode ini berdasarkan tanggal bayar, setelah potongan reward member dan promo gratis umum.</p>
                         </div>
                         <span class="metric-icon"><i class="fas fa-wallet"></i></span>
                     </div>
@@ -400,7 +418,7 @@
                         <div>
                             <p class="metric-label">Piutang Periode</p>
                             <h3 class="metric-value">Rp <?= number_format($piutang_periode, 0, ',', '.'); ?></h3>
-                            <p class="metric-note">Nilai order pada periode aktif yang pembayaran customer-nya masih belum lunas.</p>
+                            <p class="metric-note">Nilai order pada periode aktif yang pembayaran customer-nya masih belum lunas, dihitung bersih setelah reward member dan promo gratis umum.</p>
                         </div>
                         <span class="metric-icon"><i class="fas fa-file-invoice-dollar"></i></span>
                     </div>
@@ -445,6 +463,38 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="metric-card metric-finance-reward h-100 bg-white">
+                    <div class="card-body p-4 d-flex justify-content-between gap-3">
+                        <div>
+                            <p class="metric-label">Reward Member</p>
+                            <h3 class="metric-value">Rp <?= number_format($total_reward_member, 0, ',', '.'); ?></h3>
+                            <p class="metric-note">
+                                <?= rtrim(rtrim(number_format($total_reward_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg gratis diberikan pada periode ini. Perhitungan reward mengikuti tanggal bayar transaksi yang benar-benar memakai reward.
+                            </p>
+                        </div>
+                        <span class="metric-icon"><i class="fas fa-gift"></i></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="metric-card metric-finance-promo h-100 bg-white">
+                    <div class="card-body p-4 d-flex justify-content-between gap-3">
+                        <div>
+                            <p class="metric-label">Promo Gratis</p>
+                            <h3 class="metric-value">Rp <?= number_format($total_promo_gratis, 0, ',', '.'); ?></h3>
+                            <p class="metric-note">
+                                <?= rtrim(rtrim(number_format($total_promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg gratis diberikan pada periode ini. Perhitungan promo mengikuti tanggal bayar transaksi yang benar-benar memakai promo gratis.
+                            </p>
+                        </div>
+                        <span class="metric-icon"><i class="fas fa-tags"></i></span>
+                    </div>
+                </div>
+            </div>
+
+
         </div>
     <?php endif; ?>
 
@@ -592,7 +642,7 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <a href="<?= base_url('transaksi/detail/' . $row->kode_invoice); ?>" class="recent-detail-btn btn btn-sm btn-light text-primary">
+                                        <a href="<?= base_url('transaksi/detail/' . $row->kode_invoice); ?>" class="recent-detail-btn btn btn-sm btn-light">
                                             <i class="fas fa-eye"></i> Detail
                                         </a>
                                     </td>

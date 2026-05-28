@@ -71,6 +71,7 @@ header("Expires: 0");
     <?php if (!empty($report_meta['status_filter_enabled'])) : ?>
         <p style="text-align: center;">Filter Status Bayar: <?= $status_label; ?></p>
     <?php endif; ?>
+    <p style="text-align: center;">Nilai laporan dihitung dari subtotal normal dikurangi potongan reward member dan promo gratis.</p>
 
     <table>
         <thead>
@@ -80,15 +81,28 @@ header("Expires: 0");
                 <th>No Invoice</th>
                 <th>Nama Pelanggan</th>
                 <th><?= htmlspecialchars($info_column_label, ENT_QUOTES, 'UTF-8'); ?></th>
-                <th>Total Nilai (Rp)</th>
+                <th>Subtotal Normal (Rp)</th>
+                <th>Potongan Reward (Rp)</th>
+                <th>Potongan Promo (Rp)</th>
+                <th>Total Akhir (Rp)</th>
             </tr>
         </thead>
         <tbody>
             <?php
+            $grand_subtotal = 0;
+            $grand_reward = 0;
+            $grand_reward_qty = 0;
+            $grand_promo = 0;
+            $grand_promo_qty = 0;
             $grand_total = 0;
             if (!empty($laporan)) :
                 foreach ($laporan as $i => $row) :
-                    $grand_total += (float) $row->total_harga;
+                    $grand_subtotal += (float) $row->subtotal_normal;
+                    $grand_reward += (float) $row->reward_potongan;
+                    $grand_reward_qty += (float) $row->reward_gratis_qty;
+                    $grand_promo += (float) $row->promo_gratis_potongan;
+                    $grand_promo_qty += (float) $row->promo_gratis_qty;
+                    $grand_total += (float) $row->total_akhir;
                     $tanggal_acuan = $row->tgl_masuk;
                     if ($jenis_laporan === 'kas_masuk') {
                         $tanggal_acuan = $row->tgl_bayar;
@@ -111,18 +125,36 @@ header("Expires: 0");
                         <td style="mso-number-format:'\@';"><?= $row->kode_invoice; ?></td>
                         <td><?= $row->nama_pelanggan; ?></td>
                         <td class="text-center"><?= htmlspecialchars($info_value, ENT_QUOTES, 'UTF-8'); ?></td>
-                        <td class="text-end"><?= $row->total_harga; ?></td>
+                        <td class="text-end"><?= (float) $row->subtotal_normal; ?></td>
+                        <td class="text-end"><?= (float) $row->reward_potongan; ?><?php if ((float) $row->reward_gratis_qty > 0) : ?> (Gratis <?= rtrim(rtrim(number_format((float) $row->reward_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg)<?php endif; ?></td>
+                        <td class="text-end"><?= (float) $row->promo_gratis_potongan; ?><?php if ((float) $row->promo_gratis_qty > 0) : ?> (Gratis <?= rtrim(rtrim(number_format((float) $row->promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg)<?php endif; ?></td>
+                        <td class="text-end"><?= (float) $row->total_akhir; ?></td>
                     </tr>
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="6" class="text-center">Tidak ada data transaksi.</td>
+                    <td colspan="9" class="text-center">Tidak ada data transaksi.</td>
                 </tr>
             <?php endif; ?>
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="5" class="text-end" style="font-weight:bold;"><?= strtoupper($report_meta['summary_label']); ?> :</td>
+                <td colspan="5" class="text-end" style="font-weight:bold;">TOTAL SUBTOTAL NORMAL :</td>
+                <td class="text-end" style="font-weight:bold;"><?= $grand_subtotal; ?></td>
+                <td class="text-end" style="font-weight:bold;"><?= $grand_reward; ?></td>
+                <td class="text-end" style="font-weight:bold;"><?= $grand_promo; ?></td>
+                <td class="text-end" style="font-weight:bold;"><?= $grand_total; ?></td>
+            </tr>
+            <tr>
+                <td colspan="8" class="text-end" style="font-weight:bold;">TOTAL REWARD MEMBER :</td>
+                <td class="text-end" style="font-weight:bold; background-color: #f4f4f4;"><?= rtrim(rtrim(number_format($grand_reward_qty, 2, '.', ''), '0'), '.'); ?> kg / <?= $grand_reward; ?></td>
+            </tr>
+            <tr>
+                <td colspan="8" class="text-end" style="font-weight:bold;">TOTAL PROMO GRATIS :</td>
+                <td class="text-end" style="font-weight:bold; background-color: #fef3c7;"><?= rtrim(rtrim(number_format($grand_promo_qty, 2, '.', ''), '0'), '.'); ?> kg / <?= $grand_promo; ?></td>
+            </tr>
+            <tr>
+                <td colspan="8" class="text-end" style="font-weight:bold;"><?= strtoupper($report_meta['summary_label']); ?> :</td>
                 <td class="text-end" style="font-weight:bold; background-color: #ffff00;"><?= $grand_total; ?></td>
             </tr>
         </tfoot>

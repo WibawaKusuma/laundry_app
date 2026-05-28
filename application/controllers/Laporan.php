@@ -28,7 +28,7 @@ class Laporan extends Admin_Controller
                     'heading' => 'Kas Masuk',
                     'icon' => 'fa-wallet',
                     'date_label' => 'Tanggal Bayar',
-                    'summary_label' => 'Grand Total Kas Masuk',
+                    'summary_label' => 'Grand Total Kas Masuk Bersih',
                     'empty_message' => 'Tidak ada kas masuk pada periode ini.',
                     'status_filter_enabled' => false,
                 ];
@@ -39,7 +39,7 @@ class Laporan extends Admin_Controller
                     'heading' => 'Piutang',
                     'icon' => 'fa-file-invoice-dollar',
                     'date_label' => 'Tanggal Masuk',
-                    'summary_label' => 'Grand Total Piutang',
+                    'summary_label' => 'Grand Total Piutang Bersih',
                     'empty_message' => 'Tidak ada piutang pada periode ini.',
                     'status_filter_enabled' => false,
                 ];
@@ -50,7 +50,7 @@ class Laporan extends Admin_Controller
                     'heading' => 'Pengambilan',
                     'icon' => 'fa-box-open',
                     'date_label' => 'Tanggal Diambil',
-                    'summary_label' => 'Grand Total Pengambilan',
+                    'summary_label' => 'Grand Total Nilai Pengambilan',
                     'empty_message' => 'Tidak ada pengambilan pada periode ini.',
                     'status_filter_enabled' => false,
                 ];
@@ -62,7 +62,7 @@ class Laporan extends Admin_Controller
                     'heading' => 'Omset',
                     'icon' => 'fa-chart-line',
                     'date_label' => 'Tanggal Masuk',
-                    'summary_label' => 'Grand Total Omset',
+                    'summary_label' => 'Grand Total Omset Bersih',
                     'empty_message' => 'Tidak ada transaksi omset pada periode ini.',
                     'status_filter_enabled' => true,
                 ];

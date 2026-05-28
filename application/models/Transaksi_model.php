@@ -4,6 +4,19 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Transaksi_model extends CI_Model
 {
+    private function get_subquery_total_detail_aktif($alias = 'detail_aktif')
+    {
+        return "(SELECT dt.id_transaksi, SUM(dt.qty * dt.harga) AS subtotal_normal
+            FROM transaksi_detail dt
+            WHERE COALESCE(dt.batal, 0) = 0
+            GROUP BY dt.id_transaksi) {$alias}";
+    }
+
+    private function get_total_akhir_expr($subtotal_field, $reward_field, $promo_field = '0')
+    {
+        return "GREATEST(COALESCE({$subtotal_field}, 0) - COALESCE({$reward_field}, 0) - COALESCE({$promo_field}, 0), 0)";
+    }
+
     public function count_by_payment_status($payment_status, $tgl_awal, $tgl_akhir)
     {
         $this->db->where('dibayar', $payment_status);
@@ -23,10 +36,11 @@ class Transaksi_model extends CI_Model
 
     public function sum_omset($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_nilai');
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 'transaksi.reward_potongan', 'transaksi.promo_gratis_potongan');
+
+        $this->db->select("SUM({$total_akhir_expr}) as total_nilai", false);
         $this->db->from('transaksi');
-        $this->db->join('transaksi_detail', 'transaksi_detail.id_transaksi = transaksi.id');
-        $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = transaksi.id', 'left', false);
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
         $result = $this->db->get()->row();
@@ -34,12 +48,27 @@ class Transaksi_model extends CI_Model
         return (float) ($result->total_nilai ?? 0);
     }
 
+    public function sum_omset_bulanan($tahun, $bulan)
+    {
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 'transaksi.reward_potongan', 'transaksi.promo_gratis_potongan');
+
+        $this->db->select("SUM({$total_akhir_expr}) as total_nilai", false);
+        $this->db->from('transaksi');
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = transaksi.id', 'left', false);
+        $this->db->where('YEAR(transaksi.tgl_masuk)', $tahun);
+        $this->db->where('MONTH(transaksi.tgl_masuk)', $bulan);
+        $result = $this->db->get()->row();
+
+        return (float) ($result->total_nilai ?? 0);
+    }
+
     public function sum_kas_masuk($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_nilai');
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 'transaksi.reward_potongan', 'transaksi.promo_gratis_potongan');
+
+        $this->db->select("SUM({$total_akhir_expr}) as total_nilai", false);
         $this->db->from('transaksi');
-        $this->db->join('transaksi_detail', 'transaksi_detail.id_transaksi = transaksi.id');
-        $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = transaksi.id', 'left', false);
         $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
         $this->db->where('transaksi.tgl_bayar IS NOT NULL', null, false);
         $this->db->where('DATE(transaksi.tgl_bayar) >=', $tgl_awal);
@@ -51,16 +80,57 @@ class Transaksi_model extends CI_Model
 
     public function sum_piutang($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_nilai');
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 'transaksi.reward_potongan', 'transaksi.promo_gratis_potongan');
+
+        $this->db->select("SUM({$total_akhir_expr}) as total_nilai", false);
         $this->db->from('transaksi');
-        $this->db->join('transaksi_detail', 'transaksi_detail.id_transaksi = transaksi.id');
-        $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = transaksi.id', 'left', false);
         $this->db->where('transaksi.dibayar', 'Belum Dibayar');
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
         $result = $this->db->get()->row();
 
         return (float) ($result->total_nilai ?? 0);
+    }
+
+    public function sum_reward_member($tgl_awal, $tgl_akhir)
+    {
+        $this->db->select('
+            COALESCE(SUM(transaksi.reward_potongan), 0) as total_reward_potongan,
+            COALESCE(SUM(transaksi.reward_gratis_qty), 0) as total_reward_gratis_qty
+        ', false);
+        $this->db->from('transaksi');
+        $this->db->where('transaksi.reward_member_dipakai', 1);
+        $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
+        $this->db->where('transaksi.tgl_bayar IS NOT NULL', null, false);
+        $this->db->where('DATE(transaksi.tgl_bayar) >=', $tgl_awal);
+        $this->db->where('DATE(transaksi.tgl_bayar) <=', $tgl_akhir);
+        $result = $this->db->get()->row();
+
+        return [
+            'total_reward_potongan' => (float) ($result->total_reward_potongan ?? 0),
+            'total_reward_gratis_qty' => (float) ($result->total_reward_gratis_qty ?? 0),
+        ];
+    }
+
+    public function sum_promo_gratis($tgl_awal, $tgl_akhir)
+    {
+        $this->db->select('
+            COALESCE(SUM(transaksi.promo_gratis_potongan), 0) as total_promo_gratis_potongan,
+            COALESCE(SUM(transaksi.promo_gratis_qty), 0) as total_promo_gratis_qty
+        ', false);
+        $this->db->from('transaksi');
+        $this->db->where('transaksi.promo_gratis_dipakai', 1);
+        $this->db->where('transaksi.dibayar', 'Sudah Dibayar');
+        $this->db->where('transaksi.tgl_bayar IS NOT NULL', null, false);
+        $this->db->where('DATE(transaksi.tgl_bayar) >=', $tgl_awal);
+        $this->db->where('DATE(transaksi.tgl_bayar) <=', $tgl_akhir);
+        $result = $this->db->get()->row();
+
+        return [
+            'total_promo_gratis_potongan' => (float) ($result->total_promo_gratis_potongan ?? 0),
+            'total_promo_gratis_qty' => (float) ($result->total_promo_gratis_qty ?? 0),
+        ];
     }
 
     // Hitung jumlah berdasarkan status DAN rentang tanggal
@@ -91,40 +161,51 @@ class Transaksi_model extends CI_Model
 
     public function get_by_tanggal($tgl_awal, $tgl_akhir)
     {
-        $this->db->select('t.*, p.nama as nama_pelanggan');
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 't.reward_potongan', 't.promo_gratis_potongan');
+
+        $this->db->select('
+            t.*,
+            p.nama as nama_pelanggan,
+            COALESCE(detail_aktif.subtotal_normal, 0) as subtotal_normal,
+            COALESCE(t.reward_potongan, 0) as reward_potongan,
+            COALESCE(t.reward_gratis_qty, 0) as reward_gratis_qty,
+            COALESCE(t.promo_gratis_potongan, 0) as promo_gratis_potongan,
+            COALESCE(t.promo_gratis_qty, 0) as promo_gratis_qty,
+            COALESCE(t.promo_gratis_keterangan, "") as promo_gratis_keterangan,
+            ' . $total_akhir_expr . ' as total_akhir,
+            ' . $total_akhir_expr . ' as total_harga
+        ', false);
         $this->db->from('transaksi t');
         $this->db->join('m_pelanggan p', 't.id_pelanggan = p.id');
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = t.id', 'left', false);
         $this->db->where('DATE(t.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(t.tgl_masuk) <=', $tgl_akhir);
         $this->db->order_by('t.id', 'DESC');
 
-        $subquery = $this->db->query('SELECT SUM(dt.qty * dt.harga) AS grand_total, dt.id_transaksi 
-                                    FROM transaksi_detail dt 
-                                    WHERE COALESCE(dt.batal, 0) = 0
-                                    GROUP BY dt.id_transaksi');
-        $results = $subquery->result();
-
-        $grand_total = array();
-        foreach ($results as $row) {
-            $grand_total[$row->id_transaksi] = $row->grand_total;
-        }
-
-        $query = $this->db->get();
-        $results = $query->result();
-
-        foreach ($results as $row) {
-            $row->total_harga = isset($grand_total[$row->id]) ? $grand_total[$row->id] : 0;
-        }
-
-        return $results;
+        return $this->db->get()->result();
     }
 
     public function get_laporan($tgl_awal, $tgl_akhir, $jenis_laporan = 'omset', $status_bayar = 'semua')
     {
-        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_metode_bayar.nama as nama_metode_bayar');
+        $total_akhir_expr = $this->get_total_akhir_expr('detail_aktif.subtotal_normal', 'transaksi.reward_potongan', 'transaksi.promo_gratis_potongan');
+
+        $this->db->select('
+            transaksi.*,
+            m_pelanggan.nama as nama_pelanggan,
+            m_metode_bayar.nama as nama_metode_bayar,
+            COALESCE(detail_aktif.subtotal_normal, 0) as subtotal_normal,
+            COALESCE(transaksi.reward_potongan, 0) as reward_potongan,
+            COALESCE(transaksi.reward_gratis_qty, 0) as reward_gratis_qty,
+            COALESCE(transaksi.promo_gratis_potongan, 0) as promo_gratis_potongan,
+            COALESCE(transaksi.promo_gratis_qty, 0) as promo_gratis_qty,
+            COALESCE(transaksi.promo_gratis_keterangan, "") as promo_gratis_keterangan,
+            ' . $total_akhir_expr . ' as total_akhir,
+            ' . $total_akhir_expr . ' as total_harga
+        ', false);
         $this->db->from('transaksi');
         $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
         $this->db->join('m_metode_bayar', 'm_metode_bayar.id = transaksi.id_metode_bayar', 'left');
+        $this->db->join($this->get_subquery_total_detail_aktif(), 'detail_aktif.id_transaksi = transaksi.id', 'left', false);
 
         switch ($jenis_laporan) {
             case 'kas_masuk':
@@ -165,18 +246,6 @@ class Transaksi_model extends CI_Model
                 break;
         }
 
-        $transaksi = $this->db->get()->result();
-
-        foreach ($transaksi as $tr) {
-            $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_harga');
-            $this->db->from('transaksi_detail');
-            $this->db->where('transaksi_detail.id_transaksi', $tr->id);
-            $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
-            $query = $this->db->get()->row();
-
-            $tr->total_harga = $query->total_harga;
-        }
-
-        return $transaksi;
+        return $this->db->get()->result();
     }
 }

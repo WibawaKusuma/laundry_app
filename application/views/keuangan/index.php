@@ -90,7 +90,7 @@
         <div class="fw-semibold mb-1">Cara membaca angka di halaman ini</div>
         <?php if (!empty($is_admin)) : ?>
             <small class="text-muted">
-                Kas masuk dihitung dari transaksi yang sudah lunas berdasarkan tanggal bayar. Pengeluaran berasal dari data pengeluaran yang Anda input manual. Saldo operasional adalah selisih kas masuk dan pengeluaran pada periode aktif.
+                Kas masuk dihitung dari transaksi yang sudah lunas berdasarkan tanggal bayar dan sudah dikurangi potongan reward member serta promo gratis umum. Piutang juga memakai nilai bersih setelah reward member dan promo gratis umum. Pengeluaran berasal dari data pengeluaran yang Anda input manual. Saldo operasional adalah selisih kas masuk dan pengeluaran pada periode aktif.
             </small>
         <?php else : ?>
             <small class="text-muted">

@@ -44,14 +44,24 @@ class Dashboard extends CI_Controller
         $piutang_periode = 0;
         $pengeluaran_periode = 0;
         $saldo_operasional = 0;
+        $total_reward_member = 0;
+        $total_reward_gratis_qty = 0;
+        $total_promo_gratis = 0;
+        $total_promo_gratis_qty = 0;
 
         if ($is_admin) {
             $total_pelanggan = $this->Pelanggan_model->count_all_results();
             $omset_periode = $this->Transaksi_model->sum_omset($tgl_awal, $tgl_akhir);
             $kas_masuk_periode = $this->Transaksi_model->sum_kas_masuk($tgl_awal, $tgl_akhir);
             $piutang_periode = $this->Transaksi_model->sum_piutang($tgl_awal, $tgl_akhir);
+            $reward_member = $this->Transaksi_model->sum_reward_member($tgl_awal, $tgl_akhir);
+            $promo_gratis = $this->Transaksi_model->sum_promo_gratis($tgl_awal, $tgl_akhir);
             $pengeluaran_periode = $this->Keuangan_model->sum_pengeluaran($tgl_awal, $tgl_akhir);
             $saldo_operasional = $kas_masuk_periode - $pengeluaran_periode;
+            $total_reward_member = (float) ($reward_member['total_reward_potongan'] ?? 0);
+            $total_reward_gratis_qty = (float) ($reward_member['total_reward_gratis_qty'] ?? 0);
+            $total_promo_gratis = (float) ($promo_gratis['total_promo_gratis_potongan'] ?? 0);
+            $total_promo_gratis_qty = (float) ($promo_gratis['total_promo_gratis_qty'] ?? 0);
         }
 
         $data = array(
@@ -67,6 +77,10 @@ class Dashboard extends CI_Controller
             'piutang_periode' => $piutang_periode,
             'pengeluaran_periode' => $pengeluaran_periode,
             'saldo_operasional' => $saldo_operasional,
+            'total_reward_member' => $total_reward_member,
+            'total_reward_gratis_qty' => $total_reward_gratis_qty,
+            'total_promo_gratis' => $total_promo_gratis,
+            'total_promo_gratis_qty' => $total_promo_gratis_qty,
             'terbaru'           => $terbaru,
             'tgl_awal'          => $tgl_awal,
             'tgl_akhir'         => $tgl_akhir

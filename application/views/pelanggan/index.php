@@ -1,5 +1,26 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
+    <style>
+        .member-point-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid rgba(31, 41, 122, 0.14);
+            background: #f7f9ff;
+            color: #1f297a;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .member-point-chip.member-point-chip--reward {
+            border-color: #cfe7d6;
+            background: #f4fbf6;
+            color: #198754;
+        }
+    </style>
+
     <div class="flash-data-success" data-flashdata="<?= $this->session->flashdata('success'); ?>"></div>
 
     <div class="flash-data-error" data-flashdata="<?= $this->session->flashdata('error'); ?>"></div>
@@ -33,6 +54,7 @@
                                     <th>No</th>
                                     <th>Nama</th>
                                     <th>No HP</th>
+                                    <th>Poin Member</th>
                                     <th>Alamat</th>
                                     <th>Status</th>
                                     <th class="text-center">Aksi</th>
@@ -41,13 +63,14 @@
                             <tbody id="tabelPelanggan">
                                 <?php if (empty($pelanggan)) : ?>
                                     <tr>
-                                        <td colspan="6" class="text-center py-5 text-muted">
+                                        <td colspan="7" class="text-center py-5 text-muted">
                                             <p>Belum ada data pelanggan.</p>
                                         </td>
                                     </tr>
                                 <?php else : ?>
                                     <?php $no = 1;
                                     foreach ($pelanggan as $row) : ?>
+                                        <?php $poin_member = (int) ($row->poin_member ?? 0); ?>
                                         <tr>
                                             <td><?= $no++; ?></td>
                                             <td><?= $row->nama; ?></td>
@@ -55,6 +78,22 @@
                                                 <a href="https://wa.me/62<?= $row->no_hp; ?>" target="_blank" class="text-decoration-none">
                                                     <i class="fab fa-whatsapp text-success me-1"></i> <?= $row->no_hp; ?>
                                                 </a>
+                                            </td>
+                                            <td>
+                                                <?php if ($poin_member >= 8) : ?>
+                                                    <div class="d-inline-flex align-items-center gap-2 flex-wrap">
+                                                        <span class="member-point-chip member-point-chip--reward">
+                                                            <span><?= $poin_member; ?></span>
+                                                            <i class="fas fa-gift"></i>
+                                                        </span>
+                                                        <!-- <span class="badge rounded-pill text-bg-success">Reward</span> -->
+                                                    </div>
+                                                <?php else : ?>
+                                                    <span class="member-point-chip">
+                                                        <span><?= $poin_member; ?></span>
+                                                        <i class="fas fa-coins"></i>
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
                                             <td><?= $row->alamat; ?></td>
                                             <td>
@@ -130,7 +169,7 @@
 
         function loadPelanggan(keyword) {
             tabelBody.innerHTML =
-                '<tr><td colspan="6" class="text-center py-4">' +
+                '<tr><td colspan="7" class="text-center py-4">' +
                 '<i class="fas fa-spinner fa-spin me-2"></i>Mencari...</td></tr>';
 
             var xhr = new XMLHttpRequest();
@@ -142,19 +181,38 @@
                     var response = JSON.parse(xhr.responseText);
                     var html = '';
                     if (response.length === 0) {
-                        html = '<tr><td colspan="6" class="text-center py-5 text-muted">' +
+                        html = '<tr><td colspan="7" class="text-center py-5 text-muted">' +
                             '<p>Data pelanggan tidak ditemukan.</p></td></tr>';
                     } else {
                         for (var i = 0; i < response.length; i++) {
                             var row = response[i];
-                            var statusBadge = parseInt(row.aktif || 0, 10) === 1
-                                ? '<span class="badge bg-success">Aktif</span>'
-                                : '<span class="badge bg-secondary">Non Aktif</span>';
+                            var poinMember = parseInt(row.poin_member || 0, 10);
+                            var poinHtml = '';
+                            if (poinMember >= 8) {
+                                poinHtml =
+                                    '<div class="d-inline-flex align-items-center gap-2 flex-wrap">' +
+                                    '<span class="member-point-chip member-point-chip--reward">' +
+                                    '<i class="fas fa-gift"></i>' +
+                                    '<span>' + poinMember + '</span>' +
+                                    '</span>' +
+                                    '<span class="badge rounded-pill text-bg-success">Reward</span>' +
+                                    '</div>';
+                            } else {
+                                poinHtml =
+                                    '<span class="member-point-chip">' +
+                                    '<i class="fas fa-coins"></i>' +
+                                    '<span>' + poinMember + '</span>' +
+                                    '</span>';
+                            }
+                            var statusBadge = parseInt(row.aktif || 0, 10) === 1 ?
+                                '<span class="badge bg-success">Aktif</span>' :
+                                '<span class="badge bg-secondary">Non Aktif</span>';
                             html += '<tr>';
                             html += '<td>' + (i + 1) + '</td>';
                             html += '<td>' + row.nama + '</td>';
                             html += '<td><a href="https://wa.me/62' + row.no_hp + '" target="_blank" class="text-decoration-none">';
                             html += '<i class="fab fa-whatsapp text-success me-1"></i> ' + row.no_hp + '</a></td>';
+                            html += '<td>' + poinHtml + '</td>';
                             html += '<td>' + row.alamat + '</td>';
                             html += '<td>' + statusBadge + '</td>';
                             html += '<td class="text-center">';
@@ -169,14 +227,14 @@
                     tabelBody.innerHTML = html;
                 } else {
                     tabelBody.innerHTML =
-                        '<tr><td colspan="6" class="text-center py-5 text-danger">' +
+                        '<tr><td colspan="7" class="text-center py-5 text-danger">' +
                         '<p>Gagal memuat data. Silakan coba lagi.</p></td></tr>';
                 }
             };
 
             xhr.onerror = function() {
                 tabelBody.innerHTML =
-                    '<tr><td colspan="6" class="text-center py-5 text-danger">' +
+                    '<tr><td colspan="7" class="text-center py-5 text-danger">' +
                     '<p>Gagal memuat data. Silakan coba lagi.</p></td></tr>';
             };
 

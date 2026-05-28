@@ -223,6 +223,8 @@ if ($jenis_laporan === 'kas_masuk') {
                             | Filter bayar:
                             <span class="fw-semibold text-dark"><?= htmlspecialchars($active_status_label, ENT_QUOTES, 'UTF-8'); ?></span>
                         <?php endif; ?>
+                        | Perhitungan nilai:
+                        <span class="fw-semibold text-dark">subtotal normal - potongan reward member - potongan promo gratis</span>
                     </small>
                 </div>
                 <div class="table-responsive">
@@ -234,14 +236,27 @@ if ($jenis_laporan === 'kas_masuk') {
                                 <th>Invoice</th>
                                 <th>Pelanggan</th>
                                 <th class="text-center"><?= htmlspecialchars($info_column_label, ENT_QUOTES, 'UTF-8'); ?></th>
-                                <th class="text-end pe-4">Total Nilai</th>
+                                <th class="text-end">Subtotal Normal</th>
+                                <th class="text-end">Potongan Reward</th>
+                                <th class="text-end">Potongan Promo</th>
+                                <th class="text-end pe-4">Total Akhir</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
+                            $grand_subtotal = 0;
+                            $grand_reward = 0;
+                            $grand_reward_qty = 0;
+                            $grand_promo = 0;
+                            $grand_promo_qty = 0;
                             $grand_total = 0;
                             foreach ($laporan as $index => $row) :
-                                $grand_total += (float) $row->total_harga;
+                                $grand_subtotal += (float) $row->subtotal_normal;
+                                $grand_reward += (float) $row->reward_potongan;
+                                $grand_reward_qty += (float) $row->reward_gratis_qty;
+                                $grand_promo += (float) $row->promo_gratis_potongan;
+                                $grand_promo_qty += (float) $row->promo_gratis_qty;
+                                $grand_total += (float) $row->total_akhir;
 
                                 $tanggal_acuan = $row->tgl_masuk;
                                 if ($jenis_laporan === 'kas_masuk') {
@@ -272,14 +287,46 @@ if ($jenis_laporan === 'kas_masuk') {
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-end pe-4 fw-bold">Rp <?= number_format($row->total_harga, 0, ',', '.') ?></td>
+                                    <td class="text-end text-nowrap">Rp <?= number_format((float) $row->subtotal_normal, 0, ',', '.') ?></td>
+                                    <td class="text-end text-nowrap">
+                                        Rp <?= number_format((float) $row->reward_potongan, 0, ',', '.') ?>
+                                        <?php if ((float) $row->reward_gratis_qty > 0) : ?>
+                                            <div class="small text-success fw-semibold">Gratis <?= rtrim(rtrim(number_format((float) $row->reward_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg</div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        Rp <?= number_format((float) $row->promo_gratis_potongan, 0, ',', '.') ?>
+                                        <?php if ((float) $row->promo_gratis_qty > 0) : ?>
+                                            <div class="small text-warning fw-semibold">Gratis <?= rtrim(rtrim(number_format((float) $row->promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg</div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end pe-4 fw-bold text-nowrap">Rp <?= number_format((float) $row->total_akhir, 0, ',', '.') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                         <tfoot class="bg-light">
                             <tr>
-                                <td colspan="5" class="text-end fw-bold py-3"><?= strtoupper($report_meta['summary_label']); ?> :</td>
-                                <td class="text-end fw-bold text-success py-3 pe-4 fs-6">
+                                <td colspan="5" class="text-end fw-bold py-3">TOTAL SUBTOTAL NORMAL :</td>
+                                <td class="text-end fw-bold py-3 text-nowrap">Rp <?= number_format($grand_subtotal, 0, ',', '.') ?></td>
+                                <td class="text-end fw-bold py-3 text-nowrap">Rp <?= number_format($grand_reward, 0, ',', '.') ?></td>
+                                <td class="text-end fw-bold py-3 text-nowrap">Rp <?= number_format($grand_promo, 0, ',', '.') ?></td>
+                                <td class="text-end fw-bold py-3 pe-4 text-nowrap">Rp <?= number_format($grand_total, 0, ',', '.') ?></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="text-end fw-bold py-3">TOTAL REWARD MEMBER :</td>
+                                <td class="text-end fw-bold text-success py-3 pe-4 fs-6 text-nowrap">
+                                    <?= rtrim(rtrim(number_format($grand_reward_qty, 2, '.', ''), '0'), '.'); ?> kg / Rp <?= number_format($grand_reward, 0, ',', '.') ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="text-end fw-bold py-3">TOTAL PROMO GRATIS :</td>
+                                <td class="text-end fw-bold text-warning py-3 pe-4 fs-6 text-nowrap">
+                                    <?= rtrim(rtrim(number_format($grand_promo_qty, 2, '.', ''), '0'), '.'); ?> kg / Rp <?= number_format($grand_promo, 0, ',', '.') ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="text-end fw-bold py-3"><?= strtoupper($report_meta['summary_label']); ?> :</td>
+                                <td class="text-end fw-bold text-success py-3 pe-4 fs-6 text-nowrap">
                                     Rp <?= number_format($grand_total, 0, ',', '.') ?>
                                 </td>
                             </tr>

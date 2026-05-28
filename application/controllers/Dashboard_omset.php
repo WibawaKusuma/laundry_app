@@ -10,6 +10,8 @@ class Dashboard_omset extends MY_Controller
         if (empty($this->session->userdata('role'))) {
             redirect('auth/login');
         }
+
+        $this->load->model('Transaksi_model');
     }
 
     public function index()
@@ -22,14 +24,8 @@ class Dashboard_omset extends MY_Controller
             $tahun = date('Y', strtotime("-$i months"));
             $bln   = date('m', strtotime("-$i months"));
 
-            // Hitung total omset order masuk bulan ini
-            $this->db->select('SUM(transaksi_detail.qty * transaksi_detail.harga) as total_omset');
-            $this->db->from('transaksi');
-            $this->db->join('transaksi_detail', 'transaksi_detail.id_transaksi = transaksi.id');
-            $this->db->where('COALESCE(transaksi_detail.batal, 0) = 0', null, false);
-            $this->db->where('YEAR(transaksi.tgl_masuk)', $tahun);
-            $this->db->where('MONTH(transaksi.tgl_masuk)', $bln);
-            $result = $this->db->get()->row();
+            // Hitung omset bersih per bulan setelah potongan reward member
+            $total_omset = $this->Transaksi_model->sum_omset_bulanan($tahun, $bln);
 
             // Hitung jumlah order masuk bulan ini
             $this->db->where('YEAR(tgl_masuk)', $tahun);
@@ -40,7 +36,7 @@ class Dashboard_omset extends MY_Controller
                 'bulan'       => $bulan,
                 'label'       => $this->_nama_bulan($bln) . ' ' . $tahun,
                 'label_short' => $this->_nama_bulan_short($bln),
-                'total_omset' => $result->total_omset ? $result->total_omset : 0,
+                'total_omset' => $total_omset,
                 'jml_transaksi' => $jml_transaksi
             ];
         }
