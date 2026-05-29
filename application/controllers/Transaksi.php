@@ -355,6 +355,98 @@ class Transaksi extends MY_Controller
         return false;
     }
 
+    private function get_detail_benefit_flags($details)
+    {
+        $flags = [
+            'punya_cuci_komplit' => false,
+            'punya_layanan_reward' => false,
+        ];
+
+        foreach ((array) $details as $detail) {
+            $nama_tipe = (string) ($detail->nama_tipe ?? $detail['nama_tipe'] ?? '');
+            $nama_paket = (string) ($detail->nama_paket ?? $detail['nama_paket'] ?? '');
+            $nama_satuan = (string) ($detail->nama_satuan ?? $detail['nama_satuan'] ?? '');
+
+            if ($this->is_layanan_cuci_komplit($nama_tipe, $nama_paket)) {
+                $flags['punya_cuci_komplit'] = true;
+            }
+
+            if ($this->is_reward_member_service_eligible($nama_satuan, $nama_tipe, $nama_paket)) {
+                $flags['punya_layanan_reward'] = true;
+            }
+
+            if ($flags['punya_cuci_komplit'] && $flags['punya_layanan_reward']) {
+                break;
+            }
+        }
+
+        return $flags;
+    }
+
+    private function hitung_total_akhir_wa($total_tagihan, $reward_potongan = 0, $promo_gratis_potongan = 0)
+    {
+        return max(0, (float) $total_tagihan - (int) $reward_potongan - (int) $promo_gratis_potongan);
+    }
+
+    private function build_benefit_customer_message_lines($meta = [])
+    {
+        $lines = [];
+        $poin_pelanggan = max(0, min($this->batas_poin_member, (int) ($meta['poin_member_pelanggan'] ?? 0)));
+        $reward_dipakai = !empty($meta['reward_member_dipakai']) && (float) ($meta['reward_gratis_qty'] ?? 0) > 0;
+        $promo_dipakai = !empty($meta['promo_gratis_dipakai']) && (float) ($meta['promo_gratis_qty'] ?? 0) > 0;
+        $poin_sudah_masuk = !empty($meta['poin_diberikan_pada']);
+        $punya_cuci_komplit = !empty($meta['punya_cuci_komplit']);
+        $punya_layanan_reward = !empty($meta['punya_layanan_reward']);
+        $show_potential_poin = !empty($meta['show_potential_poin']);
+
+        if ($reward_dipakai) {
+            $lines[] = 'Reward Member digunakan';
+            $lines[] = 'Poin member telah digunakan untuk reward';
+            $lines[] = 'Gratis Reward: ' . $this->format_qty((float) ($meta['reward_gratis_qty'] ?? 0)) . ' kg';
+            $lines[] = 'Potongan Reward: Rp ' . number_format((int) ($meta['reward_potongan'] ?? 0), 0, ',', '.');
+            $lines[] = 'Total poin sekarang: 0';
+
+            return $lines;
+        }
+
+        if ($promo_dipakai) {
+            $promo_label = trim((string) ($meta['promo_gratis_keterangan'] ?? ''));
+            if ($promo_label === '') {
+                $promo_label = 'Promo Gratis Umum';
+            }
+
+            $lines[] = 'Promo Gratis: ' . rawurlencode($promo_label);
+            $lines[] = 'Gratis Promo: ' . $this->format_qty((float) ($meta['promo_gratis_qty'] ?? 0)) . ' kg';
+            $lines[] = 'Potongan Promo: Rp ' . number_format((int) ($meta['promo_gratis_potongan'] ?? 0), 0, ',', '.');
+        }
+
+        if ($poin_sudah_masuk) {
+            $lines[] = 'Poin didapat: +1';
+            $lines[] = 'Total poin sekarang: ' . $poin_pelanggan;
+
+            return $lines;
+        }
+
+        if ($poin_pelanggan >= $this->batas_poin_member) {
+            $lines[] = 'Poin member saat ini: ' . $poin_pelanggan;
+            $lines[] = 'Reward member tersimpan untuk Cuci Komplit Reguler atau Satu Hari.';
+
+            return $lines;
+        }
+
+        if ($show_potential_poin && $punya_cuci_komplit) {
+            $lines[] = 'Poin saat ini: ' . $poin_pelanggan;
+
+            if ($poin_pelanggan === ($this->batas_poin_member - 1)) {
+                $lines[] = 'Setelah cucian selesai dan lunas, poin menjadi 8 dan bisa digunakan untuk reward member.';
+            } else {
+                $lines[] = 'Poin akan otomatis bertambah setelah cucian selesai dan lunas.';
+            }
+        }
+
+        return $lines;
+    }
+
     private function sinkron_poin_member($id_transaksi)
     {
         $this->db->select('id, id_pelanggan, status, dibayar, poin_diberikan_pada, reward_member_dipakai');
@@ -952,7 +1044,11 @@ class Transaksi extends MY_Controller
         }
 
         $tgl_terima_fmt = date('d/m/Y H:i', strtotime($tgl_terima));
-        $tgl_selesai_fmt = date('d/m/Y H:i', strtotime($tgl_selesai));
+        $tgl_selesai_fmt = !empty($tgl_selesai) ? date('d/m/Y H:i', strtotime($tgl_selesai)) : '-';
+        $mode = strtolower(trim((string) ($payment_meta['mode'] ?? 'detail')));
+        if (!in_array($mode, ['awal', 'detail', 'pengambilan'], true)) {
+            $mode = 'detail';
+        }
         $reward_dipakai = !empty($payment_meta['reward_member_dipakai']) && (float) ($payment_meta['reward_gratis_qty'] ?? 0) > 0;
         $reward_gratis_qty = (float) ($payment_meta['reward_gratis_qty'] ?? 0);
         $reward_potongan = (int) ($payment_meta['reward_potongan'] ?? 0);
@@ -960,7 +1056,7 @@ class Transaksi extends MY_Controller
         $promo_gratis_qty = (float) ($payment_meta['promo_gratis_qty'] ?? 0);
         $promo_gratis_potongan = (int) ($payment_meta['promo_gratis_potongan'] ?? 0);
         $promo_gratis_keterangan = trim((string) ($payment_meta['promo_gratis_keterangan'] ?? ''));
-        $total_akhir = max(0, (float) $total_tagihan - $reward_potongan - $promo_gratis_potongan);
+        $total_akhir = $this->hitung_total_akhir_wa($total_tagihan, $reward_potongan, $promo_gratis_potongan);
         $total_fmt = number_format((float) $total_tagihan, 0, ',', '.');
         $total_akhir_fmt = number_format((float) $total_akhir, 0, ',', '.');
         $is_paid = (string) ($payment_meta['dibayar'] ?? '') === 'Sudah Dibayar';
@@ -968,12 +1064,28 @@ class Transaksi extends MY_Controller
         $remaining_amount_fmt = number_format($is_paid ? 0 : (float) $total_akhir, 0, ',', '.');
         $payment_method = trim((string) ($payment_meta['nama_metode_bayar'] ?? ''));
         $paid_at = !empty($payment_meta['tgl_bayar']) ? date('d/m/Y H:i', strtotime($payment_meta['tgl_bayar'])) : '';
+        $diambil_at = !empty($payment_meta['tgl_diambil']) ? date('d/m/Y H:i', strtotime($payment_meta['tgl_diambil'])) : '';
+        $nama_kasir = trim((string) ($payment_meta['nama_kasir'] ?? 'Admin'));
+        $benefit_lines = $this->build_benefit_customer_message_lines([
+            'reward_member_dipakai' => $reward_dipakai,
+            'reward_gratis_qty' => $reward_gratis_qty,
+            'reward_potongan' => $reward_potongan,
+            'promo_gratis_dipakai' => $promo_dipakai,
+            'promo_gratis_qty' => $promo_gratis_qty,
+            'promo_gratis_potongan' => $promo_gratis_potongan,
+            'promo_gratis_keterangan' => $promo_gratis_keterangan,
+            'poin_member_pelanggan' => $payment_meta['poin_member_pelanggan'] ?? 0,
+            'poin_diberikan_pada' => $payment_meta['poin_diberikan_pada'] ?? null,
+            'punya_cuci_komplit' => !empty($payment_meta['punya_cuci_komplit']),
+            'punya_layanan_reward' => !empty($payment_meta['punya_layanan_reward']),
+            'show_potential_poin' => !empty($payment_meta['show_potential_poin']),
+        ]);
 
         $company_name = $this->company['company_name'] ?? 'APP Laundry';
         $company_address = $this->company['company_address'] ?? 'Jalan';
         $company_phone = $this->company['company_phone'] ?? '08000000000';
 
-        $pesan = "FAKTUR ELEKTRONIK TRANSAKSI REGULER%0A";
+        $pesan = ($mode === 'pengambilan' ? 'FAKTUR BUKTI PENGAMBILAN' : 'FAKTUR ELEKTRONIK TRANSAKSI REGULER') . "%0A";
         $pesan .= "{$company_name}%0A";
         $pesan .= "{$company_address}%0A";
         $pesan .= "{$company_phone}%0A%0A";
@@ -982,24 +1094,30 @@ class Transaksi extends MY_Controller
         $pesan .= "Pelanggan Yth :%0A";
         $pesan .= "$pelanggan_nama%0A%0A";
         $pesan .= "Terima : $tgl_terima_fmt%0A";
-        $pesan .= "Selesai : $tgl_selesai_fmt%0A";
+        if ($mode === 'pengambilan') {
+            if ($diambil_at !== '') {
+                $pesan .= "Diambil : $diambil_at%0A";
+            }
+        } else {
+            $pesan .= "Selesai : $tgl_selesai_fmt%0A";
+        }
         $pesan .= "%0A======================%0A";
-        $pesan .= "Detail pesanan:%0A";
+        $pesan .= ($mode === 'pengambilan' ? 'Detail pengambilan:' : 'Detail pesanan:') . "%0A";
         $pesan .= "Layanan:%0A";
         $pesan .= $list_item_wa;
         $pesan .= "%0A==============%0A";
         $pesan .= "Detail biaya :%0A";
         $pesan .= "Total tagihan : Rp$total_fmt%0A";
-        if ($reward_dipakai) {
-            $pesan .= "Reward Member : Gratis " . $this->format_qty($reward_gratis_qty) . " kg Cuci Komplit Reguler/Satu Hari%0A";
-            $pesan .= "Potongan Reward : Rp" . number_format($reward_potongan, 0, ',', '.') . "%0A";
-        }
-        if ($promo_dipakai) {
-            $pesan .= "Promo Gratis : " . rawurlencode($promo_gratis_keterangan !== '' ? $promo_gratis_keterangan : 'Promo Gratis Umum') . "%0A";
-            $pesan .= "Gratis Promo : " . $this->format_qty($promo_gratis_qty) . " kg%0A";
-            $pesan .= "Potongan Promo : Rp" . number_format($promo_gratis_potongan, 0, ',', '.') . "%0A";
-        }
         $pesan .= "Grand total : Rp$total_akhir_fmt%0A%0A";
+
+        if (!empty($benefit_lines)) {
+            $pesan .= "*Benefit Customer*%0A";
+            foreach ($benefit_lines as $line) {
+                $pesan .= $line . "%0A";
+            }
+            $pesan .= "%0A";
+        }
+
         $pesan .= "Pembayaran:%0A";
         if ($is_paid) {
             $pesan .= "Dibayar : Rp$paid_amount_fmt%0A";
@@ -1015,6 +1133,22 @@ class Transaksi extends MY_Controller
             $pesan .= "Sisa tagihan : Rp$remaining_amount_fmt%0A";
             $pesan .= "Status: Belum lunas%0A%0A";
         }
+
+        if ($mode === 'pengambilan') {
+            if ($diambil_at !== '') {
+                $pesan .= "Pengambilan:%0A";
+                $pesan .= "Diserahkan pada : $diambil_at%0A";
+                $pesan .= "Oleh : $nama_kasir%0A";
+                $pesan .= "Status Laundry : Sudah Diambil%0A%0A";
+            }
+
+            $pesan .= "=================%0A";
+            $pesan .= "Kami telah menyerahkan barang dan diterima dengan kondisi baik%0A";
+            $pesan .= "Terima kasih";
+
+            return $pesan;
+        }
+
         $pesan .= "=================%0A";
         $pesan .= "Syarat dan ketentuan:%0A";
         $pesan .= "PERHATIAN :%0A";
@@ -1444,6 +1578,7 @@ class Transaksi extends MY_Controller
         $wa_link = "";
 
         if ($pelanggan && !empty($pelanggan->no_hp)) {
+            $detail_flags = $this->get_detail_benefit_flags($cart);
             $wa_link = $this->build_confirmation_wa_link(
                 $pelanggan->no_hp,
                 $invoice,
@@ -1451,7 +1586,17 @@ class Transaksi extends MY_Controller
                 date('Y-m-d H:i:s'),
                 $tgl_selesai,
                 $cart,
-                $total_tagihan
+                $total_tagihan,
+                [
+                    'mode' => 'awal',
+                    'status' => $data_transaksi['status'],
+                    'dibayar' => $data_transaksi['dibayar'],
+                    'poin_member_pelanggan' => $pelanggan->poin_member ?? 0,
+                    'poin_diberikan_pada' => null,
+                    'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
+                    'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
+                    'show_potential_poin' => true,
+                ]
             );
         }
 
@@ -1490,6 +1635,7 @@ class Transaksi extends MY_Controller
                 return empty($detail->batal);
             }
         ));
+        $detail_flags = $this->get_detail_benefit_flags($data['active_detail']);
         $data['can_add_items'] = $this->can_add_items_to_transaction($data['transaksi']);
         $data['can_modify_items'] = $this->can_modify_transaction_items($data['transaksi']);
         $data['add_item_block_reason'] = $this->get_add_item_block_reason($data['transaksi']);
@@ -1541,6 +1687,13 @@ class Transaksi extends MY_Controller
                 'promo_gratis_qty' => $data['transaksi']->promo_gratis_qty ?? 0,
                 'promo_gratis_potongan' => $data['transaksi']->promo_gratis_potongan ?? 0,
                 'promo_gratis_keterangan' => $data['transaksi']->promo_gratis_keterangan ?? '',
+                'mode' => 'detail',
+                'status' => $data['transaksi']->status ?? '',
+                'poin_member_pelanggan' => $data['transaksi']->poin_member_pelanggan ?? 0,
+                'poin_diberikan_pada' => $data['transaksi']->poin_diberikan_pada ?? null,
+                'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
+                'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
+                'show_potential_poin' => true,
             ]
         );
 
@@ -1927,9 +2080,10 @@ class Transaksi extends MY_Controller
 
     public function tandai_diambil($kode_invoice)
     {
-        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_pelanggan.poin_member as poin_member_pelanggan, m_metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
         $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('m_metode_bayar', 'm_metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $trx = $this->db->get()->row();
 
@@ -1965,90 +2119,59 @@ class Transaksi extends MY_Controller
         $this->db->where('kode_invoice', $kode_invoice);
         $this->db->update('transaksi', $data_update);
 
-        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_pelanggan.poin_member as poin_member_pelanggan, m_metode_bayar.nama as nama_metode_bayar');
         $this->db->from('transaksi');
         $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join('m_metode_bayar', 'm_metode_bayar.id = transaksi.id_metode_bayar', 'left');
         $this->db->where('transaksi.kode_invoice', $kode_invoice);
         $trx = $this->db->get()->row();
 
         $details = $this->get_active_transaction_details($trx->id);
+        $detail_flags = $this->get_detail_benefit_flags($details);
 
         $wa_link = "";
 
         if ($trx && !empty($trx->no_hp)) {
-            $nomor = trim($trx->no_hp);
-            $nomor = str_replace([' ', '-', '+'], '', $nomor);
-            if (substr($nomor, 0, 1) == '0') {
-                $nomor = '62' . substr($nomor, 1);
-            } elseif (substr($nomor, 0, 2) != '62') {
-                $nomor = '62' . $nomor;
-            }
-
-            $daftar_hari = [
-                'Sunday' => 'Minggu',
-                'Monday' => 'Senin',
-                'Tuesday' => 'Selasa',
-                'Wednesday' => 'Rabu',
-                'Thursday' => 'Kamis',
-                'Friday' => 'Jumat',
-                'Saturday' => 'Sabtu'
-            ];
-            $hari_ini = $daftar_hari[date('l')];
-            $tgl_jam  = date('d/m/y H:i');
-
             $nama_kasir = $this->session->userdata('username');
             if (empty($nama_kasir)) {
                 $nama_kasir = 'Admin';
             }
 
             $total_bayar = 0;
-            $list_item_wa = '';
             foreach ($details as $d) {
-                $subtotal = $d->subtotal;
-                $total_bayar += $subtotal;
-                $item_note_text = $this->build_item_note_text(
-                    !empty($d->promo_applied),
-                    $d->charged_qty ?? 0,
-                    'Kg/Pcs',
-                    $d->customer_notes ?? ''
-                );
-
-                $list_item_wa .= '- ' . strtoupper($d->nama_paket) . ', ' . $d->qty_label . " Kg/Pcs%0A";
-                $list_item_wa .= 'Ket : ' . rawurlencode($item_note_text) . "%0A";
+                $total_bayar += (float) ($d->subtotal ?? 0);
             }
-            $total_fmt = number_format($total_bayar, 0, ',', '.');
 
-            $pesan = "FAKTUR BUKTI PENGAMBILAN%0A%0A";
-
-            $company_name = $this->company['company_name'] ?? 'App Laundry';
-            $company_address = $this->company['company_address'] ?? 'Jalan';
-            $company_phone = $this->company['company_phone'] ?? '08000000000';
-
-            $pesan .= "{$company_name}%0A";
-            $pesan .= "{$company_address}%0A";
-            $pesan .= "{$company_phone}%0A%0A";
-            $pesan .= "Nomor Nota :%0A";
-            $pesan .= "$kode_invoice%0A%0A";
-            $pesan .= "Pelanggan Yth :%0A";
-            $pesan .= "$trx->nama_pelanggan%0A";
-            $pesan .= "======================%0A";
-            $pesan .= "DETAIL PENGAMBILAN:%0A%0A";
-            $pesan .= $list_item_wa;
-            $pesan .= "Diserahkan, $hari_ini, $tgl_jam%0A";
-            $pesan .= "Oleh: $nama_kasir%0A%0A%0A";
-            $pesan .= "Pembayaran:%0A";
-            $metode = null;
-            if (!empty($trx->id_metode_bayar)) {
-                $metode = $this->db->get_where('m_metode_bayar', ['id' => $trx->id_metode_bayar])->row();
-            }
-            $nama_metode = $metode ? $metode->nama : 'Tunai';
-            $pesan .= "$nama_metode Rp$total_fmt%0A%0A";
-            $pesan .= "Status: Lunas%0A";
-            $pesan .= "=================%0A%0A";
-            $pesan .= "Kami telah menyerahkan barang dan diterima dengan kondisi baik%0A";
-            $pesan .= "Terima kasih";
-
-            $wa_link = "https://wa.me/$nomor?text=$pesan";
+            $wa_link = $this->build_confirmation_wa_link(
+                $trx->no_hp,
+                $trx->kode_invoice,
+                $trx->nama_pelanggan,
+                $trx->tgl_masuk,
+                $trx->batas_waktu,
+                $details,
+                $total_bayar,
+                [
+                    'mode' => 'pengambilan',
+                    'status' => $trx->status ?? '',
+                    'dibayar' => $trx->dibayar ?? '',
+                    'tgl_bayar' => $trx->tgl_bayar ?? '',
+                    'tgl_diambil' => $trx->tgl_diambil ?? '',
+                    'nama_metode_bayar' => $trx->nama_metode_bayar ?? '',
+                    'nama_kasir' => $nama_kasir,
+                    'reward_member_dipakai' => $trx->reward_member_dipakai ?? 0,
+                    'reward_gratis_qty' => $trx->reward_gratis_qty ?? 0,
+                    'reward_potongan' => $trx->reward_potongan ?? 0,
+                    'promo_gratis_dipakai' => $trx->promo_gratis_dipakai ?? 0,
+                    'promo_gratis_qty' => $trx->promo_gratis_qty ?? 0,
+                    'promo_gratis_potongan' => $trx->promo_gratis_potongan ?? 0,
+                    'promo_gratis_keterangan' => $trx->promo_gratis_keterangan ?? '',
+                    'poin_member_pelanggan' => $trx->poin_member_pelanggan ?? 0,
+                    'poin_diberikan_pada' => $trx->poin_diberikan_pada ?? null,
+                    'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
+                    'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
+                    'show_potential_poin' => false,
+                ]
+            );
         }
 
         $this->session->set_flashdata('wa_link', $wa_link);
