@@ -48,6 +48,7 @@ class Dashboard extends CI_Controller
         $total_reward_gratis_qty = 0;
         $total_promo_gratis = 0;
         $total_promo_gratis_qty = 0;
+        $avg_kg_per_hari = 0;
 
         if ($is_admin) {
             $total_pelanggan = $this->Pelanggan_model->count_all_results();
@@ -62,6 +63,7 @@ class Dashboard extends CI_Controller
             $total_reward_gratis_qty = (float) ($reward_member['total_reward_gratis_qty'] ?? 0);
             $total_promo_gratis = (float) ($promo_gratis['total_promo_gratis_potongan'] ?? 0);
             $total_promo_gratis_qty = (float) ($promo_gratis['total_promo_gratis_qty'] ?? 0);
+            $avg_kg_per_hari = $this->Transaksi_model->get_avg_kg_per_hari($tgl_awal, $tgl_akhir);
         }
 
         $data = array(
@@ -81,6 +83,7 @@ class Dashboard extends CI_Controller
             'total_reward_gratis_qty' => $total_reward_gratis_qty,
             'total_promo_gratis' => $total_promo_gratis,
             'total_promo_gratis_qty' => $total_promo_gratis_qty,
+            'avg_kg_per_hari' => $avg_kg_per_hari,
             'terbaru'           => $terbaru,
             'tgl_awal'          => $tgl_awal,
             'tgl_akhir'         => $tgl_akhir

@@ -248,4 +248,29 @@ class Transaksi_model extends CI_Model
 
         return $this->db->get()->result();
     }
+
+    public function get_avg_kg_per_hari($tgl_awal, $tgl_akhir)
+    {
+        $this->db->select('SUM(td.qty) as total_kg');
+        $this->db->from('transaksi t');
+        $this->db->join('transaksi_detail td', 'td.id_transaksi = t.id');
+        $this->db->join('m_paket_laundry p', 'p.id_paket_laundry = td.id_paket');
+        $this->db->where('DATE(t.tgl_masuk) >=', $tgl_awal);
+        $this->db->where('DATE(t.tgl_masuk) <=', $tgl_akhir);
+        $this->db->where('p.id_satuan', 1); // KG
+        $this->db->where('p.id_kategori !=', 3); // Bukan Satuan Khusus
+        $this->db->where('COALESCE(td.batal, 0) =', 0);
+        $result = $this->db->get()->row();
+
+        $total_kg = (float) ($result->total_kg ?? 0);
+
+        // Hitung selisih hari kalender
+        $start = new DateTime($tgl_awal);
+        $end = new DateTime($tgl_akhir);
+        $diff = $start->diff($end);
+        $days = $diff->days + 1;
+
+        return $days > 0 ? ($total_kg / $days) : 0;
+    }
 }
+

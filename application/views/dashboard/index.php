@@ -154,6 +154,15 @@
             background: rgba(249, 115, 22, 0.14);
         }
 
+        .metric-card.metric-finance-avg .metric-value,
+        .metric-card.metric-finance-avg .metric-icon {
+            color: #0f766e;
+        }
+
+        .metric-card.metric-finance-avg .metric-icon {
+            background: rgba(15, 118, 110, 0.1);
+        }
+
         .metric-card.metric-ops-secondary .metric-value,
         .metric-card.metric-ops-secondary .metric-icon {
             color: #475467;
@@ -494,6 +503,18 @@
                 </div>
             </div>
 
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="metric-card metric-finance-avg h-100 bg-white">
+                    <div class="card-body p-4 d-flex justify-content-between gap-3">
+                        <div>
+                            <p class="metric-label">Rata-rata Cucian Kiloan</p>
+                            <h3 class="metric-value"><?= rtrim(rtrim(number_format($avg_kg_per_hari, 2, ',', '.'), '0'), ','); ?> Kg <small class="fs-6 text-muted fw-normal">/ hari</small></h3>
+                            <p class="metric-note">Rata-rata berat cucian kiloan masuk per hari pada periode ini. Cucian kategori Satuan Khusus (non-kiloan) otomatis dikecualikan.</p>
+                        </div>
+                        <span class="metric-icon"><i class="fas fa-weight-hanging"></i></span>
+                    </div>
+                </div>
+            </div>
 
         </div>
     <?php endif; ?>
