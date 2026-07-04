@@ -41,14 +41,46 @@ class Config_model extends CI_Model
     }
 
     /**
-     * Update satu config
+     * Simpan satu config. Jika key belum ada, akan dibuat.
      * @param string $key
      * @param string $value
      */
     public function set($key, $value)
     {
-        $this->db->where('config_key', $key);
-        $this->db->update('config', ['config_value' => $value]);
+        $exists = $this->db
+            ->where('config_key', $key)
+            ->count_all_results('config') > 0;
+
+        if ($exists) {
+            $this->db->where('config_key', $key);
+            $this->db->update('config', ['config_value' => $value]);
+        } else {
+            $this->db->insert('config', [
+                'config_key' => $key,
+                'config_value' => $value,
+            ]);
+        }
+
         $this->cache = null; // Reset cache
+    }
+
+    /**
+     * Simpan beberapa config dalam satu transaksi.
+     * @param array $items ['config_key' => 'config_value']
+     */
+    public function set_many(array $items)
+    {
+        if (empty($items)) {
+            return;
+        }
+
+        $this->db->trans_start();
+
+        foreach ($items as $key => $value) {
+            $this->set($key, $value);
+        }
+
+        $this->db->trans_complete();
+        $this->cache = null;
     }
 }

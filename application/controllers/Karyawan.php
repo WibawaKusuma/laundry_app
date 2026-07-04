@@ -49,9 +49,7 @@ class Karyawan extends Admin_Controller
         }
 
         // --- 1. CEK DUPLIKASI USERNAME ---
-        $cek = $this->db->get_where('m_users', ['username' => $username])->num_rows();
-
-        if ($cek > 0) {
+        if ($this->Karyawan_model->username_exists($username)) {
             // Jika hasil > 0, berarti Username SUDAH ADA.
             // Kita stop proses, kirim pesan error, dan balikan ke form tambah.
             // $this->session->set_flashdata('error', 'Gagal Simpan! Username <b>' . $username . '</b> sudah digunakan. Silakan cari username lain.');

@@ -28,9 +28,7 @@ class Dashboard_omset extends MY_Controller
             $total_omset = $this->Transaksi_model->sum_omset_bulanan($tahun, $bln);
 
             // Hitung jumlah order masuk bulan ini
-            $this->db->where('YEAR(tgl_masuk)', $tahun);
-            $this->db->where('MONTH(tgl_masuk)', $bln);
-            $jml_transaksi = $this->db->count_all_results('transaksi');
+            $jml_transaksi = $this->Transaksi_model->count_order_bulanan($tahun, $bln);
 
             $data_bulanan[] = [
                 'bulan'       => $bulan,

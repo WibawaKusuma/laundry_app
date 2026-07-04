@@ -495,7 +495,7 @@
                             <p class="metric-label">Promo Gratis</p>
                             <h3 class="metric-value">Rp <?= number_format($total_promo_gratis, 0, ',', '.'); ?></h3>
                             <p class="metric-note">
-                                <?= rtrim(rtrim(number_format($total_promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg gratis diberikan pada periode ini. Perhitungan promo mengikuti tanggal bayar transaksi yang benar-benar memakai promo gratis.
+                                <?= rtrim(rtrim(number_format($total_promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> unit promo gratis diberikan pada periode ini. Perhitungan promo mengikuti tanggal bayar transaksi yang benar-benar memakai promo gratis.
                             </p>
                         </div>
                         <span class="metric-icon"><i class="fas fa-tags"></i></span>

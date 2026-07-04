@@ -15,6 +15,11 @@ class Karyawan_model extends CI_Model
         return $this->db->get('m_users')->row();
     }
 
+    public function username_exists($username)
+    {
+        return $this->db->get_where('m_users', ['username' => $username])->num_rows() > 0;
+    }
+
     public function insert($data)
     {
         $this->db->insert('m_users', $data);

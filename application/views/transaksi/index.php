@@ -216,6 +216,15 @@
             font-weight: 700;
         }
 
+        .trx-page-size {
+            width: auto;
+            min-width: 82px;
+        }
+
+        .trx-pagination .btn {
+            min-width: 34px;
+        }
+
         @media (max-width: 991.98px) {
             .trx-period {
                 white-space: normal;
@@ -259,6 +268,17 @@
                     </div>
                 </div>
 
+                <div class="col-12 col-md-auto col-xl-auto">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="fas fa-money-check-alt"></i></span>
+                        <select name="status_bayar" class="form-select">
+                            <option value="semua" <?= ($status_bayar ?? 'belum') === 'semua' ? 'selected' : ''; ?>>Semua</option>
+                            <option value="sudah" <?= ($status_bayar ?? 'belum') === 'sudah' ? 'selected' : ''; ?>>Sudah Bayar</option>
+                            <option value="belum" <?= ($status_bayar ?? 'belum') === 'belum' ? 'selected' : ''; ?>>Belum Bayar</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="col-6 col-md-auto col-xl-auto d-grid">
                     <button type="submit" class="btn btn-sm btn-primary" title="Filter Data">
                         <i class="fas fa-filter me-1"></i> Filter
@@ -269,10 +289,6 @@
                     <a href="<?= base_url('transaksi/baru'); ?>" class="btn btn-success btn-sm">
                         <i class="fas fa-plus me-1"></i> Baru
                     </a>
-                </div>
-
-                <div class="col-12 col-xl-auto text-xl-end">
-                    <span class="trx-period">Periode aktif: <?= date('d M Y', strtotime($tgl_awal)); ?> s/d <?= date('d M Y', strtotime($tgl_akhir)); ?></span>
                 </div>
             </form>
         </div>
@@ -302,6 +318,20 @@
                 </div>
 
             </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3 border-bottom">
+            <div class="d-flex align-items-center gap-2 text-muted small">
+                <span>Tampilkan</span>
+                <select id="transaksiPageSize" class="form-select form-select-sm trx-page-size">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span>data</span>
+            </div>
+            <div id="transaksiPageInfo" class="text-muted small"></div>
         </div>
 
         <div class="card-body p-0">
@@ -387,11 +417,12 @@
                             <?php foreach ($transaksi as $row) : ?>
                                 <?php
                                 $st = (string) $row->status;
+                                $is_batal = $st === 'Dibatalkan';
                                 $is_lunas = (string) $row->dibayar === 'Sudah Dibayar';
                                 $is_diambil = $st === 'Diambil';
                                 $is_siap_diambil = $st === 'Selesai';
                                 $is_lunas_belum_diambil = $is_lunas && $is_siap_diambil;
-                                $is_terlambat = !$is_diambil && !empty($row->batas_waktu) && strtotime($row->batas_waktu) < time();
+                                $is_terlambat = !$is_batal && !$is_diambil && !empty($row->batas_waktu) && strtotime($row->batas_waktu) < time();
 
                                 $badge = 'bg-secondary';
                                 if ($st == 'Proses') {
@@ -400,6 +431,8 @@
                                     $badge = 'bg-warning text-dark';
                                 } elseif ($st == 'Diambil') {
                                     $badge = 'bg-success';
+                                } elseif ($is_batal) {
+                                    $badge = 'bg-danger';
                                 }
                                 ?>
                                 <tr>
@@ -413,6 +446,8 @@
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">Prioritas serah terima</span>
                                             <?php elseif ($is_siap_diambil) : ?>
                                                 <span class="badge bg-info-subtle text-info border border-info-subtle">Siap menunggu customer</span>
+                                            <?php elseif ($is_batal) : ?>
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Nota dibatalkan</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -431,7 +466,9 @@
                                     </td>
 
                                     <td>
-                                        <?php if ($is_lunas) : ?>
+                                        <?php if ($is_batal) : ?>
+                                            <span class="badge bg-light text-danger border border-danger-subtle">Dibatalkan</span>
+                                        <?php elseif ($is_lunas) : ?>
                                             <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fas fa-check-circle me-1"></i> Lunas</span>
                                             <?php if (!empty($row->tgl_bayar)) : ?>
                                                 <div class="mt-2"><small class="text-muted">Dibayar: <?= date('d/m/Y H:i', strtotime($row->tgl_bayar)); ?></small></div>
@@ -442,7 +479,12 @@
                                     </td>
 
                                     <td>
-                                        <?php if ($is_diambil) : ?>
+                                        <?php if ($is_batal) : ?>
+                                            <span class="badge bg-light text-danger border border-danger-subtle">Tidak Diproses</span>
+                                            <?php if (!empty($row->batal_at)) : ?>
+                                                <div class="mt-2"><small class="text-muted">Batal: <?= date('d/m/Y H:i', strtotime($row->batal_at)); ?></small></div>
+                                            <?php endif; ?>
+                                        <?php elseif ($is_diambil) : ?>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Sudah Diambil</span>
                                             <?php if (!empty($row->tgl_diambil)) : ?>
                                                 <div class="mt-2"><small class="text-muted">Diambil: <?= date('d/m/Y H:i', strtotime($row->tgl_diambil)); ?></small></div>
@@ -472,6 +514,9 @@
                     </tbody>
                 </table>
             </div>
+            <div class="d-flex justify-content-end px-4 py-3 border-top">
+                <div id="transaksiPagination" class="btn-group btn-group-sm trx-pagination" role="group" aria-label="Paginasi transaksi"></div>
+            </div>
         </div>
     </div>
 </main>
@@ -481,25 +526,106 @@
         var searchInput = document.getElementById('searchTransaksi');
         var btnClear = document.getElementById('btnClearSearch');
         var table = document.getElementById('tabelTransaksi');
-        var rows = table ? table.querySelectorAll('tbody tr') : [];
+        var rows = table ? Array.prototype.slice.call(table.querySelectorAll('tbody tr')) : [];
+        var pageSizeSelect = document.getElementById('transaksiPageSize');
+        var pageInfo = document.getElementById('transaksiPageInfo');
+        var pagination = document.getElementById('transaksiPagination');
+        var pageSize = parseInt(pageSizeSelect.value || '25', 10);
+        var currentPage = 1;
+        var filteredRows = [];
 
-        searchInput.addEventListener('keyup', function() {
-            var keyword = this.value.toLowerCase();
+        rows = rows.filter(function(row) {
+            return !row.querySelector('td[colspan]');
+        });
+
+        function applyFilter(page) {
+            var keyword = searchInput.value.toLowerCase().trim();
             btnClear.classList.toggle('d-none', keyword.length === 0);
+            filteredRows = rows.filter(function(row) {
+                return row.textContent.toLowerCase().indexOf(keyword) > -1;
+            });
+            renderPage(page || 1);
+        }
+
+        function renderPage(page) {
+            var totalRows = filteredRows.length;
+            var totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+            currentPage = Math.min(Math.max(parseInt(page || 1, 10), 1), totalPages);
+            var start = (currentPage - 1) * pageSize;
+            var end = start + pageSize;
 
             rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                row.style.display = text.indexOf(keyword) > -1 ? '' : 'none';
+                row.style.display = 'none';
             });
+
+            filteredRows.slice(start, end).forEach(function(row) {
+                row.style.display = '';
+            });
+
+            if (totalRows === 0) {
+                pageInfo.textContent = 'Tidak ada data';
+                pagination.innerHTML = '';
+                return;
+            }
+
+            pageInfo.textContent = 'Menampilkan ' + (start + 1) + '-' + Math.min(end, totalRows) + ' dari ' + totalRows + ' data';
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            var pages = [];
+            pages.push({ label: '&laquo;', page: Math.max(1, currentPage - 1), disabled: currentPage === 1 });
+
+            var startPage = Math.max(1, currentPage - 2);
+            var endPage = Math.min(totalPages, currentPage + 2);
+            if (currentPage <= 3) {
+                endPage = Math.min(totalPages, 5);
+            }
+            if (currentPage >= totalPages - 2) {
+                startPage = Math.max(1, totalPages - 4);
+            }
+
+            for (var p = startPage; p <= endPage; p++) {
+                pages.push({ label: p, page: p, active: p === currentPage });
+            }
+
+            pages.push({ label: '&raquo;', page: Math.min(totalPages, currentPage + 1), disabled: currentPage === totalPages });
+
+            pagination.innerHTML = pages.map(function(item) {
+                return '<button type="button" class="btn ' + (item.active ? 'btn-primary' : 'btn-outline-primary') + '" data-page="' + item.page + '"' + (item.disabled ? ' disabled' : '') + '>' + item.label + '</button>';
+            }).join('');
+        }
+
+        searchInput.addEventListener('keyup', function() {
+            applyFilter(1);
         });
 
         btnClear.addEventListener('click', function() {
             searchInput.value = '';
             btnClear.classList.add('d-none');
-            rows.forEach(function(row) {
-                row.style.display = '';
-            });
             searchInput.focus();
+            applyFilter(1);
         });
+
+        pageSizeSelect.addEventListener('change', function() {
+            pageSize = parseInt(this.value || '25', 10);
+            applyFilter(1);
+        });
+
+        pagination.addEventListener('click', function(e) {
+            var button = e.target.closest('button[data-page]');
+            if (!button || button.disabled) {
+                return;
+            }
+
+            renderPage(parseInt(button.getAttribute('data-page'), 10));
+        });
+
+        applyFilter(1);
     });
 </script>

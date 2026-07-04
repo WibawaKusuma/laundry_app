@@ -9,6 +9,7 @@ class Pelanggan extends MY_Controller
     {
         parent::__construct();
         $this->load->library('form_validation');
+        $this->load->model('Pelanggan_model');
 
         if (empty($this->session->userdata('role'))) {
             redirect('auth/login');
@@ -36,16 +37,7 @@ class Pelanggan extends MY_Controller
     private function is_duplicate_name($name, $exclude_id = null)
     {
         $normalized_name = mb_strtolower($this->normalize_customer_name($name), 'UTF-8');
-        $sql = 'SELECT COUNT(*) AS total FROM m_pelanggan WHERE LOWER(TRIM(nama)) = ?';
-        $params = [$normalized_name];
-
-        if (!empty($exclude_id)) {
-            $sql .= ' AND id != ?';
-            $params[] = (int) $exclude_id;
-        }
-
-        $row = $this->db->query($sql, $params)->row();
-        return !empty($row) && (int) $row->total > 0;
+        return $this->Pelanggan_model->name_exists($normalized_name, $exclude_id);
     }
 
     private function is_duplicate_phone($phone, $exclude_id = null)
@@ -62,14 +54,7 @@ class Pelanggan extends MY_Controller
             return false;
         }
 
-        $this->db->from('m_pelanggan');
-        $this->db->where('no_hp', $phone);
-
-        if (!empty($exclude_id)) {
-            $this->db->where('id !=', (int) $exclude_id);
-        }
-
-        return $this->db->count_all_results() > 0;
+        return $this->Pelanggan_model->phone_exists($phone, $exclude_id);
     }
 
     public function unique_nama_check($nama, $id = null)
@@ -94,9 +79,7 @@ class Pelanggan extends MY_Controller
 
     public function index()
     {
-        $this->db->order_by('aktif', 'DESC');
-        $this->db->order_by('nama', 'ASC');
-        $data['pelanggan'] = $this->db->get('m_pelanggan')->result();
+        $data['pelanggan'] = $this->Pelanggan_model->get_all_ordered();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -107,17 +90,7 @@ class Pelanggan extends MY_Controller
     public function search()
     {
         $keyword = $this->input->get('keyword');
-
-        if ($keyword) {
-            $this->db->group_start();
-            $this->db->like('nama', $keyword);
-            $this->db->or_like('no_hp', $keyword);
-            $this->db->group_end();
-        }
-
-        $this->db->order_by('aktif', 'DESC');
-        $this->db->order_by('nama', 'ASC');
-        $result = $this->db->get('m_pelanggan')->result();
+        $result = $this->Pelanggan_model->search($keyword);
 
         $this->output
             ->set_content_type('application/json')
@@ -157,7 +130,7 @@ class Pelanggan extends MY_Controller
                 'aktif' => (int) $this->input->post('aktif')
             );
 
-            $this->db->insert('m_pelanggan', $data);
+            $this->Pelanggan_model->insert($data);
             $this->session->set_flashdata('success', 'Data Pelanggan Berhasil Disimpan');
             redirect('pelanggan');
         }
@@ -166,7 +139,7 @@ class Pelanggan extends MY_Controller
     public function edit($id)
     {
         $data['title'] = 'Edit Pelanggan';
-        $data['pelanggan'] = $this->db->get_where('m_pelanggan', array('id' => $id))->row();
+        $data['pelanggan'] = $this->Pelanggan_model->get_by_id($id);
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -193,8 +166,7 @@ class Pelanggan extends MY_Controller
                 'aktif' => (int) $this->input->post('aktif')
             );
 
-            $this->db->where('id', $id);
-            $this->db->update('m_pelanggan', $data);
+            $this->Pelanggan_model->update($id, $data);
             $this->session->set_flashdata('success', 'Data Pelanggan Berhasil Diupdate');
             redirect('pelanggan');
         }
@@ -202,8 +174,7 @@ class Pelanggan extends MY_Controller
 
     public function hapus($id)
     {
-        $this->db->where('id', $id);
-        $this->db->delete('m_pelanggan');
+        $this->Pelanggan_model->delete($id);
         $this->session->set_flashdata('success', 'Data Pelanggan Berhasil Dihapus');
         redirect('pelanggan');
     }

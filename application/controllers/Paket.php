@@ -15,27 +15,13 @@ class Paket extends MY_Controller
 
         $this->preventPageCache();
         $this->load->library('form_validation');
+        $this->load->model('Paket_model');
     }
 
     public function index()
     {
         $keyword = trim((string) $this->input->get('q', true));
-
-        $this->db->select('m_paket_laundry.*, m_kategori.nama_kategori, m_tipe.nama_tipe, m_satuan.nama_satuan');
-        $this->db->from('m_paket_laundry');
-        $this->db->join('m_kategori', 'm_kategori.id_kategori = m_paket_laundry.id_kategori', 'left');
-        $this->db->join('m_tipe', 'm_tipe.id_tipe = m_paket_laundry.id_tipe', 'left');
-        $this->db->join('m_satuan', 'm_satuan.id_satuan = m_paket_laundry.id_satuan', 'left');
-        if ($keyword !== '') {
-            $this->db->group_start();
-            $this->db->like('m_paket_laundry.nama_paket', $keyword);
-            $this->db->or_like('m_tipe.nama_tipe', $keyword);
-            $this->db->or_like('m_kategori.nama_kategori', $keyword);
-            $this->db->or_like('m_satuan.nama_satuan', $keyword);
-            $this->db->group_end();
-        }
-        $this->db->order_by('m_paket_laundry.id_paket_laundry', 'ASC');
-        $data['paket'] = $this->db->get()->result();
+        $data['paket'] = $this->Paket_model->get_all_with_master($keyword);
         $data['keyword'] = $keyword;
 
         $this->load->view('templates/header');
@@ -57,9 +43,9 @@ class Paket extends MY_Controller
             'harga' => ''
         ];
 
-        $data['kategori'] = $this->db->get('m_kategori')->result();
-        $data['tipe'] = $this->db->get('m_tipe')->result();
-        $data['satuan'] = $this->db->get('m_satuan')->result();
+        $data['kategori'] = $this->Paket_model->get_kategori();
+        $data['tipe'] = $this->Paket_model->get_tipe();
+        $data['satuan'] = $this->Paket_model->get_satuan();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -101,7 +87,7 @@ class Paket extends MY_Controller
                 'harga' => $this->input->post('harga', true)
             ];
 
-            if ($this->db->insert('m_paket_laundry', $data)) {
+            if ($this->Paket_model->insert($data)) {
                 $this->session->set_flashdata('success', 'Data Laundry Berhasil Disimpan');
             } else {
                 $this->session->set_flashdata('error', 'Gagal menyimpan ke database!');
@@ -114,11 +100,11 @@ class Paket extends MY_Controller
     public function edit($id)
     {
         $data['title'] = 'Edit Paket Laundry';
-        $data['paket'] = $this->db->get_where('m_paket_laundry', array('id_paket_laundry' => $id))->row();
+        $data['paket'] = $this->Paket_model->get_by_id($id);
 
-        $data['kategori'] = $this->db->get('m_kategori')->result();
-        $data['tipe'] = $this->db->get('m_tipe')->result();
-        $data['satuan'] = $this->db->get('m_satuan')->result();
+        $data['kategori'] = $this->Paket_model->get_kategori();
+        $data['tipe'] = $this->Paket_model->get_tipe();
+        $data['satuan'] = $this->Paket_model->get_satuan();
 
         $this->load->view('templates/header');
         $this->load->view('templates/sidebar');
@@ -149,8 +135,7 @@ class Paket extends MY_Controller
                 'harga' => $this->input->post('harga', true)
             ];
 
-            $this->db->where('id_paket_laundry', $id);
-            if ($this->db->update('m_paket_laundry', $data)) {
+            if ($this->Paket_model->update($id, $data)) {
                 $this->session->set_flashdata('success', 'Data Laundry Berhasil Diupdate');
             } else {
                 $this->session->set_flashdata('error', 'Gagal mengupdate data!');
@@ -162,8 +147,7 @@ class Paket extends MY_Controller
 
     public function hapus($id)
     {
-        $this->db->where('id_paket_laundry', $id);
-        $this->db->delete('m_paket_laundry');
+        $this->Paket_model->delete($id);
         $this->session->set_flashdata('flash', 'Dihapus');
         redirect('paket');
     }

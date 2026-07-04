@@ -248,14 +248,20 @@ if ($jenis_laporan === 'kas_masuk') {
                             $grand_reward = 0;
                             $grand_reward_qty = 0;
                             $grand_promo = 0;
-                            $grand_promo_qty = 0;
+                            $grand_promo_qty_kg = 0;
+                            $grand_promo_qty_pasang = 0;
                             $grand_total = 0;
                             foreach ($laporan as $index => $row) :
+                                $promo_unit = (string) ($row->benefit_tipe ?? '') === 'promo_sepatu' ? 'pasang' : 'kg';
                                 $grand_subtotal += (float) $row->subtotal_normal;
                                 $grand_reward += (float) $row->reward_potongan;
                                 $grand_reward_qty += (float) $row->reward_gratis_qty;
                                 $grand_promo += (float) $row->promo_gratis_potongan;
-                                $grand_promo_qty += (float) $row->promo_gratis_qty;
+                                if ($promo_unit === 'pasang') {
+                                    $grand_promo_qty_pasang += (float) $row->promo_gratis_qty;
+                                } else {
+                                    $grand_promo_qty_kg += (float) $row->promo_gratis_qty;
+                                }
                                 $grand_total += (float) $row->total_akhir;
 
                                 $tanggal_acuan = $row->tgl_masuk;
@@ -297,7 +303,7 @@ if ($jenis_laporan === 'kas_masuk') {
                                     <td class="text-end text-nowrap">
                                         Rp <?= number_format((float) $row->promo_gratis_potongan, 0, ',', '.') ?>
                                         <?php if ((float) $row->promo_gratis_qty > 0) : ?>
-                                            <div class="small text-warning fw-semibold">Gratis <?= rtrim(rtrim(number_format((float) $row->promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> kg</div>
+                                            <div class="small text-warning fw-semibold">Gratis <?= rtrim(rtrim(number_format((float) $row->promo_gratis_qty, 2, '.', ''), '0'), '.'); ?> <?= $promo_unit; ?></div>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4 fw-bold text-nowrap">Rp <?= number_format((float) $row->total_akhir, 0, ',', '.') ?></td>
@@ -315,13 +321,22 @@ if ($jenis_laporan === 'kas_masuk') {
                             <tr>
                                 <td colspan="8" class="text-end fw-bold py-3">TOTAL REWARD MEMBER :</td>
                                 <td class="text-end fw-bold text-success py-3 pe-4 fs-6 text-nowrap">
-                                    <?= rtrim(rtrim(number_format($grand_reward_qty, 2, '.', ''), '0'), '.'); ?> kg / Rp <?= number_format($grand_reward, 0, ',', '.') ?>
+                                    <?= $grand_reward_qty > 0 ? rtrim(rtrim(number_format($grand_reward_qty, 2, '.', ''), '0'), '.') . ' kg / ' : ''; ?>Rp <?= number_format($grand_reward, 0, ',', '.') ?>
                                 </td>
                             </tr>
                             <tr>
-                                <td colspan="8" class="text-end fw-bold py-3">TOTAL PROMO GRATIS :</td>
+                                <td colspan="8" class="text-end fw-bold py-3">TOTAL POTONGAN PROMO :</td>
                                 <td class="text-end fw-bold text-warning py-3 pe-4 fs-6 text-nowrap">
-                                    <?= rtrim(rtrim(number_format($grand_promo_qty, 2, '.', ''), '0'), '.'); ?> kg / Rp <?= number_format($grand_promo, 0, ',', '.') ?>
+                                    <?php
+                                    $promo_qty_parts = [];
+                                    if ($grand_promo_qty_kg > 0) {
+                                        $promo_qty_parts[] = rtrim(rtrim(number_format($grand_promo_qty_kg, 2, '.', ''), '0'), '.') . ' kg';
+                                    }
+                                    if ($grand_promo_qty_pasang > 0) {
+                                        $promo_qty_parts[] = rtrim(rtrim(number_format($grand_promo_qty_pasang, 2, '.', ''), '0'), '.') . ' pasang';
+                                    }
+                                    ?>
+                                    <?= !empty($promo_qty_parts) ? implode(' + ', $promo_qty_parts) . ' / ' : ''; ?>Rp <?= number_format($grand_promo, 0, ',', '.') ?>
                                 </td>
                             </tr>
                             <tr>

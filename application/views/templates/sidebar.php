@@ -50,11 +50,17 @@
                         </a>
                     </li>
 
-                <li class="nav-item">
-                    <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
-                        <i class="fas fa-file-alt me-2"></i> Laporan Bisnis
-                    </a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $uri == 'pengaturan' ? 'active' : '' ?>" href="<?= base_url('pengaturan/promo') ?>">
+                            <i class="fas fa-sliders-h me-2"></i> Pengaturan Promo
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link <?= $uri == 'laporan' ? 'active' : '' ?>" href="<?= base_url('laporan') ?>">
+                            <i class="fas fa-file-alt me-2"></i> Laporan Bisnis
+                        </a>
+                    </li>
                 <?php endif; ?>
             <?php endif; ?>
 

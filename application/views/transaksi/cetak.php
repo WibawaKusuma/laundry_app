@@ -78,7 +78,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 13pt;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .table-items th {
@@ -119,7 +119,24 @@
             display: flex;
             justify-content: space-between;
             font-weight: bold;
-            font-size: 13pt;
+            font-size: 12pt;
+            line-height: 1.25;
+        }
+
+        .summary-row.total {
+            border-top: 1px dashed #000;
+            margin-top: 4px;
+            padding-top: 4px;
+            font-size: 14pt;
+        }
+
+        .summary-label {
+            max-width: 58%;
+        }
+
+        .summary-value {
+            text-align: right;
+            white-space: nowrap;
         }
 
         .status-bayar {
@@ -171,6 +188,14 @@
             <div class="info-row">
                 <span>Pelanggan: <span class="customer-name"><?= htmlspecialchars(substr($transaksi->nama_pelanggan, 0, 20), ENT_QUOTES, 'UTF-8'); ?></span></span>
             </div>
+            <?php if ((string) ($transaksi->status ?? '') === 'Dibatalkan') : ?>
+                <div class="info-row">
+                    <span>Status: DIBATALKAN</span>
+                </div>
+                <div style="font-size: 9pt; line-height: 1.3;">
+                    Alasan: <?= htmlspecialchars($transaksi->alasan_batal ?? '-', ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
         </div>
 
         <table class="table-items">
@@ -195,12 +220,14 @@
                             <?= htmlspecialchars($item_label, ENT_QUOTES, 'UTF-8'); ?>
                             <?php if (!empty($d->nama_paket) && strcasecmp($d->nama_paket, $item_label) !== 0) : ?>
                                 <div style="font-size: 9pt; font-weight: normal;">
-                                    Paket: <?= htmlspecialchars($d->nama_paket, ENT_QUOTES, 'UTF-8'); ?>
+                                    <?= htmlspecialchars($d->nama_paket, ENT_QUOTES, 'UTF-8'); ?>
                                 </div>
                             <?php endif; ?>
-                            <div style="font-size: 9pt; font-weight: normal;">
-                                Ket: <?= htmlspecialchars($d->item_note_text ?? '-', ENT_QUOTES, 'UTF-8'); ?>
-                            </div>
+                            <?php if (!empty($d->item_note_text) && trim((string) $d->item_note_text) !== '-') : ?>
+                                <div style="font-size: 9pt; font-weight: normal;">
+                                    <?= htmlspecialchars($d->item_note_text, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php endif; ?>
                         </td>
                         <td class="qty"><?= $d->qty_label; ?><?= strtolower($unit_label); ?></td>
                         <td class="price"><?= number_format($subtotal, 0, ',', '.'); ?></td>
@@ -210,54 +237,42 @@
         </table>
 
         <div class="summary">
-            <?php if (!empty($ringkasan_pembayaran['reward_dipakai'])) : ?>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Subtotal Normal:</span>
-                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
-                </div>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Reward Member:</span>
-                    <span>Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Reg/Satu Hari</span>
-                </div>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Potongan Reward:</span>
-                    <span>- Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></span>
+            <?php if (!empty($ringkasan_pembayaran['reward_tersedia'])) : ?>
+                <div class="summary-row">
+                    <span class="summary-label">Subtotal</span>
+                    <span class="summary-value">Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
                 </div>
                 <div class="summary-row">
-                    <span>TOTAL AKHIR:</span>
-                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
+                    <span class="summary-label">Reward Member</span>
+                    <span class="summary-value">- Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></span>
                 </div>
-            <?php elseif (!empty($ringkasan_pembayaran['promo_dipakai'])) : ?>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Subtotal Normal:</span>
-                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
+                <div class="summary-row total">
+                    <span class="summary-label">TOTAL BAYAR</span>
+                    <span class="summary-value">Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
                 </div>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Promo Gratis:</span>
-                    <span><?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_keterangan'] ?: ($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis'), ENT_QUOTES, 'UTF-8'); ?></span>
-                </div>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Gratis Promo:</span>
-                    <span><?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</span>
-                </div>
-                <div class="summary-row" style="font-size: 9pt;">
-                    <span>Potongan Promo:</span>
-                    <span>- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></span>
+            <?php elseif (!empty($ringkasan_pembayaran['promo_tersedia'])) : ?>
+                <div class="summary-row">
+                    <span class="summary-label">Subtotal</span>
+                    <span class="summary-value">Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></span>
                 </div>
                 <div class="summary-row">
-                    <span>TOTAL AKHIR:</span>
-                    <span>Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
+                    <span class="summary-label">Promo <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span class="summary-value">- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></span>
+                </div>
+                <div class="summary-row total">
+                    <span class="summary-label">TOTAL BAYAR</span>
+                    <span class="summary-value">Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></span>
                 </div>
             <?php else : ?>
-                <div class="summary-row">
-                    <span>TOTAL:</span>
-                    <span>Rp <?= number_format($grand_total, 0, ',', '.'); ?></span>
+                <div class="summary-row total">
+                    <span class="summary-label">TOTAL BAYAR</span>
+                    <span class="summary-value">Rp <?= number_format($grand_total, 0, ',', '.'); ?></span>
                 </div>
             <?php endif; ?>
         </div>
 
         <div class="status-bayar">
-            <?= strtoupper($transaksi->dibayar); ?>
+            <?= (string) ($transaksi->status ?? '') === 'Dibatalkan' ? 'DIBATALKAN' : strtoupper($transaksi->dibayar); ?>
         </div>
 
         <?php if (!empty($transaksi->nama_metode_bayar)) : ?>

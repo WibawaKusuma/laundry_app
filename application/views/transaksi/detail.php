@@ -7,6 +7,7 @@
     /** @var array $status_options */
     /** @var bool $can_add_items */
     /** @var bool $can_modify_items */
+    /** @var bool $can_cancel_transaction */
     /** @var string $add_item_block_reason */
     /** @var string $wa_contact_link */
     /** @var array $promo_settings */
@@ -14,7 +15,10 @@
     /** @var array|null $benefit_badge */
     ?>
 
-    <?php $promo_enabled = !empty($promo_settings['is_enabled']); ?>
+    <?php
+    $promo_enabled = !empty($promo_settings['is_enabled']);
+    $is_cancelled = (string) ($transaksi->status ?? '') === 'Dibatalkan';
+    ?>
 
     <style>
         .trx-payment-summary {
@@ -546,7 +550,7 @@
                             <small class="text-muted d-block">Tanggal Masuk</small>
                             <span class="fw-bold"><?= date('d/m/Y H:i', strtotime($transaksi->tgl_masuk)); ?></span>
                             <small class="text-muted d-block mt-2">Batas Waktu</small>
-                            <span class="text-danger fw-bold"><?= date('d/m/Y H:i', strtotime($transaksi->batas_waktu)); ?></span>
+                            <span class="text-danger fw-bold"><?= !empty($transaksi->batas_waktu) ? date('d/m/Y H:i', strtotime($transaksi->batas_waktu)) : '-'; ?></span>
                         </div>
                     </div>
 
@@ -561,6 +565,8 @@
                                 $operational_badge = 'bg-warning text-dark';
                             } elseif ($transaksi->status == 'Diambil') {
                                 $operational_badge = 'bg-success';
+                            } elseif ($is_cancelled) {
+                                $operational_badge = 'bg-danger';
                             }
                             ?>
                             <span class="badge <?= $operational_badge; ?>"><?= strtoupper($transaksi->status); ?></span>
@@ -575,7 +581,9 @@
 
                         <div class="trx-status-box">
                             <small>Status Pembayaran</small>
-                            <?php if ($transaksi->dibayar == 'Sudah Dibayar') : ?>
+                            <?php if ($is_cancelled) : ?>
+                                <span class="badge bg-light text-danger border border-danger">DIBATALKAN</span>
+                            <?php elseif ($transaksi->dibayar == 'Sudah Dibayar') : ?>
                                 <span class="badge bg-success">LUNAS</span>
                             <?php else : ?>
                                 <span class="badge bg-danger">BELUM DIBAYAR</span>
@@ -591,7 +599,9 @@
 
                         <div class="trx-status-box">
                             <small>Status Pengambilan</small>
-                            <?php if ($transaksi->status == 'Diambil') : ?>
+                            <?php if ($is_cancelled) : ?>
+                                <span class="badge bg-light text-danger border border-danger">TIDAK DIPROSES</span>
+                            <?php elseif ($transaksi->status == 'Diambil') : ?>
                                 <span class="badge bg-primary">SUDAH DIAMBIL</span>
                             <?php else : ?>
                                 <span class="badge bg-light text-dark border">BELUM DIAMBIL</span>
@@ -610,6 +620,16 @@
                         </div>
                     </div>
 
+                    <?php if ($is_cancelled) : ?>
+                        <div class="alert alert-danger d-flex flex-column gap-1 mb-3">
+                            <div><i class="fas fa-ban me-2"></i><strong>Transaksi Dibatalkan</strong></div>
+                            <div><strong>Alasan:</strong> <?= htmlspecialchars($transaksi->alasan_batal ?? '-', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php if (!empty($transaksi->batal_at)) : ?>
+                                <div><strong>Waktu batal:</strong> <?= date('d/m/Y H:i', strtotime($transaksi->batal_at)); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (!empty($ringkasan_pembayaran['reward_dipakai'])) : ?>
                         <div class="alert alert-success d-flex flex-column gap-1 mb-3">
                             <div><i class="fas fa-gift me-2"></i><strong>Reward Member:</strong> Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit Reguler / Satu Hari</div>
@@ -620,11 +640,11 @@
                     <?php elseif (!empty($ringkasan_pembayaran['promo_dipakai'])) : ?>
                         <div class="alert alert-warning d-flex flex-column gap-1 mb-3">
                             <div><i class="fas fa-tags me-2"></i><strong>Promo Gratis:</strong> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_keterangan'] ?: ($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis'), ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div><strong>Total Cuci Komplit:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</div>
-                            <div><strong>Gratis Promo:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg</div>
+                            <div><strong>Total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'Cuci Komplit', ENT_QUOTES, 'UTF-8'); ?>:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_qty_eligible'] ?? $ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div><strong>Gratis Promo:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?></div>
                             <div><strong>Potongan Promo:</strong> Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></div>
                             <div><strong>Total Akhir:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></div>
-                            <small class="text-muted">Promo berlaku kelipatan sesuai total kg Cuci Komplit yang memenuhi syarat.</small>
+                            <small class="text-muted">Promo berlaku kelipatan sesuai total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'layanan', ENT_QUOTES, 'UTF-8'); ?> yang memenuhi syarat.</small>
                         </div>
                     <?php endif; ?>
 
@@ -654,7 +674,17 @@
                             <tbody>
                                 <?php
                                 $grand_total = 0;
-                                foreach (($active_detail ?? $detail) as $d) :
+                                $display_detail = $active_detail ?? $detail;
+                                ?>
+                                <?php if (empty($display_detail)) : ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            Tidak ada item aktif pada transaksi ini.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php
+                                foreach ($display_detail as $d) :
                                     $subtotal = $d->subtotal;
                                     $grand_total += $subtotal;
                                     $item_label = !empty($d->nama_tipe) ? $d->nama_tipe : $d->nama_paket;
@@ -740,7 +770,7 @@
                                             <td colspan="5" class="text-end text-success">
                                                 <?= !empty($ringkasan_pembayaran['promo_preview']) ? 'Preview Promo Gratis' : 'Promo Gratis'; ?>:
                                                 <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>
-                                                (<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit, gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg)
+                                                (<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_qty_eligible'] ?? $ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'Cuci Komplit', ENT_QUOTES, 'UTF-8'); ?>, gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?>)
                                             </td>
                                             <td class="text-end fw-semibold text-warning text-nowrap">- Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></td>
                                         </tr>
@@ -914,6 +944,26 @@
                             <div class="small mb-0"><?= htmlspecialchars($add_item_block_reason, ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     <?php endif; ?>
+
+                    <?php if (!empty($can_cancel_transaction)) : ?>
+                        <div class="mt-4 pt-2 border-top">
+                            <form action="<?= base_url('transaksi/batalkan'); ?>" method="post" class="js-cancel-transaction-form">
+                                <input type="hidden" name="kode_invoice" value="<?= $transaksi->kode_invoice; ?>">
+                                <label for="alasan_batal" class="form-label fw-bold text-danger">Batalkan Transaksi</label>
+                                <textarea
+                                    name="alasan_batal"
+                                    id="alasan_batal"
+                                    class="form-control mb-2"
+                                    rows="2"
+                                    maxlength="255"
+                                    placeholder="Alasan wajib. Contoh: customer batal cuci atau salah input pelanggan."
+                                    required></textarea>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-ban me-1"></i> Batalkan Transaksi
+                                </button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -925,7 +975,11 @@
                     <i class="fas fa-tshirt me-2 app-section-header-icon"></i> Status Laundry
                 </div>
                 <div class="card-body">
-                    <?php if ($transaksi->status === 'Diambil') : ?>
+                    <?php if ($is_cancelled) : ?>
+                        <div class="alert alert-danger mb-0">
+                            Transaksi sudah dibatalkan dan status pengerjaan dikunci.
+                        </div>
+                    <?php elseif ($transaksi->status === 'Diambil') : ?>
                         <div class="alert alert-success mb-0">
                             Laundry sudah selesai seluruh proses dan telah diambil customer.
                         </div>
@@ -986,8 +1040,8 @@
                                     </div>
                                     <div class="trx-payment-breakdown-note">
                                         <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>.
-                                        Total Cuci Komplit <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg,
-                                        gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg dan berlaku kelipatan
+                                        Total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'Cuci Komplit', ENT_QUOTES, 'UTF-8'); ?> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_qty_eligible'] ?? $ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?>,
+                                        gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?> dan berlaku kelipatan
                                         <?php if (!empty($ringkasan_pembayaran['promo_preview'])) : ?>
                                             dan akan dikunci saat pembayaran dicatat.
                                         <?php else : ?>
@@ -1003,7 +1057,11 @@
                         </div>
                     </div>
 
-                    <?php if ($transaksi->dibayar == 'Belum Dibayar') : ?>
+                    <?php if ($is_cancelled) : ?>
+                        <div class="alert alert-danger mb-0 text-start">
+                            Pembayaran dinonaktifkan karena transaksi sudah dibatalkan.
+                        </div>
+                    <?php elseif ($transaksi->dibayar == 'Belum Dibayar') : ?>
                         <div class="alert alert-danger trx-payment-status">
                             Status: <strong>BELUM LUNAS</strong>
                         </div>
@@ -1044,7 +1102,9 @@
                                 data-promo-potongan="Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?>"
                                 data-promo-potongan-value="<?= (int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0); ?>"
                                 data-promo-label="<?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>"
-                                data-promo-total-kg="<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?>">
+                                data-promo-total-kg="<?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_qty_eligible'] ?? $ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?>"
+                                data-promo-unit="<?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?>"
+                                data-promo-scope="<?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'Cuci Komplit', ENT_QUOTES, 'UTF-8'); ?>">
                                 <i class="fas fa-check-circle me-2"></i> Catat Pembayaran
                             </button>
                         </form>
@@ -1231,6 +1291,44 @@
             });
         });
 
+        document.querySelectorAll('.js-cancel-transaction-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                var alasan = form.querySelector('[name="alasan_batal"]');
+                if (!alasan || alasan.value.trim() === '') {
+                    Swal.fire('Alasan wajib diisi', 'Isi alasan pembatalan transaksi terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Batalkan Transaksi Ini?',
+                    html: `
+                        <div style="padding-top:.25rem;">
+                            <div style="display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .8rem;border-radius:999px;background:#fff4f4;color:#b42318;font-size:.88rem;font-weight:700;border:1px solid #f5c2c7;">
+                                <i class="fas fa-ban"></i>
+                                <span>Semua item akan dibatalkan dan nota dikunci</span>
+                            </div>
+                            <div style="margin-top:1rem;color:#4b5563;line-height:1.6;">
+                                Aksi ini hanya untuk transaksi yang masih Baru dan belum dibayar.
+                            </div>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Batalkan Transaksi',
+                    cancelButtonText: 'Kembali',
+                    focusCancel: true
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+
         var btnBayar = document.querySelector('.btn-bayar');
         if (btnBayar) {
             btnBayar.addEventListener('click', function(e) {
@@ -1247,6 +1345,8 @@
                 var promoPotongan = btnBayar.getAttribute('data-promo-potongan') || 'Rp 0';
                 var promoLabel = btnBayar.getAttribute('data-promo-label') || 'Promo Gratis';
                 var promoTotalKg = btnBayar.getAttribute('data-promo-total-kg') || '0';
+                var promoUnit = btnBayar.getAttribute('data-promo-unit') || 'kg';
+                var promoScope = btnBayar.getAttribute('data-promo-scope') || 'Cuci Komplit';
                 var promoGratisValue = parseFloat(promoGratis || '0');
                 var promoPotonganValue = parseInt(btnBayar.getAttribute('data-promo-potongan-value') || '0', 10);
                 var detailPotonganHtml = '';
@@ -1275,7 +1375,7 @@
                                 <strong>${subtotalNormal}</strong>
                             </div>
                             <div style="display:flex;justify-content:space-between;gap:.8rem;font-size:.9rem;color:#b45309;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed #e5c48a;">
-                                <span>${promoLabel} <br> (${promoTotalKg} kg Cuci Komplit, gratis ${promoGratis} kg)</span>
+                                <span>${promoLabel} <br> (${promoTotalKg} ${promoUnit} ${promoScope}, gratis ${promoGratis} ${promoUnit})</span>
                                 <strong>- ${promoPotongan}</strong>
                             </div>
                         </div>
