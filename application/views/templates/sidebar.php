@@ -52,7 +52,7 @@
 
                     <li class="nav-item">
                         <a class="nav-link <?= $uri == 'pengaturan' ? 'active' : '' ?>" href="<?= base_url('pengaturan/promo') ?>">
-                            <i class="fas fa-sliders-h me-2"></i> Pengaturan Promo
+                            <i class="fas fa-sliders-h me-2"></i> Promo
                         </a>
                     </li>
 
