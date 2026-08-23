@@ -216,6 +216,49 @@
             font-weight: 700;
         }
 
+        .trx-laundry-type {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+        }
+
+        .trx-laundry-chip {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            padding: 0.28rem 0.55rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .trx-laundry-chip-express {
+            color: #9a3412;
+            background: #ffedd5;
+            border-color: #fed7aa;
+        }
+
+        .trx-laundry-chip-satu-hari {
+            color: #1d4ed8;
+            background: #dbeafe;
+            border-color: #bfdbfe;
+        }
+
+        .trx-laundry-chip-reguler {
+            color: #166534;
+            background: #dcfce7;
+            border-color: #bbf7d0;
+        }
+
+        .trx-laundry-chip-neutral {
+            color: #52607e;
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+
         .trx-page-size {
             width: auto;
             min-width: 82px;
@@ -423,6 +466,8 @@
                                 $is_siap_diambil = $st === 'Selesai';
                                 $is_lunas_belum_diambil = $is_lunas && $is_siap_diambil;
                                 $is_terlambat = !$is_batal && !$is_diambil && !empty($row->batas_waktu) && strtotime($row->batas_waktu) < time();
+                                $jenis_cucian = trim((string) ($row->jenis_cucian ?? ''));
+                                $jenis_cucian_labels = array_values(array_filter(array_map('trim', explode(',', $jenis_cucian))));
 
                                 $badge = 'bg-secondary';
                                 if ($st == 'Proses') {
@@ -463,6 +508,24 @@
 
                                     <td>
                                         <span class="badge <?= $badge; ?>"><?= strtoupper($st); ?></span>
+                                        <?php if (!empty($jenis_cucian_labels)) : ?>
+                                            <div class="trx-laundry-type">
+                                                <?php foreach ($jenis_cucian_labels as $jenis_label) : ?>
+                                                    <?php
+                                                    $jenis_key = strtolower($jenis_label);
+                                                    $jenis_class = 'trx-laundry-chip-neutral';
+                                                    if ($jenis_key === 'express') {
+                                                        $jenis_class = 'trx-laundry-chip-express';
+                                                    } elseif ($jenis_key === 'satu hari') {
+                                                        $jenis_class = 'trx-laundry-chip-satu-hari';
+                                                    } elseif ($jenis_key === 'reguler') {
+                                                        $jenis_class = 'trx-laundry-chip-reguler';
+                                                    }
+                                                    ?>
+                                                    <span class="trx-laundry-chip <?= $jenis_class; ?>"><?= htmlspecialchars($jenis_label, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
 
                                     <td>

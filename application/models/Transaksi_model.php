@@ -750,9 +750,29 @@ class Transaksi_model extends CI_Model
 
     public function get_index_by_periode($tgl_awal, $tgl_akhir, $status_bayar = 'belum')
     {
-        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan');
+        $jenis_cucian_subquery = '(
+            SELECT
+                td.id_transaksi,
+                GROUP_CONCAT(
+                    DISTINCT CASE
+                        WHEN LOWER(TRIM(p.nama_paket)) LIKE "%express%" THEN "Express"
+                        WHEN LOWER(TRIM(p.nama_paket)) LIKE "%satu hari%" THEN "Satu hari"
+                        WHEN LOWER(TRIM(p.nama_paket)) LIKE "%reguler%" THEN "Reguler"
+                        ELSE NULL
+                    END
+                    ORDER BY p.nama_paket
+                    SEPARATOR ", "
+                ) AS jenis_cucian
+            FROM transaksi_detail td
+            INNER JOIN m_paket_laundry p ON p.id_paket_laundry = td.id_paket
+            WHERE COALESCE(td.batal, 0) = 0
+            GROUP BY td.id_transaksi
+        ) jenis_cucian';
+
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, jenis_cucian.jenis_cucian');
         $this->db->from('transaksi');
         $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan');
+        $this->db->join($jenis_cucian_subquery, 'jenis_cucian.id_transaksi = transaksi.id', 'left', false);
         $this->db->where('DATE(transaksi.tgl_masuk) >=', $tgl_awal);
         $this->db->where('DATE(transaksi.tgl_masuk) <=', $tgl_akhir);
 
