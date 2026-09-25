@@ -1,7 +1,7 @@
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
     <?php
-    $promo_enabled = !empty($promo_settings['is_enabled']);
+    $promo_aktif = $promo_aktif ?? [];
     $member_settings = $member_settings ?? ['batas_poin' => 8, 'gratis_qty' => 3];
     $selected_pelanggan_id = (int) ($selected_pelanggan_id ?? 0);
     ?>
@@ -66,6 +66,7 @@
                                     value="<?= $p->id; ?>"
                                     data-poin-member="<?= $poin_member; ?>"
                                     data-reward-tersedia="<?= $reward_tersedia ? '1' : '0'; ?>"
+                                    data-jenis-pelanggan="<?= (string) ($p->jenis_pelanggan ?? 'umum') === 'mitra' ? 'mitra' : 'umum'; ?>"
                                     <?= $selected_pelanggan_id === (int) $p->id ? 'selected' : ''; ?>>
                                     <?= $p->nama; ?> (<?= $p->no_hp; ?>)
                                 </option>
@@ -137,25 +138,20 @@
                         </div>
                     </div>
 
-                    <?php if ($promo_enabled) : ?>
-                        <div class="col-md-6 col-xl-4">
-                            <label class="form-label fw-bold d-block">Promo Transaksi</label>
-                            <div class="border rounded-3 p-3 bg-light h-100">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" value="1" id="promo_cuci_3kg">
-                                    <label class="form-check-label fw-semibold" for="promo_cuci_3kg">
-                                        Aktifkan <?= $promo_settings['label']; ?>
-                                    </label>
-                                </div>
-                                <small class="text-muted d-block">
-                                    Berlaku untuk layanan kiloan tipe Cuci Komplit dan Cuci Setrika. Berat dibulatkan ke atas lalu <?= $promo_settings['free_qty']; ?> kg pertama gratis.
-                                </small>
-                                <small class="text-primary d-block mt-1">
-                                    Contoh: 3.8 kg dihitung 4 kg, yang dibayar hanya 1 kg. Layanan Setrika saja tidak mendapat promo.
-                                </small>
-                            </div>
+                    <div class="col-md-6 col-xl-4">
+                        <label class="form-label fw-bold d-block">Promo Aktif</label>
+                        <div class="border rounded-3 p-3 bg-light h-100 small">
+                            <?php if (!empty($promo_aktif)) : ?>
+                                <?php foreach ($promo_aktif as $promo_label) : ?>
+                                    <div class="mb-1"><i class="fas fa-tags me-1 text-primary"></i><?= htmlspecialchars($promo_label, ENT_QUOTES, 'UTF-8'); ?></div>
+                                <?php endforeach; ?>
+                                <div class="text-muted mt-2">Promo dihitung otomatis per nota dan dikunci saat nota disimpan. Satu nota hanya dapat satu benefit (reward member diprioritaskan).</div>
+                            <?php else : ?>
+                                <div class="text-muted">Tidak ada promo aktif.</div>
+                            <?php endif; ?>
+                            <div class="text-danger mt-2"><i class="fas fa-shoe-prints me-1"></i>Sepatu/sandal wajib nota terpisah dari cucian.</div>
                         </div>
-                    <?php endif; ?>
+                    </div>
 
                     <div class="col-md-6 col-xl-4">
                         <label class="form-label fw-bold d-block">&nbsp;</label>
@@ -240,17 +236,21 @@
             var rewardTersedia = String(selectedOption.data('reward-tersedia') || '0') === '1';
             var batasPoin = <?= (int) $member_settings['batas_poin']; ?>;
             var gratisQty = <?= (float) $member_settings['gratis_qty']; ?>;
-            var poin = Math.min(Math.max(poinRaw, 0), batasPoin);
+            var poin = Math.max(poinRaw, 0);
             var sisa = Math.max(0, batasPoin - poin);
             var html = '';
 
-            if (rewardTersedia) {
+            if (String(selectedOption.data('jenis-pelanggan') || 'umum') === 'mitra') {
+                html = '<div class="fw-semibold mb-1"><i class="fas fa-handshake me-2"></i>Pelanggan Mitra</div>' +
+                    '<div>Nota mitra tidak mendapat promo, reward, maupun poin member.</div>';
+                infoEl.addClass('text-dark');
+            } else if (rewardTersedia) {
                 html = '<div class="fw-semibold mb-1"><i class="fas fa-gift me-2"></i>Poin member: ' + poin + '</div>' +
-                    '<div>Customer ini berhak mendapat gratis cuci ' + gratisQty + ' kg untuk Cuci Komplit Reguler atau Satu Hari.</div>';
+                    '<div>Reward gratis cuci ' + gratisQty + ' kg akan OTOMATIS dipakai di nota ini jika ada Cuci Komplit Reguler / Satu Hari (poin berkurang ' + batasPoin + '). Jika tidak ada, poin tetap disimpan.</div>';
                 infoEl.addClass('text-success border-success');
             } else {
                 html = '<div class="fw-semibold mb-1"><i class="fas fa-coins me-2"></i>Poin member: ' + poin + '</div>' +
-                    '<div>Butuh ' + sisa + ' transaksi Cuci Komplit lagi untuk mendapat gratis cuci ' + gratisQty + ' kg.</div>';
+                    '<div>Butuh ' + sisa + ' nota cucian lunas lagi untuk mendapat gratis cuci ' + gratisQty + ' kg.</div>';
                 infoEl.addClass('text-dark');
             }
 
@@ -295,7 +295,6 @@
                     id_pelanggan: id_pelanggan,
                     id_paket: id_paket,
                     qty: qty,
-                    promo_cuci_3kg: $('#promo_cuci_3kg').is(':checked') ? 1 : 0,
                     customer_notes: $('#customer_notes').val()
                 },
                 dataType: 'JSON',
@@ -305,7 +304,6 @@
                         $('#id_paket').val('').trigger('change');
                         $('#qty').val('');
                         $('#customer_notes').val('');
-                        $('#promo_cuci_3kg').prop('checked', false);
                         Swal.fire({
                             icon: 'success',
                             title: 'Masuk Keranjang',

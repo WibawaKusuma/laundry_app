@@ -10,14 +10,16 @@
     /** @var bool $can_cancel_transaction */
     /** @var string $add_item_block_reason */
     /** @var string $wa_contact_link */
-    /** @var array $promo_settings */
+    /** @var array $promo_aktif */
+    /** @var array $member_settings */
     /** @var array $ringkasan_pembayaran */
     /** @var array|null $benefit_badge */
     ?>
 
     <?php
-    $promo_enabled = !empty($promo_settings['is_enabled']);
     $is_cancelled = (string) ($transaksi->status ?? '') === 'Dibatalkan';
+    $snapshot_sinkron = !isset($ringkasan_pembayaran['snapshot_sinkron']) || !empty($ringkasan_pembayaran['snapshot_sinkron']);
+    $total_bayar_nota = (int) round((float) ($ringkasan_pembayaran['total_akhir'] ?? 0));
     ?>
 
     <style>
@@ -630,9 +632,20 @@
                         </div>
                     <?php endif; ?>
 
+                    <?php if (!$snapshot_sinkron) : ?>
+                        <div class="alert alert-danger d-flex flex-column gap-1 mb-3">
+                            <div><i class="fas fa-exclamation-triangle me-2"></i><strong>Total tersimpan tidak sesuai hitungan sistem</strong></div>
+                            <div>Total tersimpan: Rp <?= number_format((int) ($transaksi->total_akhir ?? 0), 0, ',', '.'); ?> &middot; Hitungan sistem: Rp <?= number_format($total_bayar_nota, 0, ',', '.'); ?></div>
+                            <div>Pembayaran diblokir sampai admin mengecek data nota ini.</div>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (!empty($ringkasan_pembayaran['reward_dipakai'])) : ?>
                         <div class="alert alert-success d-flex flex-column gap-1 mb-3">
                             <div><i class="fas fa-gift me-2"></i><strong>Reward Member:</strong> Gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['reward_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> kg Cuci Komplit Reguler / Satu Hari</div>
+                            <?php if (!empty($ringkasan_pembayaran['reward_poin_dipakai'])) : ?>
+                                <div><strong>Poin dipakai:</strong> <?= (int) $ringkasan_pembayaran['reward_poin_dipakai']; ?> poin (dikunci saat nota dibuat)</div>
+                            <?php endif; ?>
                             <div><strong>Subtotal Normal:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? 0), 0, ',', '.'); ?></div>
                             <div><strong>Potongan Reward:</strong> Rp <?= number_format((int) ($ringkasan_pembayaran['reward_potongan'] ?? 0), 0, ',', '.'); ?></div>
                             <div><strong>Total Akhir:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></div>
@@ -644,7 +657,9 @@
                             <div><strong>Gratis Promo:</strong> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?></div>
                             <div><strong>Potongan Promo:</strong> Rp <?= number_format((int) ($ringkasan_pembayaran['promo_gratis_potongan'] ?? 0), 0, ',', '.'); ?></div>
                             <div><strong>Total Akhir:</strong> Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? 0), 0, ',', '.'); ?></div>
-                            <small class="text-muted">Promo berlaku kelipatan sesuai total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'layanan', ENT_QUOTES, 'UTF-8'); ?> yang memenuhi syarat.</small>
+                            <?php if (!empty($ringkasan_pembayaran['promo_kelipatan'])) : ?>
+                                <small class="text-muted">Promo berlaku kelipatan sesuai total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'layanan', ENT_QUOTES, 'UTF-8'); ?> yang memenuhi syarat.</small>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
@@ -908,22 +923,17 @@
                                             <div class="col-12">
                                                 <label class="form-label">Promo Transaksi</label>
                                                 <div class="trx-add-item-panel">
-                                                    <?php if ($promo_enabled) : ?>
-                                                        <div class="form-check mb-2">
-                                                            <input class="form-check-input" type="checkbox" value="1" id="detail_promo_cuci_3kg" name="promo_cuci_3kg">
-                                                            <label class="form-check-label fw-semibold" for="detail_promo_cuci_3kg">
-                                                                Aktifkan <?= $promo_settings['label']; ?>
-                                                            </label>
-                                                        </div>
+                                                    <?php if ((string) ($transaksi->jenis_pelanggan ?? 'umum') === 'mitra') : ?>
+                                                        <small class="text-muted d-block">Pelanggan mitra: nota ini tanpa promo, reward, dan poin member.</small>
+                                                    <?php elseif (!empty($transaksi->aturan_promo_label)) : ?>
                                                         <small class="text-muted d-block">
-                                                            Berlaku untuk layanan kiloan tipe Cuci Komplit dan Cuci Setrika. Berat dibulatkan ke atas lalu <?= $promo_settings['free_qty']; ?> kg pertama gratis.
-                                                        </small>
-                                                        <small class="text-primary d-block mt-2">
-                                                            Contoh: 3.8 kg dihitung 4 kg, yang dibayar hanya 1 kg. Layanan Setrika saja tidak mendapat promo.
+                                                            Promo terkunci di nota ini: <strong><?= htmlspecialchars($transaksi->aturan_promo_label, ENT_QUOTES, 'UTF-8'); ?></strong>.
+                                                            Total dihitung ulang otomatis memakai aturan ini, bukan setting promo terbaru.
                                                         </small>
                                                     <?php else : ?>
-                                                        <small class="text-muted d-block">Promo tidak aktif untuk transaksi ini.</small>
+                                                        <small class="text-muted d-block">Tidak ada promo yang terkunci di nota ini.</small>
                                                     <?php endif; ?>
+                                                    <small class="text-danger d-block mt-2">Sepatu/sandal tidak bisa digabung dengan cucian dalam satu nota.</small>
                                                 </div>
                                             </div>
                                         </div>
@@ -1041,7 +1051,7 @@
                                     <div class="trx-payment-breakdown-note">
                                         <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_label'] ?? 'Promo Gratis', ENT_QUOTES, 'UTF-8'); ?>.
                                         Total <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_scope_label'] ?? 'Cuci Komplit', ENT_QUOTES, 'UTF-8'); ?> <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_total_qty_eligible'] ?? $ringkasan_pembayaran['promo_total_kg_cuci_komplit'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?>,
-                                        gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?> dan berlaku kelipatan
+                                        gratis <?= rtrim(rtrim(number_format((float) ($ringkasan_pembayaran['promo_gratis_qty'] ?? 0), 2, '.', ''), '0'), '.'); ?> <?= htmlspecialchars($ringkasan_pembayaran['promo_gratis_unit'] ?? 'kg', ENT_QUOTES, 'UTF-8'); ?><?= !empty($ringkasan_pembayaran['promo_kelipatan']) ? ' dan berlaku kelipatan' : ''; ?>
                                         <?php if (!empty($ringkasan_pembayaran['promo_preview'])) : ?>
                                             dan akan dikunci saat pembayaran dicatat.
                                         <?php else : ?>
@@ -1067,6 +1077,7 @@
                         </div>
 
                         <form id="formBayar" action="<?= base_url('transaksi/bayar_tagihan/' . $transaksi->kode_invoice); ?>" method="post">
+                            <input type="hidden" name="expected_total" value="<?= $total_bayar_nota; ?>">
                             <div class="mb-3 text-start">
                                 <label class="form-label small text-muted fw-bold">Pilih Metode Pembayaran</label>
                                 <div class="trx-method-list">
@@ -1092,6 +1103,7 @@
 
                             <button
                                 type="button"
+                                <?= $snapshot_sinkron ? '' : 'disabled'; ?>
                                 class="btn btn-sm btn-success w-100 btn-bayar trx-pay-button"
                                 data-total="Rp <?= number_format((float) ($ringkasan_pembayaran['total_akhir'] ?? $grand_total), 0, ',', '.'); ?>"
                                 data-subtotal="Rp <?= number_format((float) ($ringkasan_pembayaran['total_normal'] ?? $grand_total), 0, ',', '.'); ?>"

@@ -1,13 +1,24 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+/**
+ * Alur tagihan & benefit (lihat README bagian "Alur Transaksi", "Promo dan Reward", "Snapshot Tagihan"):
+ *
+ * 1. simpan()      : aturan promo yang aktif dikunci ke nota; jika poin pelanggan sudah >= batas dan nota
+ *                    punya item Cuci Komplit Reguler/Satu hari, poin langsung di-reserve untuk reward.
+ *                    Snapshot tagihan dihitung dan disimpan.
+ * 2. tambah/edit/batal item : snapshot dihitung ulang dari data terkunci yang sama.
+ * 3. detail()/cetak(): HANYA membaca, tidak pernah menulis snapshot.
+ * 4. bayar_tagihan(): tidak menghitung benefit baru; hanya memvalidasi snapshot lalu mencatat lunas.
+ * 5. Poin +1 diberikan saat nota selesai & lunas (sinkron_poin_member).
+ */
 class Transaksi extends MY_Controller
 {
     private $allowed_statuses = ['Baru', 'Proses', 'Selesai', 'Diambil', 'Dibatalkan'];
     private $allowed_payment_statuses = ['Belum Dibayar', 'Sudah Dibayar'];
     private $cancelled_status = 'Dibatalkan';
-    private $batas_poin_member = 8;
-    private $reward_member_gratis_qty = 3;
+    private $reward_default_batas_poin = 8;
+    private $reward_default_gratis_qty = 3;
     private $promo_opening_default_gratis_qty = 3;
     private $promo_daily_default_min_kg = 7;
     private $promo_daily_default_gratis_qty = 1;
@@ -19,6 +30,7 @@ class Transaksi extends MY_Controller
         parent::__construct();
         $this->load->library('form_validation');
         $this->load->library('laundry_service_rules');
+        $this->load->library('laundry_benefit_calculator');
         $this->load->library('laundry_notification_builder');
         $this->load->model('Transaksi_model');
 
@@ -27,120 +39,94 @@ class Transaksi extends MY_Controller
         }
     }
 
-    private function get_promo_settings()
+    // ------------------------------------------------------------------
+    // Pengaturan promo & reward (dibaca dari tabel config)
+    // ------------------------------------------------------------------
+
+    private function config_number($key, $default)
     {
-        $is_enabled = isset($this->company['promo_opening_aktif']) && (string) $this->company['promo_opening_aktif'] === '1';
-        $free_qty = isset($this->company['promo_opening_gratis_qty']) ? (float) $this->company['promo_opening_gratis_qty'] : $this->promo_opening_default_gratis_qty;
-        $label = trim((string) ($this->company['promo_opening_label'] ?? 'Promo Opening Gratis Cuci 3 Kg'));
+        $value = isset($this->company[$key]) ? (float) $this->company[$key] : 0;
 
-        if ($free_qty <= 0) {
-            $free_qty = (float) $this->promo_opening_default_gratis_qty;
-        }
+        return $value > 0 ? $value : (float) $default;
+    }
 
-        if ($label === '') {
-            $label = 'Promo Opening Gratis Cuci 3 Kg';
-        }
+    private function config_label($key, $default)
+    {
+        $label = trim((string) ($this->company[$key] ?? ''));
 
+        return $label !== '' ? $label : $default;
+    }
+
+    private function get_promo_opening_settings()
+    {
         return [
-            'is_enabled' => $is_enabled,
-            'config_key' => 'promo_opening_aktif',
-            'label' => $label,
-            'free_qty' => $free_qty,
+            'is_enabled' => (string) ($this->company['promo_opening_aktif'] ?? '0') === '1',
+            'gratis_qty' => $this->config_number('promo_opening_gratis_qty', $this->promo_opening_default_gratis_qty),
+            'label' => $this->config_label('promo_opening_label', 'Promo Opening Gratis Cuci 3 Kg'),
         ];
     }
 
     private function get_promo_daily_settings()
     {
-        $is_enabled = isset($this->company['promo_daily_aktif']) && (string) $this->company['promo_daily_aktif'] === '1';
-        $min_kg = isset($this->company['promo_daily_min_kg']) ? (float) $this->company['promo_daily_min_kg'] : $this->promo_daily_default_min_kg;
-        $gratis_qty = isset($this->company['promo_daily_gratis_qty']) ? (float) $this->company['promo_daily_gratis_qty'] : $this->promo_daily_default_gratis_qty;
-        $label = trim((string) ($this->company['promo_daily_label'] ?? 'Promo Daily Minimal 7 Kg Gratis 1 Kg'));
-
-        if ($min_kg <= 0) {
-            $min_kg = (float) $this->promo_daily_default_min_kg;
-        }
-
-        if ($gratis_qty <= 0) {
-            $gratis_qty = (float) $this->promo_daily_default_gratis_qty;
-        }
-
-        if ($label === '') {
-            $label = 'Promo Daily Minimal 7 Kg Gratis 1 Kg';
-        }
-
         return [
-            'is_enabled' => $is_enabled,
-            'config_key' => 'promo_daily_aktif',
-            'min_kg' => $min_kg,
-            'gratis_qty' => $gratis_qty,
-            'label' => $label,
+            'is_enabled' => (string) ($this->company['promo_daily_aktif'] ?? '0') === '1',
+            'min_kg' => $this->config_number('promo_daily_min_kg', $this->promo_daily_default_min_kg),
+            'gratis_qty' => $this->config_number('promo_daily_gratis_qty', $this->promo_daily_default_gratis_qty),
+            'label' => $this->config_label('promo_daily_label', 'Promo Daily Minimal 7 Kg Gratis 1 Kg'),
         ];
     }
 
     private function get_promo_sepatu_settings()
     {
-        $is_enabled = isset($this->company['promo_sepatu_aktif']) && (string) $this->company['promo_sepatu_aktif'] === '1';
-        $min_pasang = isset($this->company['promo_sepatu_min_pasang']) ? (float) $this->company['promo_sepatu_min_pasang'] : $this->promo_sepatu_default_min_pasang;
-        $gratis_qty = isset($this->company['promo_sepatu_gratis_qty']) ? (float) $this->company['promo_sepatu_gratis_qty'] : $this->promo_sepatu_default_gratis_qty;
-        $label = trim((string) ($this->company['promo_sepatu_label'] ?? 'Promo Sepatu 5 Pasang Gratis 1 Pasang'));
-
-        if ($min_pasang <= 0) {
-            $min_pasang = (float) $this->promo_sepatu_default_min_pasang;
-        }
-
-        if ($gratis_qty <= 0) {
-            $gratis_qty = (float) $this->promo_sepatu_default_gratis_qty;
-        }
-
-        if ($label === '') {
-            $label = 'Promo Sepatu 5 Pasang Gratis 1 Pasang';
-        }
-
         return [
-            'is_enabled' => $is_enabled,
-            'config_key' => 'promo_sepatu_aktif',
-            'min_pasang' => $min_pasang,
-            'gratis_qty' => $gratis_qty,
-            'label' => $label,
+            'is_enabled' => (string) ($this->company['promo_sepatu_aktif'] ?? '0') === '1',
+            'min_pasang' => $this->config_number('promo_sepatu_min_pasang', $this->promo_sepatu_default_min_pasang),
+            'gratis_qty' => $this->config_number('promo_sepatu_gratis_qty', $this->promo_sepatu_default_gratis_qty),
+            'label' => $this->config_label('promo_sepatu_label', 'Promo Sepatu 5 Pasang Gratis 1 Pasang'),
         ];
     }
 
     private function get_member_settings()
     {
-        return [
-            'batas_poin' => $this->batas_poin_member,
-            'gratis_qty' => $this->reward_member_gratis_qty,
-            'label_reward' => 'Reward Member Gratis Cuci 3 Kg Reguler / Satu Hari',
-        ];
-    }
-
-    private function get_aturan_promo_transaksi($trx, $tipe)
-    {
-        if (!$trx || (string) ($trx->aturan_promo_tipe ?? '') !== $tipe) {
-            return null;
-        }
-
-        $min_qty = (float) ($trx->aturan_promo_min_qty ?? 0);
-        $gratis_qty = (float) ($trx->aturan_promo_gratis_qty ?? 0);
-        $unit = trim((string) ($trx->aturan_promo_unit ?? ''));
-        $label = trim((string) ($trx->aturan_promo_label ?? ''));
-
-        if ($min_qty <= 0 || $gratis_qty <= 0 || $unit === '' || $label === '') {
-            return null;
-        }
+        $batas_poin = (int) $this->config_number('reward_member_batas_poin', $this->reward_default_batas_poin);
+        $gratis_qty = $this->config_number('reward_member_gratis_qty', $this->reward_default_gratis_qty);
 
         return [
-            'tipe' => $tipe,
-            'min_qty' => $min_qty,
+            'batas_poin' => max(1, $batas_poin),
             'gratis_qty' => $gratis_qty,
-            'unit' => $unit,
-            'label' => $label,
+            'label_reward' => 'Reward Member Gratis Cuci ' . $this->laundry_service_rules->format_qty($gratis_qty) . ' Kg Cuci Komplit Reguler / Satu Hari',
         ];
     }
 
-    private function siapkan_aturan_promo_order(array $cart)
+    private function get_promo_aktif_summary()
     {
-        $result = [
+        $opening = $this->get_promo_opening_settings();
+        $daily = $this->get_promo_daily_settings();
+        $sepatu = $this->get_promo_sepatu_settings();
+        $aktif = [];
+
+        if ($opening['is_enabled']) {
+            $aktif[] = $opening['label'] . ' (otomatis per nota, Cuci Komplit kg lebih dari ' . $this->laundry_service_rules->format_qty($opening['gratis_qty']) . ' kg)';
+        }
+        if ($daily['is_enabled']) {
+            $aktif[] = $daily['label'];
+        }
+        if ($sepatu['is_enabled']) {
+            $aktif[] = $sepatu['label'] . ' (khusus nota sepatu)';
+        }
+
+        return $aktif;
+    }
+
+    /**
+     * Aturan promo yang dikunci ke nota saat dibuat, berdasarkan promo yang AKTIF saat itu
+     * (bukan berdasarkan isi keranjang). Nota alas kaki hanya bisa memakai Promo Sepatu,
+     * nota cucian memakai Promo Opening atau Promo Daily (keduanya tidak boleh aktif bersamaan).
+     * Pelanggan mitra tidak mendapat aturan promo apa pun.
+     */
+    private function siapkan_aturan_promo_order($is_nota_alas_kaki, $is_mitra = false)
+    {
+        $kosong = [
             'aturan_promo_tipe' => null,
             'aturan_promo_min_qty' => 0,
             'aturan_promo_gratis_qty' => 0,
@@ -148,62 +134,145 @@ class Transaksi extends MY_Controller
             'aturan_promo_label' => null,
         ];
 
-        $daily_settings = $this->get_promo_daily_settings();
-        $sepatu_settings = $this->get_promo_sepatu_settings();
-        $punya_daily_eligible = false;
-        $punya_sepatu_eligible = false;
-
-        foreach ($cart as $item) {
-            if ($this->laundry_service_rules->is_promo_gratis_service_eligible($item['nama_satuan'] ?? '', $item['nama_tipe'] ?? '', $item['nama_paket'] ?? '')) {
-                $punya_daily_eligible = true;
-            }
-
-            if ($this->laundry_service_rules->is_promo_sepatu_service_eligible($item['nama_satuan'] ?? '', $item['nama_kategori'] ?? '', $item['nama_paket'] ?? '')) {
-                $punya_sepatu_eligible = true;
-            }
+        if ($is_mitra) {
+            return $kosong;
         }
 
-        if (!empty($daily_settings['is_enabled']) && $punya_daily_eligible) {
+        if ($is_nota_alas_kaki) {
+            $sepatu = $this->get_promo_sepatu_settings();
+
+            return $sepatu['is_enabled'] ? [
+                'aturan_promo_tipe' => 'promo_sepatu',
+                'aturan_promo_min_qty' => (float) $sepatu['min_pasang'],
+                'aturan_promo_gratis_qty' => (float) $sepatu['gratis_qty'],
+                'aturan_promo_unit' => 'pasang',
+                'aturan_promo_label' => $sepatu['label'],
+            ] : $kosong;
+        }
+
+        $opening = $this->get_promo_opening_settings();
+        if ($opening['is_enabled']) {
+            return [
+                'aturan_promo_tipe' => 'promo_opening',
+                'aturan_promo_min_qty' => (float) $opening['gratis_qty'],
+                'aturan_promo_gratis_qty' => (float) $opening['gratis_qty'],
+                'aturan_promo_unit' => 'kg',
+                'aturan_promo_label' => $opening['label'],
+            ];
+        }
+
+        $daily = $this->get_promo_daily_settings();
+        if ($daily['is_enabled']) {
             return [
                 'aturan_promo_tipe' => 'promo_daily',
-                'aturan_promo_min_qty' => (float) $daily_settings['min_kg'],
-                'aturan_promo_gratis_qty' => (float) $daily_settings['gratis_qty'],
+                'aturan_promo_min_qty' => (float) $daily['min_kg'],
+                'aturan_promo_gratis_qty' => (float) $daily['gratis_qty'],
                 'aturan_promo_unit' => 'kg',
-                'aturan_promo_label' => $daily_settings['label'],
+                'aturan_promo_label' => $daily['label'],
             ];
         }
 
-        if (!empty($sepatu_settings['is_enabled']) && $punya_sepatu_eligible) {
-            return [
-                'aturan_promo_tipe' => 'promo_sepatu',
-                'aturan_promo_min_qty' => (float) $sepatu_settings['min_pasang'],
-                'aturan_promo_gratis_qty' => (float) $sepatu_settings['gratis_qty'],
-                'aturan_promo_unit' => 'pasang',
-                'aturan_promo_label' => $sepatu_settings['label'],
-            ];
-        }
-
-        return $result;
+        return $kosong;
     }
 
-    private function get_pelanggan_member_data($id_pelanggan)
+    // ------------------------------------------------------------------
+    // Klasifikasi item
+    // ------------------------------------------------------------------
+
+    private function item_field($item, $key)
     {
-        $id_pelanggan = (int) $id_pelanggan;
-        if ($id_pelanggan <= 0) {
+        if (is_array($item)) {
+            return (string) ($item[$key] ?? '');
+        }
+
+        return (string) ($item->$key ?? '');
+    }
+
+    private function is_item_alas_kaki($item)
+    {
+        return $this->laundry_service_rules->is_item_alas_kaki($this->item_field($item, 'nama_satuan'), $this->item_field($item, 'nama_paket'));
+    }
+
+    private function is_pelanggan_mitra($pelanggan)
+    {
+        return $pelanggan && (string) ($pelanggan->jenis_pelanggan ?? 'umum') === 'mitra';
+    }
+
+    private function nota_dapat_poin($items)
+    {
+        foreach ((array) $items as $item) {
+            if ($this->laundry_service_rules->is_item_dapat_poin($this->item_field($item, 'nama_satuan'), $this->item_field($item, 'nama_tipe'), $this->item_field($item, 'nama_paket'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function nota_punya_layanan_reward($items)
+    {
+        foreach ((array) $items as $item) {
+            if ($this->laundry_service_rules->is_reward_member_service_eligible($this->item_field($item, 'nama_satuan'), $this->item_field($item, 'nama_tipe'), $this->item_field($item, 'nama_paket'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Nota alas kaki (sepatu/sandal) wajib terpisah dari nota cucian.
+     * Mengembalikan pesan penolakan, atau null jika boleh digabung.
+     */
+    private function cek_campuran_alas_kaki($items_existing, $item_baru)
+    {
+        $items_existing = array_values((array) $items_existing);
+        if (empty($items_existing)) {
             return null;
         }
 
-        return $this->Transaksi_model->get_pelanggan_member_data($id_pelanggan);
+        $baru_alas_kaki = $this->is_item_alas_kaki($item_baru);
+        $nota_alas_kaki = $this->is_item_alas_kaki($items_existing[0]);
+
+        if ($baru_alas_kaki === $nota_alas_kaki) {
+            return null;
+        }
+
+        return $baru_alas_kaki
+            ? 'Sepatu/sandal harus dibuat di nota terpisah dari cucian. Simpan nota cucian ini dulu, lalu buat nota baru khusus sepatu.'
+            : 'Nota ini khusus sepatu/sandal. Cucian harus dibuat di nota terpisah.';
     }
+
+    private function is_nota_campuran_alas_kaki($items)
+    {
+        $ada_alas_kaki = false;
+        $ada_lainnya = false;
+
+        foreach ((array) $items as $item) {
+            if ($this->is_item_alas_kaki($item)) {
+                $ada_alas_kaki = true;
+            } else {
+                $ada_lainnya = true;
+            }
+        }
+
+        return $ada_alas_kaki && $ada_lainnya;
+    }
+
+    // ------------------------------------------------------------------
+    // Pelanggan & keranjang
+    // ------------------------------------------------------------------
 
     private function get_poin_member_pelanggan($id_pelanggan)
     {
-        $pelanggan = $this->get_pelanggan_member_data($id_pelanggan);
-        if (!$pelanggan) {
+        $id_pelanggan = (int) $id_pelanggan;
+        if ($id_pelanggan <= 0) {
             return 0;
         }
 
-        return max(0, min($this->batas_poin_member, (int) ($pelanggan->poin_member ?? 0)));
+        $pelanggan = $this->Transaksi_model->get_pelanggan_member_data($id_pelanggan);
+
+        return max(0, (int) ($pelanggan->poin_member ?? 0));
     }
 
     private function get_cart_customer_id()
@@ -224,23 +293,12 @@ class Transaksi extends MY_Controller
 
     private function normalize_cart_item($item)
     {
-        $pricing = $this->laundry_service_rules->calculate_cart_pricing($this->get_promo_settings(), 
-            $item['harga'] ?? 0,
-            $item['qty'] ?? 0,
-            $item['nama_satuan'] ?? '',
-            !empty($item['promo_requested']),
-            $item['nama_tipe'] ?? '',
-            $item['nama_paket'] ?? ''
-        );
+        $pricing = $this->laundry_service_rules->calculate_item_pricing($item['harga'] ?? 0, $item['qty'] ?? 0);
 
         $item['qty'] = $pricing['actual_qty'];
-        $item['rounded_qty'] = $pricing['rounded_qty'];
         $item['charged_qty'] = $pricing['charged_qty'];
-        $item['promo_free_qty'] = $pricing['free_qty'];
-        $item['promo_requested'] = $pricing['promo_requested'];
-        $item['promo_applied'] = $pricing['promo_applied'];
-        $item['promo_label'] = $pricing['promo_label'];
         $item['subtotal'] = $pricing['subtotal'];
+        $item['promo_applied'] = false;
         $item['customer_notes'] = trim((string) ($item['customer_notes'] ?? ''));
 
         return $item;
@@ -266,45 +324,85 @@ class Transaksi extends MY_Controller
         return $normalized_cart;
     }
 
-    private function transaksi_memiliki_layanan_cuci_komplit($id_transaksi)
+    private function build_transaction_detail_item($paket, $qty, $customer_notes = '')
     {
-        $details = $this->get_active_transaction_details((int) $id_transaksi);
+        $pricing = $this->laundry_service_rules->calculate_item_pricing($paket->harga, $qty);
 
-        foreach ($details as $detail) {
-            if ($this->laundry_service_rules->is_layanan_cuci_komplit($detail->nama_tipe ?? '', $detail->nama_paket ?? '')) {
-                return true;
-            }
-        }
-
-        return false;
+        return [
+            'id' => $paket->id_paket_laundry,
+            'nama_paket' => $paket->nama_paket,
+            'nama_satuan' => $paket->nama_satuan,
+            'nama_kategori' => $paket->nama_kategori,
+            'nama_tipe' => $paket->nama_tipe,
+            'harga' => $paket->harga,
+            'qty' => $pricing['actual_qty'],
+            'charged_qty' => $pricing['charged_qty'],
+            'promo_applied' => false,
+            'customer_notes' => trim((string) $customer_notes),
+            'subtotal' => $pricing['subtotal'],
+        ];
     }
 
-    private function get_detail_benefit_flags($details)
+    // ------------------------------------------------------------------
+    // Tagihan
+    // ------------------------------------------------------------------
+
+    private function is_nota_terbuka($trx)
     {
-        $flags = [
-            'punya_cuci_komplit' => false,
-            'punya_layanan_reward' => false,
-        ];
+        return $trx
+            && (string) ($trx->dibayar ?? '') === 'Belum Dibayar'
+            && (string) ($trx->status ?? '') !== $this->cancelled_status;
+    }
 
-        foreach ((array) $details as $detail) {
-            $nama_tipe = (string) ($detail->nama_tipe ?? $detail['nama_tipe'] ?? '');
-            $nama_paket = (string) ($detail->nama_paket ?? $detail['nama_paket'] ?? '');
-            $nama_satuan = (string) ($detail->nama_satuan ?? $detail['nama_satuan'] ?? '');
+    /**
+     * Ringkasan tagihan untuk ditampilkan.
+     * - Nota terbuka: dihitung dari data terkunci (hasilnya selalu sama dengan snapshot tersimpan,
+     *   kecuali data lama/rusak; ditandai snapshot_sinkron = false dan pembayaran diblokir).
+     * - Nota lunas/batal: dibaca apa adanya dari snapshot.
+     */
+    private function hitung_ringkasan_transaksi($trx, array $active_details)
+    {
+        if (!$this->is_nota_terbuka($trx)) {
+            $ringkasan = $this->laundry_benefit_calculator->ringkasan_dari_snapshot($trx, $active_details);
+            $ringkasan['snapshot_sinkron'] = true;
 
-            if ($this->laundry_service_rules->is_layanan_cuci_komplit($nama_tipe, $nama_paket)) {
-                $flags['punya_cuci_komplit'] = true;
-            }
-
-            if ($this->laundry_service_rules->is_reward_member_service_eligible($nama_satuan, $nama_tipe, $nama_paket)) {
-                $flags['punya_layanan_reward'] = true;
-            }
-
-            if ($flags['punya_cuci_komplit'] && $flags['punya_layanan_reward']) {
-                break;
-            }
+            return $ringkasan;
         }
 
-        return $flags;
+        $ringkasan = $this->laundry_benefit_calculator->hitung($trx, $active_details);
+        $ringkasan['snapshot_sinkron'] = empty($trx->snapshot_tagihan_at)
+            || (int) ($trx->total_akhir ?? 0) === (int) round((float) $ringkasan['total_akhir']);
+
+        return $ringkasan;
+    }
+
+    /**
+     * Hitung ulang dan simpan snapshot setelah isi nota berubah (hanya nota terbuka).
+     * Jika reward sudah di-reserve tapi item Cuci Komplit Reguler/Satu hari sudah tidak ada,
+     * poin reward dikembalikan ke pelanggan.
+     */
+    private function simpan_snapshot_tagihan($id_transaksi)
+    {
+        $trx = $this->Transaksi_model->get_transaction_by_id($id_transaksi);
+        if (!$this->is_nota_terbuka($trx)) {
+            return null;
+        }
+
+        $details = $this->get_active_transaction_details($trx->id);
+
+        if ((int) ($trx->reward_poin_dipakai ?? 0) > 0 && !$this->nota_punya_layanan_reward($details)) {
+            $this->Transaksi_model->release_reward_reservation(
+                $trx->id,
+                $this->session->userdata('user_id'),
+                'Reward batal: item Cuci Komplit Reguler/Satu hari dihapus dari nota ' . $trx->kode_invoice
+            );
+            $trx = $this->Transaksi_model->get_transaction_by_id($id_transaksi);
+        }
+
+        $ringkasan = $this->laundry_benefit_calculator->hitung($trx, $details);
+        $this->Transaksi_model->update_billing_snapshot($trx->id, $this->laundry_benefit_calculator->snapshot_fields($ringkasan));
+
+        return $ringkasan;
     }
 
     private function sinkron_poin_member($id_transaksi)
@@ -314,652 +412,65 @@ class Transaksi extends MY_Controller
         if (
             !$trx
             || (int) ($trx->id_pelanggan ?? 0) <= 0
-            || (string) ($trx->status ?? '') === $this->cancelled_status
             || !in_array((string) ($trx->status ?? ''), ['Selesai', 'Diambil'], true)
             || (string) ($trx->dibayar ?? '') !== 'Sudah Dibayar'
             || !empty($trx->poin_diberikan_pada)
+            || (string) ($trx->jenis_pelanggan ?? 'umum') === 'mitra'
             || !empty($trx->reward_member_dipakai)
-            || !$this->transaksi_memiliki_layanan_cuci_komplit($trx->id)
+            || (int) ($trx->reward_poin_dipakai ?? 0) > 0
+            || !$this->nota_dapat_poin($this->get_active_transaction_details($trx->id))
         ) {
             return false;
         }
 
-        return $this->Transaksi_model->sync_member_point($trx->id, $trx->id_pelanggan, $this->batas_poin_member);
+        return $this->Transaksi_model->sync_member_point($trx->id, $trx->id_pelanggan, $this->session->userdata('user_id'));
     }
 
-    private function hitung_reward_member_pembayaran($id_transaksi)
+    // ------------------------------------------------------------------
+    // WhatsApp & badge
+    // ------------------------------------------------------------------
+
+    private function build_wa_meta($trx, array $ringkasan, $details, $mode, array $extra = [])
     {
-        $result = [
-            'reward_tersedia' => false,
-            'reward_gratis_qty' => 0,
-            'reward_potongan' => 0,
-            'total_sebelum_reward' => 0,
-            'total_setelah_reward' => 0,
-            'detail_cuci_komplit' => 0,
-            'id_pelanggan' => 0,
-        ];
+        $member = $this->get_member_settings();
 
-        $trx = $this->Transaksi_model->get_reward_payment_transaction($id_transaksi);
-
-        if (!$trx || (int) ($trx->id_pelanggan ?? 0) <= 0) {
-            return $result;
-        }
-
-        $result['id_pelanggan'] = (int) $trx->id_pelanggan;
-        $detail_rows = $this->get_active_transaction_details($trx->id);
-
-        foreach ($detail_rows as $detail) {
-            $result['total_sebelum_reward'] += (float) ($detail->subtotal ?? 0);
-        }
-
-        $result['total_setelah_reward'] = $result['total_sebelum_reward'];
-
-        if (
-            (string) ($trx->status ?? '') === $this->cancelled_status
-            || (string) ($trx->dibayar ?? '') !== 'Belum Dibayar'
-            || !empty($trx->reward_member_dipakai)
-            || $this->get_poin_member_pelanggan($trx->id_pelanggan) < $this->batas_poin_member
-        ) {
-            return $result;
-        }
-
-        $sisa_reward_qty = (float) $this->reward_member_gratis_qty;
-
-        foreach ($detail_rows as $detail) {
-            if (
-                $sisa_reward_qty <= 0
-                || !$this->laundry_service_rules->is_reward_member_service_eligible($detail->nama_satuan ?? '', $detail->nama_tipe ?? '', $detail->nama_paket ?? '')
-            ) {
-                continue;
-            }
-
-            $qty_valid = max(0, (float) ($detail->qty ?? 0));
-            if ($qty_valid <= 0) {
-                continue;
-            }
-
-            $gratis_qty = min($sisa_reward_qty, $qty_valid);
-            $result['detail_cuci_komplit']++;
-            $result['reward_gratis_qty'] += $gratis_qty;
-            $result['reward_potongan'] += (int) round((float) ($detail->harga ?? 0) * $gratis_qty);
-            $sisa_reward_qty -= $gratis_qty;
-        }
-
-        if ($result['reward_gratis_qty'] <= 0) {
-            return $result;
-        }
-
-        $result['reward_tersedia'] = true;
-        $result['total_setelah_reward'] = max(0, $result['total_sebelum_reward'] - $result['reward_potongan']);
-
-        return $result;
+        return array_merge([
+            'mode' => $mode,
+            'status' => $trx->status ?? '',
+            'dibayar' => $trx->dibayar ?? '',
+            'nama_metode_bayar' => $trx->nama_metode_bayar ?? '',
+            'tgl_bayar' => $trx->tgl_bayar ?? '',
+            'tgl_diambil' => $trx->tgl_diambil ?? '',
+            'poin_member_pelanggan' => (int) ($trx->poin_member_pelanggan ?? 0),
+            'poin_diberikan_pada' => $trx->poin_diberikan_pada ?? null,
+            'is_mitra' => $this->laundry_benefit_calculator->is_nota_mitra($trx),
+            'dapat_poin' => $this->nota_dapat_poin($details),
+            'batas_poin' => $member['batas_poin'],
+            'total_akhir' => (float) $ringkasan['total_akhir'],
+            'benefit_tipe' => $ringkasan['benefit_tipe'] ?? '',
+            'reward_member_dipakai' => !empty($ringkasan['reward_dipakai']),
+            'reward_gratis_qty' => (float) $ringkasan['reward_gratis_qty'],
+            'reward_potongan' => (int) $ringkasan['reward_potongan'],
+            'reward_poin_dipakai' => (int) ($ringkasan['reward_poin_dipakai'] ?? 0),
+            'promo_gratis_dipakai' => !empty($ringkasan['promo_dipakai']),
+            'promo_gratis_qty' => (float) $ringkasan['promo_gratis_qty'],
+            'promo_gratis_potongan' => (int) $ringkasan['promo_gratis_potongan'],
+            'promo_gratis_keterangan' => $ringkasan['promo_gratis_keterangan'] ?? '',
+            'promo_gratis_label' => $ringkasan['promo_gratis_label'] ?? '',
+            'promo_gratis_unit' => $ringkasan['promo_gratis_unit'] ?? 'kg',
+        ], $extra);
     }
 
-    private function hitung_promo_gratis_pembayaran($id_transaksi)
+    private function siapkan_badge_benefit_transaksi($transaksi, $active_detail, array $ringkasan)
     {
-        $settings = $this->get_promo_daily_settings();
-        $result = [
-            'promo_tersedia' => false,
-            'benefit_tipe' => 'promo_daily',
-            'promo_gratis_qty' => 0,
-            'promo_gratis_potongan' => 0,
-            'promo_gratis_label' => $settings['label'],
-            'promo_gratis_keterangan' => '',
-            'promo_gratis_unit' => 'kg',
-            'promo_gratis_scope_label' => 'Cuci Komplit',
-            'total_qty_eligible' => 0,
-            'total_kg_cuci_komplit' => 0,
-            'total_sebelum_promo' => 0,
-            'total_setelah_promo' => 0,
-            'id_transaksi_detail_dasar' => 0,
-            'harga_dasar' => 0,
-            'jumlah_kelipatan' => 0,
-        ];
-
-        $trx = $this->Transaksi_model->get_promo_payment_transaction($id_transaksi);
-
-        if (!$trx) {
-            return $result;
-        }
-
-        $aturan_promo = $this->get_aturan_promo_transaksi($trx, 'promo_daily');
-        if (!$aturan_promo) {
-            return $result;
-        }
-
-        $settings = [
-            'is_enabled' => true,
-            'min_kg' => (float) $aturan_promo['min_qty'],
-            'gratis_qty' => (float) $aturan_promo['gratis_qty'],
-            'label' => (string) $aturan_promo['label'],
-        ];
-        $result['promo_gratis_label'] = $settings['label'];
-
-        $detail_rows = $this->get_active_transaction_details($trx->id);
-        foreach ($detail_rows as $detail) {
-            $result['total_sebelum_promo'] += (float) ($detail->subtotal ?? 0);
-        }
-
-        $result['total_setelah_promo'] = $result['total_sebelum_promo'];
-
-        if (
-            (string) ($trx->status ?? '') === $this->cancelled_status
-            || (string) ($trx->dibayar ?? '') !== 'Belum Dibayar'
-            || !empty($trx->reward_member_dipakai)
-            || !empty($trx->promo_gratis_dipakai)
-        ) {
-            return $result;
-        }
-
-        $detail_eligible = [];
-
-        foreach ($detail_rows as $detail) {
-            if (!$this->laundry_service_rules->is_promo_gratis_service_eligible($detail->nama_satuan ?? '', $detail->nama_tipe ?? '', $detail->nama_paket ?? '')) {
-                continue;
-            }
-
-            $qty_valid = max(0, (float) ($detail->qty ?? 0));
-            if ($qty_valid <= 0) {
-                continue;
-            }
-
-            $result['total_kg_cuci_komplit'] += $qty_valid;
-            $result['total_qty_eligible'] += $qty_valid;
-            $detail_eligible[] = $detail;
-        }
-
-        if ($result['total_kg_cuci_komplit'] < (float) $settings['min_kg'] || empty($detail_eligible)) {
-            return $result;
-        }
-
-        $jumlah_kelipatan = (int) floor((((float) $result['total_kg_cuci_komplit']) + 0.0000001) / (float) $settings['min_kg']);
-        if ($jumlah_kelipatan <= 0) {
-            return $result;
-        }
-
-        $gratis_qty = min(
-            (float) $result['total_kg_cuci_komplit'],
-            (float) $jumlah_kelipatan * (float) $settings['gratis_qty']
-        );
-
-        if ($gratis_qty <= 0) {
-            return $result;
-        }
-
-        usort($detail_eligible, function ($a, $b) {
-            $harga_a = (float) ($a->harga ?? 0);
-            $harga_b = (float) ($b->harga ?? 0);
-
-            if ($harga_a === $harga_b) {
-                return (int) ($a->id ?? 0) <=> (int) ($b->id ?? 0);
-            }
-
-            return $harga_a <=> $harga_b;
-        });
-
-        $sisa_gratis_qty = $gratis_qty;
-        $promo_potongan = 0.0;
-        $detail_dasar = null;
-
-        foreach ($detail_eligible as $detail) {
-            if ($sisa_gratis_qty <= 0) {
-                break;
-            }
-
-            $qty_valid = max(0, (float) ($detail->qty ?? 0));
-            if ($qty_valid <= 0) {
-                continue;
-            }
-
-            $qty_promo_detail = min($sisa_gratis_qty, $qty_valid);
-            if ($qty_promo_detail <= 0) {
-                continue;
-            }
-
-            if ($detail_dasar === null) {
-                $detail_dasar = $detail;
-            }
-
-            $promo_potongan += $qty_promo_detail * (float) ($detail->harga ?? 0);
-            $sisa_gratis_qty -= $qty_promo_detail;
-        }
-
-        $result['promo_tersedia'] = true;
-        $result['promo_gratis_qty'] = $gratis_qty;
-        $result['promo_gratis_potongan'] = (int) round($promo_potongan);
-        $result['id_transaksi_detail_dasar'] = (int) ($detail_dasar->id ?? 0);
-        $result['harga_dasar'] = (int) round((float) ($detail_dasar->harga ?? 0));
-        $result['jumlah_kelipatan'] = $jumlah_kelipatan;
-        $result['promo_gratis_keterangan'] = $this->laundry_service_rules->build_promo_gratis_keterangan($result);
-        $result['total_setelah_promo'] = max(0, $result['total_sebelum_promo'] - $result['promo_gratis_potongan']);
-
-        return $result;
-    }
-
-    private function hitung_promo_sepatu_pembayaran($id_transaksi)
-    {
-        $settings = $this->get_promo_sepatu_settings();
-        $result = [
-            'promo_tersedia' => false,
-            'benefit_tipe' => 'promo_sepatu',
-            'promo_gratis_qty' => 0,
-            'promo_gratis_potongan' => 0,
-            'promo_gratis_label' => $settings['label'],
-            'promo_gratis_keterangan' => '',
-            'promo_gratis_unit' => 'pasang',
-            'promo_gratis_scope_label' => 'Sepatu',
-            'total_qty_eligible' => 0,
-            'total_kg_cuci_komplit' => 0,
-            'total_sebelum_promo' => 0,
-            'total_setelah_promo' => 0,
-            'id_transaksi_detail_dasar' => 0,
-            'harga_dasar' => 0,
-            'jumlah_kelipatan' => 0,
-        ];
-
-        $trx = $this->Transaksi_model->get_promo_payment_transaction($id_transaksi);
-
-        if (!$trx) {
-            return $result;
-        }
-
-        $aturan_promo = $this->get_aturan_promo_transaksi($trx, 'promo_sepatu');
-        if (!$aturan_promo) {
-            return $result;
-        }
-
-        $settings = [
-            'is_enabled' => true,
-            'min_pasang' => (float) $aturan_promo['min_qty'],
-            'gratis_qty' => (float) $aturan_promo['gratis_qty'],
-            'label' => (string) $aturan_promo['label'],
-        ];
-        $result['promo_gratis_label'] = $settings['label'];
-
-        $detail_rows = $this->get_active_transaction_details($trx->id);
-        foreach ($detail_rows as $detail) {
-            $result['total_sebelum_promo'] += (float) ($detail->subtotal ?? 0);
-        }
-
-        $result['total_setelah_promo'] = $result['total_sebelum_promo'];
-
-        if (
-            (string) ($trx->status ?? '') === $this->cancelled_status
-            || (string) ($trx->dibayar ?? '') !== 'Belum Dibayar'
-            || !empty($trx->reward_member_dipakai)
-            || !empty($trx->promo_gratis_dipakai)
-        ) {
-            return $result;
-        }
-
-        $detail_eligible = [];
-
-        foreach ($detail_rows as $detail) {
-            if (!$this->laundry_service_rules->is_promo_sepatu_service_eligible($detail->nama_satuan ?? '', $detail->nama_kategori ?? '', $detail->nama_paket ?? '')) {
-                continue;
-            }
-
-            $qty_valid = max(0, (float) ($detail->qty ?? 0));
-            if ($qty_valid <= 0) {
-                continue;
-            }
-
-            $result['total_qty_eligible'] += $qty_valid;
-            $detail_eligible[] = $detail;
-        }
-
-        if ($result['total_qty_eligible'] < (float) $settings['min_pasang'] || empty($detail_eligible)) {
-            return $result;
-        }
-
-        $jumlah_kelipatan = (int) floor((((float) $result['total_qty_eligible']) + 0.0000001) / (float) $settings['min_pasang']);
-        if ($jumlah_kelipatan <= 0) {
-            return $result;
-        }
-
-        $gratis_qty = min(
-            (float) $result['total_qty_eligible'],
-            (float) $jumlah_kelipatan * (float) $settings['gratis_qty']
-        );
-
-        if ($gratis_qty <= 0) {
-            return $result;
-        }
-
-        usort($detail_eligible, function ($a, $b) {
-            $harga_a = (float) ($a->harga ?? 0);
-            $harga_b = (float) ($b->harga ?? 0);
-
-            if ($harga_a === $harga_b) {
-                return (int) ($a->id ?? 0) <=> (int) ($b->id ?? 0);
-            }
-
-            return $harga_a <=> $harga_b;
-        });
-
-        $sisa_gratis_qty = $gratis_qty;
-        $promo_potongan = 0.0;
-        $detail_dasar = null;
-
-        foreach ($detail_eligible as $detail) {
-            if ($sisa_gratis_qty <= 0) {
-                break;
-            }
-
-            $qty_valid = max(0, (float) ($detail->qty ?? 0));
-            if ($qty_valid <= 0) {
-                continue;
-            }
-
-            $qty_promo_detail = min($sisa_gratis_qty, $qty_valid);
-            if ($qty_promo_detail <= 0) {
-                continue;
-            }
-
-            if ($detail_dasar === null) {
-                $detail_dasar = $detail;
-            }
-
-            $promo_potongan += $qty_promo_detail * (float) ($detail->harga ?? 0);
-            $sisa_gratis_qty -= $qty_promo_detail;
-        }
-
-        $result['promo_tersedia'] = true;
-        $result['promo_gratis_qty'] = $gratis_qty;
-        $result['promo_gratis_potongan'] = (int) round($promo_potongan);
-        $result['id_transaksi_detail_dasar'] = (int) ($detail_dasar->id ?? 0);
-        $result['harga_dasar'] = (int) round((float) ($detail_dasar->harga ?? 0));
-        $result['jumlah_kelipatan'] = $jumlah_kelipatan;
-        $result['promo_gratis_keterangan'] = $this->laundry_service_rules->build_promo_gratis_keterangan($result);
-        $result['total_setelah_promo'] = max(0, $result['total_sebelum_promo'] - $result['promo_gratis_potongan']);
-
-        return $result;
-    }
-
-    private function siapkan_ringkasan_pembayaran($transaksi, $total_normal, $reward_preview = null, $izinkan_preview = true, $promo_preview = null, $promo_sepatu_preview = null)
-    {
-        $ringkasan = [
-            'total_normal' => (float) $total_normal,
-            'total_akhir' => (float) $total_normal,
-            'reward_tersedia' => false,
-            'reward_preview' => false,
-            'reward_dipakai' => false,
-            'reward_gratis_qty' => 0,
-            'reward_potongan' => 0,
-            'promo_tersedia' => false,
-            'promo_preview' => false,
-            'promo_dipakai' => false,
-            'promo_gratis_qty' => 0,
-            'promo_gratis_potongan' => 0,
-            'promo_gratis_label' => '',
-            'promo_gratis_keterangan' => '',
-            'promo_gratis_unit' => 'kg',
-            'promo_gratis_scope_label' => 'Cuci Komplit',
-            'promo_benefit_tipe' => 'promo_daily',
-            'promo_total_qty_eligible' => 0,
-            'promo_total_kg_cuci_komplit' => 0,
-        ];
-
-        if (!$transaksi) {
-            return $ringkasan;
-        }
-
-        $reward_gratis_terkunci = (float) ($transaksi->reward_gratis_qty ?? 0);
-        $reward_potongan_terkunci = (int) ($transaksi->reward_potongan ?? 0);
-
-        if (!empty($transaksi->reward_member_dipakai) && $reward_gratis_terkunci > 0) {
-            $ringkasan['reward_tersedia'] = true;
-            $ringkasan['reward_dipakai'] = true;
-            $ringkasan['reward_gratis_qty'] = $reward_gratis_terkunci;
-            $ringkasan['reward_potongan'] = $reward_potongan_terkunci;
-            $ringkasan['total_akhir'] = max(0, $ringkasan['total_normal'] - $reward_potongan_terkunci);
-
-            return $ringkasan;
-        }
-
-        $promo_gratis_terkunci = (float) ($transaksi->promo_gratis_qty ?? 0);
-        $promo_gratis_potongan_terkunci = (int) ($transaksi->promo_gratis_potongan ?? 0);
-
-        if (!empty($transaksi->promo_gratis_dipakai) && $promo_gratis_terkunci > 0) {
-            $total_kg_cuci_komplit = 0;
-            $is_promo_sepatu_terkunci = (string) ($transaksi->benefit_tipe ?? '') === 'promo_sepatu';
-            foreach ($this->get_active_transaction_details($transaksi->id) as $detail_row) {
-                if (
-                    (!$is_promo_sepatu_terkunci && $this->laundry_service_rules->is_promo_gratis_service_eligible($detail_row->nama_satuan ?? '', $detail_row->nama_tipe ?? '', $detail_row->nama_paket ?? ''))
-                    || ($is_promo_sepatu_terkunci && $this->laundry_service_rules->is_promo_sepatu_service_eligible($detail_row->nama_satuan ?? '', $detail_row->nama_kategori ?? '', $detail_row->nama_paket ?? ''))
-                ) {
-                    $total_kg_cuci_komplit += max(0, (float) ($detail_row->qty ?? 0));
-                }
-            }
-
-            $ringkasan['promo_tersedia'] = true;
-            $ringkasan['promo_dipakai'] = true;
-            $ringkasan['promo_gratis_qty'] = $promo_gratis_terkunci;
-            $ringkasan['promo_gratis_potongan'] = $promo_gratis_potongan_terkunci;
-            $ringkasan['promo_gratis_keterangan'] = trim((string) ($transaksi->promo_gratis_keterangan ?? ''));
-            $ringkasan['promo_benefit_tipe'] = (string) ($transaksi->benefit_tipe ?? '') === 'promo_sepatu' ? 'promo_sepatu' : 'promo_daily';
-            $ringkasan['promo_gratis_unit'] = $ringkasan['promo_benefit_tipe'] === 'promo_sepatu' ? 'pasang' : 'kg';
-            $ringkasan['promo_gratis_scope_label'] = $ringkasan['promo_benefit_tipe'] === 'promo_sepatu' ? 'Sepatu' : 'Cuci Komplit';
-            $ringkasan['promo_gratis_label'] = $ringkasan['promo_gratis_keterangan'] !== '' ? $ringkasan['promo_gratis_keterangan'] : ($ringkasan['promo_benefit_tipe'] === 'promo_sepatu' ? ($this->get_promo_sepatu_settings()['label'] ?? 'Promo Sepatu') : ($this->get_promo_daily_settings()['label'] ?? 'Promo Gratis'));
-            $ringkasan['promo_total_kg_cuci_komplit'] = (float) $total_kg_cuci_komplit;
-            $ringkasan['promo_total_qty_eligible'] = (float) $total_kg_cuci_komplit;
-            $ringkasan['total_akhir'] = max(0, $ringkasan['total_normal'] - $promo_gratis_potongan_terkunci);
-
-            return $ringkasan;
-        }
-
-        if (!$izinkan_preview || (string) ($transaksi->dibayar ?? '') !== 'Belum Dibayar') {
-            return $ringkasan;
-        }
-
-        if (!is_array($reward_preview)) {
-            $reward_preview = $this->hitung_reward_member_pembayaran($transaksi->id);
-        }
-
-        if (!empty($reward_preview['reward_tersedia'])) {
-            $ringkasan['reward_tersedia'] = true;
-            $ringkasan['reward_preview'] = true;
-            $ringkasan['reward_gratis_qty'] = (float) ($reward_preview['reward_gratis_qty'] ?? 0);
-            $ringkasan['reward_potongan'] = (int) ($reward_preview['reward_potongan'] ?? 0);
-            $ringkasan['total_akhir'] = (float) ($reward_preview['total_setelah_reward'] ?? $ringkasan['total_normal']);
-
-            return $ringkasan;
-        }
-
-        if (!is_array($promo_preview)) {
-            $promo_preview = $this->hitung_promo_gratis_pembayaran($transaksi->id);
-        }
-
-        if (!empty($promo_preview['promo_tersedia'])) {
-            $ringkasan['promo_tersedia'] = true;
-            $ringkasan['promo_preview'] = true;
-            $ringkasan['promo_benefit_tipe'] = (string) ($promo_preview['benefit_tipe'] ?? 'promo_daily');
-            $ringkasan['promo_gratis_qty'] = (float) ($promo_preview['promo_gratis_qty'] ?? 0);
-            $ringkasan['promo_gratis_potongan'] = (int) ($promo_preview['promo_gratis_potongan'] ?? 0);
-            $ringkasan['promo_gratis_label'] = trim((string) ($promo_preview['promo_gratis_label'] ?? ''));
-            $ringkasan['promo_gratis_keterangan'] = trim((string) ($promo_preview['promo_gratis_keterangan'] ?? ''));
-            $ringkasan['promo_gratis_unit'] = trim((string) ($promo_preview['promo_gratis_unit'] ?? 'kg'));
-            $ringkasan['promo_gratis_scope_label'] = trim((string) ($promo_preview['promo_gratis_scope_label'] ?? 'Cuci Komplit'));
-            $ringkasan['promo_total_qty_eligible'] = (float) ($promo_preview['total_qty_eligible'] ?? $promo_preview['total_kg_cuci_komplit'] ?? 0);
-            $ringkasan['promo_total_kg_cuci_komplit'] = (float) ($promo_preview['total_kg_cuci_komplit'] ?? 0);
-            $ringkasan['total_akhir'] = (float) ($promo_preview['total_setelah_promo'] ?? $ringkasan['total_normal']);
-
-            return $ringkasan;
-        }
-
-        if (!is_array($promo_sepatu_preview)) {
-            $promo_sepatu_preview = $this->hitung_promo_sepatu_pembayaran($transaksi->id);
-        }
-
-        if (!empty($promo_sepatu_preview['promo_tersedia'])) {
-            $ringkasan['promo_tersedia'] = true;
-            $ringkasan['promo_preview'] = true;
-            $ringkasan['promo_benefit_tipe'] = 'promo_sepatu';
-            $ringkasan['promo_gratis_qty'] = (float) ($promo_sepatu_preview['promo_gratis_qty'] ?? 0);
-            $ringkasan['promo_gratis_potongan'] = (int) ($promo_sepatu_preview['promo_gratis_potongan'] ?? 0);
-            $ringkasan['promo_gratis_label'] = trim((string) ($promo_sepatu_preview['promo_gratis_label'] ?? 'Promo Sepatu'));
-            $ringkasan['promo_gratis_keterangan'] = trim((string) ($promo_sepatu_preview['promo_gratis_keterangan'] ?? ''));
-            $ringkasan['promo_gratis_unit'] = 'pasang';
-            $ringkasan['promo_gratis_scope_label'] = 'Sepatu';
-            $ringkasan['promo_total_qty_eligible'] = (float) ($promo_sepatu_preview['total_qty_eligible'] ?? 0);
-            $ringkasan['promo_total_kg_cuci_komplit'] = 0;
-            $ringkasan['total_akhir'] = (float) ($promo_sepatu_preview['total_setelah_promo'] ?? $ringkasan['total_normal']);
-        }
-
-        return $ringkasan;
-    }
-
-    private function hitung_total_detail_aktif($id_transaksi)
-    {
-        $total = 0;
-
-        foreach ($this->get_active_transaction_details($id_transaksi) as $detail_row) {
-            $total += (float) ($detail_row->subtotal ?? 0);
-        }
-
-        return $total;
-    }
-
-    private function siapkan_snapshot_tagihan($transaksi, $total_normal = null, $reward_preview = null, $promo_preview = null, $izinkan_preview = true)
-    {
-        if (!$transaksi) {
-            return [
-                'snapshot' => [],
-                'ringkasan' => $this->siapkan_ringkasan_pembayaran(null, 0, null, false, null),
-            ];
-        }
-
-        if ($total_normal === null) {
-            $total_normal = $this->hitung_total_detail_aktif($transaksi->id);
-        }
-
-        if ((string) ($transaksi->status ?? '') === $this->cancelled_status) {
-            $ringkasan = $this->siapkan_ringkasan_pembayaran($transaksi, 0, null, false, null);
-
-            return [
-                'snapshot' => [
-                    'subtotal_normal' => 0,
-                    'diskon_total' => 0,
-                    'total_akhir' => 0,
-                    'benefit_tipe' => null,
-                    'benefit_keterangan' => null,
-                    'snapshot_tagihan_at' => date('Y-m-d H:i:s'),
-                ],
-                'ringkasan' => $ringkasan,
-            ];
-        }
-
-        $ringkasan = $this->siapkan_ringkasan_pembayaran(
-            $transaksi,
-            $total_normal,
-            $reward_preview,
-            $izinkan_preview,
-            $promo_preview
-        );
-
-        $diskon_total = 0;
-        $benefit_tipe = null;
-        $benefit_keterangan = null;
-
-        if (!empty($ringkasan['reward_tersedia'])) {
-            $diskon_total = (int) ($ringkasan['reward_potongan'] ?? 0);
-            $benefit_tipe = 'reward_member';
-            $benefit_keterangan = 'Reward Member gratis ' . $this->laundry_service_rules->format_qty((float) ($ringkasan['reward_gratis_qty'] ?? 0)) . ' kg';
-        } elseif (!empty($ringkasan['promo_tersedia'])) {
-            $diskon_total = (int) ($ringkasan['promo_gratis_potongan'] ?? 0);
-            $benefit_tipe = (string) ($ringkasan['promo_benefit_tipe'] ?? 'promo_daily');
-            $benefit_keterangan = trim((string) ($ringkasan['promo_gratis_keterangan'] ?? ''));
-            if ($benefit_keterangan === '') {
-                $benefit_keterangan = trim((string) ($ringkasan['promo_gratis_label'] ?? 'Promo Gratis'));
-            }
-        }
-
-        $snapshot = [
-            'subtotal_normal' => (int) round((float) $total_normal),
-            'diskon_total' => max(0, (int) $diskon_total),
-            'total_akhir' => max(0, (int) round((float) ($ringkasan['total_akhir'] ?? $total_normal))),
-            'benefit_tipe' => $benefit_tipe,
-            'benefit_keterangan' => $benefit_keterangan,
-            'snapshot_tagihan_at' => date('Y-m-d H:i:s'),
-        ];
-
-        return [
-            'snapshot' => $snapshot,
-            'ringkasan' => $ringkasan,
-        ];
-    }
-
-    private function sync_snapshot_tagihan($transaksi, $total_normal = null, $reward_preview = null, $promo_preview = null, $izinkan_preview = true)
-    {
-        $snapshot_result = $this->siapkan_snapshot_tagihan($transaksi, $total_normal, $reward_preview, $promo_preview, $izinkan_preview);
-
-        if (!empty($snapshot_result['snapshot'])) {
-            $this->Transaksi_model->update_billing_snapshot($transaksi->id, $snapshot_result['snapshot']);
-        }
-
-        return $snapshot_result;
-    }
-
-    private function build_wa_benefit_meta_from_ringkasan(array $ringkasan)
-    {
-        $meta = [
-            'benefit_preview' => !empty($ringkasan['reward_preview']) || !empty($ringkasan['promo_preview']),
-            'total_akhir' => (float) ($ringkasan['total_akhir'] ?? $ringkasan['total_normal'] ?? 0),
-            'diskon_total' => 0,
-        ];
-
-        if (!empty($ringkasan['reward_tersedia'])) {
-            $meta['benefit_tipe'] = 'reward_member';
-            $meta['reward_member_dipakai'] = !empty($ringkasan['reward_dipakai']);
-            $meta['reward_gratis_qty'] = (float) ($ringkasan['reward_gratis_qty'] ?? 0);
-            $meta['reward_potongan'] = (int) ($ringkasan['reward_potongan'] ?? 0);
-            $meta['diskon_total'] = $meta['reward_potongan'];
-
-            return $meta;
-        }
-
-        if (!empty($ringkasan['promo_tersedia'])) {
-            $meta['benefit_tipe'] = 'promo_daily';
-            if (($ringkasan['promo_benefit_tipe'] ?? '') === 'promo_sepatu') {
-                $meta['benefit_tipe'] = 'promo_sepatu';
-            }
-            $meta['promo_gratis_dipakai'] = !empty($ringkasan['promo_dipakai']);
-            $meta['promo_gratis_qty'] = (float) ($ringkasan['promo_gratis_qty'] ?? 0);
-            $meta['promo_gratis_potongan'] = (int) ($ringkasan['promo_gratis_potongan'] ?? 0);
-            $meta['promo_gratis_keterangan'] = $ringkasan['promo_gratis_keterangan'] ?: ($ringkasan['promo_gratis_label'] ?? '');
-            $meta['promo_gratis_unit'] = $ringkasan['promo_gratis_unit'] ?? 'kg';
-            $meta['promo_gratis_scope_label'] = $ringkasan['promo_gratis_scope_label'] ?? 'Cuci Komplit';
-            $meta['diskon_total'] = $meta['promo_gratis_potongan'];
-        }
-
-        return $meta;
-    }
-
-    private function siapkan_badge_benefit_transaksi($transaksi, $active_detail = [], $reward_preview = null, $promo_preview = null)
-    {
-        if (!$transaksi) {
+        if (!$transaksi || $this->laundry_benefit_calculator->is_nota_mitra($transaksi)) {
             return null;
         }
 
-        $poin_pelanggan = max(0, min($this->batas_poin_member, (int) ($transaksi->poin_member_pelanggan ?? 0)));
-        $reward_tersedia = !empty($reward_preview['reward_tersedia']);
-        $promo_tersedia = !empty($promo_preview['promo_tersedia']);
-        $reward_dipakai = !empty($transaksi->reward_member_dipakai);
-        $promo_dipakai = !empty($transaksi->promo_gratis_dipakai);
-        $memiliki_cuci_komplit = false;
-        $memiliki_layanan_reward = false;
+        $member = $this->get_member_settings();
+        $poin_pelanggan = max(0, (int) ($transaksi->poin_member_pelanggan ?? 0));
 
-        foreach ((array) $active_detail as $detail_row) {
-            if ($this->laundry_service_rules->is_layanan_cuci_komplit($detail_row->nama_tipe ?? '', $detail_row->nama_paket ?? '')) {
-                $memiliki_cuci_komplit = true;
-            }
-
-            if ($this->laundry_service_rules->is_reward_member_service_eligible($detail_row->nama_satuan ?? '', $detail_row->nama_tipe ?? '', $detail_row->nama_paket ?? '')) {
-                $memiliki_layanan_reward = true;
-            }
-        }
-
-        if ($reward_dipakai) {
+        if (!empty($ringkasan['reward_dipakai'])) {
             return [
                 'label' => 'Reward Member',
                 'icon' => 'fas fa-gift',
@@ -967,25 +478,9 @@ class Transaksi extends MY_Controller
             ];
         }
 
-        if ((string) ($transaksi->dibayar ?? '') === 'Belum Dibayar' && $reward_tersedia) {
-            return [
-                'label' => 'Reward Member',
-                'icon' => 'fas fa-gift',
-                'class' => 'trx-benefit-badge-success',
-            ];
-        }
-
-        if ($promo_dipakai) {
+        if (!empty($ringkasan['promo_dipakai'])) {
             return [
                 'label' => 'Promo Gratis',
-                'icon' => 'fas fa-tags',
-                'class' => 'trx-benefit-badge-warning',
-            ];
-        }
-
-        if ((string) ($transaksi->dibayar ?? '') === 'Belum Dibayar' && $promo_tersedia) {
-            return [
-                'label' => 'Promo Gratis Tersedia',
                 'icon' => 'fas fa-tags',
                 'class' => 'trx-benefit-badge-warning',
             ];
@@ -999,29 +494,15 @@ class Transaksi extends MY_Controller
             ];
         }
 
-        if (
-            $poin_pelanggan >= $this->batas_poin_member
-            && !$memiliki_layanan_reward
-            && !$reward_dipakai
-            && !$promo_dipakai
-            && !$reward_tersedia
-            && !$promo_tersedia
-        ) {
+        if ($poin_pelanggan >= $member['batas_poin']) {
             return [
-                'label' => 'Poin 8 Tersimpan',
+                'label' => 'Reward Tersimpan (' . $poin_pelanggan . ' poin)',
                 'icon' => 'fas fa-coins',
                 'class' => 'trx-benefit-badge-stored',
             ];
         }
 
-        if (
-            $memiliki_cuci_komplit
-            && empty($transaksi->poin_diberikan_pada)
-            && !$reward_dipakai
-            && !$promo_dipakai
-            && !$reward_tersedia
-            && !$promo_tersedia
-        ) {
+        if ($this->nota_dapat_poin($active_detail) && (string) ($transaksi->status ?? '') !== $this->cancelled_status) {
             return [
                 'label' => 'Dapat Poin',
                 'icon' => 'fas fa-star',
@@ -1032,39 +513,13 @@ class Transaksi extends MY_Controller
         return null;
     }
 
+    // ------------------------------------------------------------------
+    // Helper detail & status
+    // ------------------------------------------------------------------
+
     private function get_package_with_meta($id_paket)
     {
         return $this->Transaksi_model->get_package_with_meta($id_paket);
-    }
-
-    private function build_transaction_detail_item($paket, $qty, $promo_requested, $customer_notes = '')
-    {
-        $pricing = $this->laundry_service_rules->calculate_cart_pricing($this->get_promo_settings(), 
-            $paket->harga,
-            $qty,
-            $paket->nama_satuan,
-            $promo_requested,
-            $paket->nama_tipe,
-            $paket->nama_paket
-        );
-
-        return [
-            'id' => $paket->id_paket_laundry,
-            'nama_paket' => $paket->nama_paket,
-            'nama_satuan' => $paket->nama_satuan,
-            'nama_kategori' => $paket->nama_kategori,
-            'nama_tipe' => $paket->nama_tipe,
-            'harga' => $paket->harga,
-            'qty' => $pricing['actual_qty'],
-            'rounded_qty' => $pricing['rounded_qty'],
-            'charged_qty' => $pricing['charged_qty'],
-            'promo_free_qty' => $pricing['free_qty'],
-            'promo_requested' => $pricing['promo_requested'],
-            'promo_applied' => $pricing['promo_applied'],
-            'promo_label' => $pricing['promo_label'],
-            'customer_notes' => trim((string) $customer_notes),
-            'subtotal' => $pricing['subtotal']
-        ];
     }
 
     private function get_transaction_details($transaksi_id, $include_cancelled = false)
@@ -1112,7 +567,7 @@ class Transaksi extends MY_Controller
     private function load_package_form_data()
     {
         $data = [];
-        $data['promo_settings'] = $this->get_promo_settings();
+        $data['promo_aktif'] = $this->get_promo_aktif_summary();
         $data['kategori'] = $this->Transaksi_model->get_kategori();
         $data['tipe'] = $this->Transaksi_model->get_tipe();
         $data['paket'] = $this->Transaksi_model->get_paket_form_options();
@@ -1183,6 +638,10 @@ class Transaksi extends MY_Controller
         $this->Transaksi_model->update_deadline($transaksi_id, $batas_waktu);
     }
 
+    // ------------------------------------------------------------------
+    // Halaman & aksi
+    // ------------------------------------------------------------------
+
     public function index()
     {
         $tgl_awal  = $this->input->get('tgl_awal');
@@ -1246,7 +705,7 @@ class Transaksi extends MY_Controller
     {
         $data['title'] = 'Input Transaksi Baru';
         $package_data = $this->load_package_form_data();
-        $data['promo_settings'] = $package_data['promo_settings'];
+        $data['promo_aktif'] = $package_data['promo_aktif'];
         $data['member_settings'] = $this->get_member_settings();
         $data['pelanggan'] = $this->Transaksi_model->get_pelanggan_aktif();
         $data['kategori'] = $package_data['kategori'];
@@ -1265,7 +724,6 @@ class Transaksi extends MY_Controller
         $id_paket = $this->input->post('id_paket');
         $qty = $this->input->post('qty');
         $id_pelanggan = (int) $this->input->post('id_pelanggan');
-        $promo_requested = $this->input->post('promo_cuci_3kg') == '1';
         $customer_notes = trim((string) $this->input->post('customer_notes'));
 
         if ($id_pelanggan <= 0) {
@@ -1287,33 +745,57 @@ class Transaksi extends MY_Controller
 
         $paket = $this->Transaksi_model->get_package_with_meta($id_paket);
 
-        if ($paket) {
-            $item = $this->build_transaction_detail_item($paket, $qty, $promo_requested, $customer_notes);
-
-            if (!$this->session->userdata('cart')) {
-                $cart = [];
-            } else {
-                $cart = $this->session->userdata('cart');
-            }
-
-            $cart_key = $id_paket . '-' . (!empty($item['promo_applied']) ? 'promo' : 'normal');
-
-            if (isset($cart[$cart_key])) {
-                $cart[$cart_key]['qty'] += (float) $item['qty'];
-                $cart[$cart_key] = $this->normalize_cart_item($cart[$cart_key]);
-            } else {
-                $cart[$cart_key] = $item;
-            }
-
-            $this->session->set_userdata('cart', $cart);
-            $this->set_cart_customer_id($id_pelanggan);
-            $this->get_normalized_cart(true);
-
+        if (!$paket) {
             echo json_encode([
-                'status' => 'success',
-                'promo_applied' => !empty($item['promo_applied']),
+                'status' => 'error',
+                'message' => 'Paket laundry tidak ditemukan.'
             ]);
+            return;
         }
+
+        $item = $this->build_transaction_detail_item($paket, $qty, $customer_notes);
+
+        if ((float) $item['qty'] <= 0) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Jumlah bawaan harus lebih dari 0.'
+            ]);
+            return;
+        }
+
+        $cart = $this->session->userdata('cart');
+        if (empty($cart) || !is_array($cart)) {
+            $cart = [];
+        }
+
+        $pesan_campuran = $this->cek_campuran_alas_kaki($cart, $item);
+        if ($pesan_campuran !== null) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => $pesan_campuran
+            ]);
+            return;
+        }
+
+        $cart_key = (string) $paket->id_paket_laundry;
+
+        if (isset($cart[$cart_key])) {
+            $cart[$cart_key]['qty'] += (float) $item['qty'];
+            if ($item['customer_notes'] !== '') {
+                $cart[$cart_key]['customer_notes'] = trim($cart[$cart_key]['customer_notes'] . ' | ' . $item['customer_notes'], ' |');
+            }
+            $cart[$cart_key] = $this->normalize_cart_item($cart[$cart_key]);
+        } else {
+            $cart[$cart_key] = $item;
+        }
+
+        $this->session->set_userdata('cart', $cart);
+        $this->set_cart_customer_id($id_pelanggan);
+        $this->get_normalized_cart(true);
+
+        echo json_encode([
+            'status' => 'success',
+        ]);
     }
 
     public function show_cart()
@@ -1328,19 +810,16 @@ class Transaksi extends MY_Controller
                 $total_bayar += $item['subtotal'];
                 $qty_label = $this->laundry_service_rules->format_qty($item['qty']);
                 $harga_label = 'Rp ' . number_format($item['harga'], 0, ',', '.');
-                $promo_html = '';
+                $notes_html = '';
 
-                if (!empty($item['promo_applied'])) {
-                    $promo_html = '<small class="d-block text-primary mt-1"><i class="fas fa-tags me-1"></i>' . $item['promo_label'] . ' aktif: berat asli ' . $qty_label . ' ' . $item['nama_satuan'] . ', dibulatkan ' . $this->laundry_service_rules->format_qty($item['rounded_qty']) . ' ' . $item['nama_satuan'] . ', dibayar ' . $this->laundry_service_rules->format_qty($item['charged_qty']) . ' ' . $item['nama_satuan'] . '.</small>';
-                }
                 if (!empty($item['customer_notes'])) {
-                    $promo_html .= '<small class="d-block text-muted mt-1"><i class="fas fa-clipboard-list me-1"></i>Catatan: ' . htmlspecialchars($item['customer_notes'], ENT_QUOTES, 'UTF-8') . '</small>';
+                    $notes_html .= '<small class="d-block text-muted mt-1"><i class="fas fa-clipboard-list me-1"></i>Catatan: ' . htmlspecialchars($item['customer_notes'], ENT_QUOTES, 'UTF-8') . '</small>';
                 }
 
                 $html .= '
                 <tr>
                     <td>' . $no++ . '</td>
-                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . ' - ' . ($item['nama_tipe'] ?? '-') . '</small>' . $promo_html . '</td>
+                    <td>' . $item['nama_paket'] . ' <small class="text-muted d-block">' . $item['nama_kategori'] . ' - ' . ($item['nama_tipe'] ?? '-') . '</small>' . $notes_html . '</td>
                     <td>' . $harga_label . '</td>
                     <td>' . $qty_label . ' ' . $item['nama_satuan'] . '</td>
                     <td class="text-end fw-bold">Rp ' . number_format($item['subtotal'], 0, ',', '.') . '</td>
@@ -1398,6 +877,11 @@ class Transaksi extends MY_Controller
             redirect('transaksi/baru');
         }
 
+        if ($this->is_nota_campuran_alas_kaki($cart)) {
+            $this->session->set_flashdata('error', 'Sepatu/sandal harus dibuat di nota terpisah dari cucian. Hapus salah satu jenis item dari keranjang.');
+            redirect('transaksi/baru');
+        }
+
         $pelanggan_aktif = $this->Transaksi_model->get_pelanggan_aktif_by_id($id_pelanggan);
 
         if (!$pelanggan_aktif) {
@@ -1406,7 +890,6 @@ class Transaksi extends MY_Controller
         }
 
         $max_jam = 0;
-        $total_tagihan = 0;
 
         foreach ($cart as $item) {
             $paket_db = $this->Transaksi_model->get_paket_by_id($item['id']);
@@ -1414,28 +897,29 @@ class Transaksi extends MY_Controller
             if ($paket_db && $paket_db->durasi_jam > $max_jam) {
                 $max_jam = $paket_db->durasi_jam;
             }
-
-            $total_tagihan += isset($item['subtotal']) ? (float) $item['subtotal'] : 0;
         }
 
         if ($max_jam == 0) {
             $max_jam = 24;
         }
 
+        $tgl_masuk = date('Y-m-d H:i:s');
         $tgl_selesai = date('Y-m-d H:i:s', strtotime("+$max_jam hours"));
         $invoice = $this->generate_unique_invoice_code();
-        $aturan_promo_order = $this->siapkan_aturan_promo_order($cart);
+        $is_nota_alas_kaki = $this->is_item_alas_kaki(reset($cart));
+        $is_mitra = $this->is_pelanggan_mitra($pelanggan_aktif);
 
-        $data_transaksi = [
+        // Pelanggan mitra: jenis dikunci ke nota dan tidak ada aturan promo yang dikunci.
+        $data_transaksi = array_merge([
             'kode_invoice' => $invoice,
             'id_pelanggan' => $id_pelanggan,
-            'tgl_masuk' => date('Y-m-d H:i:s'),
+            'jenis_pelanggan' => $is_mitra ? 'mitra' : 'umum',
+            'tgl_masuk' => $tgl_masuk,
             'batas_waktu' => $tgl_selesai,
             'status' => $this->allowed_statuses[0],
             'dibayar' => $this->allowed_payment_statuses[0],
             'id_user' => $this->session->userdata('user_id'),
-        ];
-        $data_transaksi = array_merge($data_transaksi, $aturan_promo_order);
+        ], $this->siapkan_aturan_promo_order($is_nota_alas_kaki, $is_mitra));
 
         $data_detail = [];
 
@@ -1444,52 +928,55 @@ class Transaksi extends MY_Controller
                 'id_paket' => $item['id'],
                 'qty' => $item['charged_qty'],
                 'harga' => $item['harga'],
-                'keterangan' => $this->laundry_service_rules->build_promo_keterangan($item)
+                'keterangan' => $this->laundry_service_rules->build_item_keterangan($item['customer_notes'] ?? ''),
             ];
         }
 
-        $create_result = $this->Transaksi_model->create_transaction_with_details($data_transaksi, $data_detail);
+        // Reward diputuskan SEKALI di sini: poin sudah >= batas dan ada item Cuci Komplit Reguler/Satu hari.
+        $member = $this->get_member_settings();
+        $reward_request = null;
+        if (!$is_mitra && (int) ($pelanggan_aktif->poin_member ?? 0) >= $member['batas_poin'] && $this->nota_punya_layanan_reward($cart)) {
+            $reward_request = [
+                'batas_poin' => $member['batas_poin'],
+                'gratis_qty' => $member['gratis_qty'],
+                'user_id' => $this->session->userdata('user_id'),
+            ];
+        }
+
+        $create_result = $this->Transaksi_model->create_transaction_with_details($data_transaksi, $data_detail, $reward_request);
 
         if (!$create_result['success']) {
             $this->session->set_flashdata('error', 'Transaksi gagal disimpan. Silakan coba lagi.');
             redirect('transaksi/baru');
         }
 
-        $transaksi_baru = $this->Transaksi_model->get_detail_transaction_by_invoice($invoice);
-        $snapshot_result = $this->sync_snapshot_tagihan($transaksi_baru, $total_tagihan);
-        $ringkasan_awal = $snapshot_result['ringkasan'];
+        $ringkasan = $this->simpan_snapshot_tagihan($create_result['id_transaksi']);
+        $transaksi_baru = $this->Transaksi_model->get_transaction_by_id($create_result['id_transaksi']);
+        $wa_link = '';
 
-        $pelanggan = $this->Transaksi_model->get_pelanggan_by_id($id_pelanggan);
-        $wa_link = "";
-
-        if ($pelanggan && !empty($pelanggan->no_hp)) {
-            $detail_flags = $this->get_detail_benefit_flags($cart);
+        if ($transaksi_baru && !empty($transaksi_baru->no_hp) && is_array($ringkasan)) {
             $wa_link = $this->laundry_notification_builder->build_confirmation_wa_link(
                 $this->company,
-                $this->batas_poin_member,
-                $pelanggan->no_hp,
+                $member['batas_poin'],
+                $transaksi_baru->no_hp,
                 $invoice,
-                $pelanggan->nama,
-                date('Y-m-d H:i:s'),
+                $transaksi_baru->nama_pelanggan,
+                $tgl_masuk,
                 $tgl_selesai,
                 $cart,
-                $total_tagihan,
-                array_merge([
-                    'mode' => 'awal',
-                    'status' => $data_transaksi['status'],
-                    'dibayar' => $data_transaksi['dibayar'],
-                    'poin_member_pelanggan' => $pelanggan->poin_member ?? 0,
-                    'poin_diberikan_pada' => null,
-                    'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
-                    'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
-                    'show_potential_poin' => true,
-                ], $this->build_wa_benefit_meta_from_ringkasan($ringkasan_awal))
+                $ringkasan['total_normal'],
+                $this->build_wa_meta($transaksi_baru, $ringkasan, $cart, 'awal', ['show_potential_poin' => true])
             );
+        }
+
+        $pesan_sukses = 'Transaksi Berhasil Disimpan!';
+        if (!empty($create_result['reward_reserved'])) {
+            $pesan_sukses .= ' Reward member (' . $member['batas_poin'] . ' poin) otomatis dipakai di nota ini.';
         }
 
         $this->clear_cart_session();
         $this->session->set_flashdata('wa_link', $wa_link);
-        $this->session->set_flashdata('success', 'Transaksi Berhasil Disimpan!');
+        $this->session->set_flashdata('success', $pesan_sukses);
 
         redirect('transaksi');
     }
@@ -1517,7 +1004,6 @@ class Transaksi extends MY_Controller
                 return empty($detail->batal);
             }
         ));
-        $detail_flags = $this->get_detail_benefit_flags($data['active_detail']);
         $data['can_add_items'] = $this->can_add_items_to_transaction($data['transaksi']);
         $data['can_modify_items'] = $this->can_modify_transaction_items($data['transaksi']);
         $data['can_cancel_transaction'] = $this->can_cancel_transaction($data['transaksi']);
@@ -1529,66 +1015,28 @@ class Transaksi extends MY_Controller
             $data['wa_contact_link'] = 'https://wa.me/' . $normalized_phone;
         }
 
-        $total_tagihan = 0;
-        foreach ($data['active_detail'] as $detail_row) {
-            $total_tagihan += (float) ($detail_row->subtotal ?? 0);
-        }
+        // Halaman detail hanya membaca; snapshot tidak pernah ditulis di sini.
+        $data['ringkasan_pembayaran'] = $this->hitung_ringkasan_transaksi($data['transaksi'], $data['active_detail']);
+        $data['benefit_badge'] = $this->siapkan_badge_benefit_transaksi($data['transaksi'], $data['active_detail'], $data['ringkasan_pembayaran']);
+        $data['grand_total'] = $this->laundry_benefit_calculator->hitung_total_normal($data['active_detail']);
 
-        $data['reward_preview'] = $this->hitung_reward_member_pembayaran($data['transaksi']->id);
-        $data['promo_gratis_preview'] = $this->hitung_promo_gratis_pembayaran($data['transaksi']->id);
-        $data['promo_sepatu_preview'] = empty($data['promo_gratis_preview']['promo_tersedia'])
-            ? $this->hitung_promo_sepatu_pembayaran($data['transaksi']->id)
-            : null;
-        $snapshot_result = $this->sync_snapshot_tagihan(
-            $data['transaksi'],
-            $total_tagihan,
-            $data['reward_preview'],
-            !empty($data['promo_gratis_preview']['promo_tersedia']) ? $data['promo_gratis_preview'] : $data['promo_sepatu_preview'],
-            true
-        );
-        $data['ringkasan_pembayaran'] = $snapshot_result['ringkasan'];
-        $data['benefit_badge'] = $this->siapkan_badge_benefit_transaksi(
-            $data['transaksi'],
-            $data['active_detail'],
-            $data['reward_preview'],
-            !empty($data['promo_gratis_preview']['promo_tersedia']) ? $data['promo_gratis_preview'] : $data['promo_sepatu_preview']
-        );
-        $data['grand_total'] = $total_tagihan;
-
+        $member = $this->get_member_settings();
         $data['wa_confirmation_link'] = (string) $data['transaksi']->status === $this->cancelled_status ? '' : $this->laundry_notification_builder->build_confirmation_wa_link(
             $this->company,
-            $this->batas_poin_member,
+            $member['batas_poin'],
             $data['transaksi']->no_hp ?? '',
             $data['transaksi']->kode_invoice,
             $data['transaksi']->nama_pelanggan,
             $data['transaksi']->tgl_masuk,
             $data['transaksi']->batas_waktu,
             $data['active_detail'],
-            $total_tagihan,
-            array_merge([
-                'dibayar' => $data['transaksi']->dibayar ?? '',
-                'nama_metode_bayar' => $data['transaksi']->nama_metode_bayar ?? '',
-                'tgl_bayar' => $data['transaksi']->tgl_bayar ?? '',
-                'reward_member_dipakai' => $data['transaksi']->reward_member_dipakai ?? 0,
-                'reward_gratis_qty' => $data['transaksi']->reward_gratis_qty ?? 0,
-                'reward_potongan' => $data['transaksi']->reward_potongan ?? 0,
-                'promo_gratis_dipakai' => $data['transaksi']->promo_gratis_dipakai ?? 0,
-                'promo_gratis_qty' => $data['transaksi']->promo_gratis_qty ?? 0,
-                'promo_gratis_potongan' => $data['transaksi']->promo_gratis_potongan ?? 0,
-                'promo_gratis_keterangan' => $data['transaksi']->promo_gratis_keterangan ?? '',
-                'mode' => 'detail',
-                'status' => $data['transaksi']->status ?? '',
-                'poin_member_pelanggan' => $data['transaksi']->poin_member_pelanggan ?? 0,
-                'poin_diberikan_pada' => $data['transaksi']->poin_diberikan_pada ?? null,
-                'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
-                'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
-                'show_potential_poin' => true,
-            ], $this->build_wa_benefit_meta_from_ringkasan($data['ringkasan_pembayaran']))
+            $data['ringkasan_pembayaran']['total_normal'],
+            $this->build_wa_meta($data['transaksi'], $data['ringkasan_pembayaran'], $data['active_detail'], 'detail', ['show_potential_poin' => true])
         );
 
         $package_data = $this->load_package_form_data();
-        $data['promo_settings'] = $package_data['promo_settings'];
-        $data['member_settings'] = $this->get_member_settings();
+        $data['promo_aktif'] = $package_data['promo_aktif'];
+        $data['member_settings'] = $member;
         $data['kategori'] = $package_data['kategori'];
         $data['tipe'] = $package_data['tipe'];
         $data['paket'] = $package_data['paket'];
@@ -1677,11 +1125,9 @@ class Transaksi extends MY_Controller
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
+        // Harga item tetap harga saat item dibuat.
         $paket->harga = (int) $detail->harga;
-
-        $promo = $this->laundry_service_rules->parse_promo_keterangan($detail->keterangan ?? '');
-        $promo_requested = is_array($promo) && !empty($promo['promo_type']);
-        $item = $this->build_transaction_detail_item($paket, $qty, $promo_requested, $customer_notes);
+        $item = $this->build_transaction_detail_item($paket, $qty, $customer_notes);
 
         if ((float) $item['qty'] <= 0) {
             $this->session->set_flashdata('error', 'Jumlah bawaan harus lebih dari 0.');
@@ -1691,11 +1137,11 @@ class Transaksi extends MY_Controller
         $this->Transaksi_model->update_detail_item($detail_id, [
             'charged_qty' => $item['charged_qty'],
             'harga' => $item['harga'],
-            'keterangan' => $this->laundry_service_rules->build_promo_keterangan($item),
+            'keterangan' => $this->laundry_service_rules->build_item_keterangan($item['customer_notes']),
         ]);
-        $this->sync_snapshot_tagihan($trx);
+        $this->simpan_snapshot_tagihan($trx->id);
 
-        $this->session->set_flashdata('success', 'Item laundry berhasil diperbarui.');
+        $this->session->set_flashdata('success', 'Item laundry berhasil diperbarui. Kirim ulang nota WhatsApp agar customer menerima total terbaru.');
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
@@ -1736,9 +1182,9 @@ class Transaksi extends MY_Controller
         $this->Transaksi_model->cancel_detail_item($detail_id, $this->session->userdata('user_id'));
 
         $this->sync_transaction_deadline($trx->id);
-        $this->sync_snapshot_tagihan($trx);
+        $this->simpan_snapshot_tagihan($trx->id);
 
-        $this->session->set_flashdata('success', 'Item laundry berhasil dibatalkan tanpa menghapus histori.');
+        $this->session->set_flashdata('success', 'Item laundry berhasil dibatalkan tanpa menghapus histori. Kirim ulang nota WhatsApp agar customer menerima total terbaru.');
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
@@ -1758,7 +1204,6 @@ class Transaksi extends MY_Controller
 
         $id_paket = (int) $this->input->post('id_paket');
         $qty = $this->input->post('qty');
-        $promo_requested = $this->input->post('promo_cuci_3kg') == '1';
         $customer_notes = trim((string) $this->input->post('customer_notes'));
 
         if ($id_paket <= 0 || $qty === null || $qty === '') {
@@ -1773,10 +1218,16 @@ class Transaksi extends MY_Controller
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
-        $item = $this->build_transaction_detail_item($paket, $qty, $promo_requested, $customer_notes);
+        $item = $this->build_transaction_detail_item($paket, $qty, $customer_notes);
 
         if ((float) $item['qty'] <= 0) {
             $this->session->set_flashdata('error', 'Jumlah bawaan harus lebih dari 0.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $pesan_campuran = $this->cek_campuran_alas_kaki($this->get_active_transaction_details($trx->id), $item);
+        if ($pesan_campuran !== null) {
+            $this->session->set_flashdata('error', $pesan_campuran);
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
@@ -1785,13 +1236,13 @@ class Transaksi extends MY_Controller
             'id_paket' => $paket->id_paket_laundry,
             'qty' => $item['charged_qty'],
             'harga' => $item['harga'],
-            'keterangan' => $this->laundry_service_rules->build_promo_keterangan($item)
+            'keterangan' => $this->laundry_service_rules->build_item_keterangan($item['customer_notes']),
         ]);
 
         $this->sync_transaction_deadline($trx->id);
-        $this->sync_snapshot_tagihan($trx);
+        $this->simpan_snapshot_tagihan($trx->id);
 
-        $this->session->set_flashdata('success', 'Item laundry berhasil ditambahkan ke nota ini.');
+        $this->session->set_flashdata('success', 'Item laundry berhasil ditambahkan ke nota ini. Kirim ulang nota WhatsApp agar customer menerima total terbaru.');
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
@@ -1837,7 +1288,7 @@ class Transaksi extends MY_Controller
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
-        $this->session->set_flashdata('success', 'Transaksi berhasil dibatalkan.');
+        $this->session->set_flashdata('success', 'Transaksi berhasil dibatalkan. Poin reward yang terpakai di nota ini (jika ada) sudah dikembalikan.');
         redirect('transaksi');
     }
 
@@ -1889,9 +1340,9 @@ class Transaksi extends MY_Controller
     public function bayar_tagihan($kode_invoice)
     {
         $id_metode_bayar = (int) $this->input->post('id_metode_bayar');
-        $tgl_bayar = date('Y-m-d H:i:s');
+        $expected_total = $this->input->post('expected_total');
 
-        $trx = $this->Transaksi_model->get_payment_transaction_by_invoice($kode_invoice);
+        $trx = $this->Transaksi_model->get_detail_transaction_by_invoice($kode_invoice);
 
         if (!$trx) {
             $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
@@ -1913,44 +1364,42 @@ class Transaksi extends MY_Controller
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
-        $reward_preview = $this->hitung_reward_member_pembayaran($trx->id);
-        $promo_preview = $this->hitung_promo_gratis_pembayaran($trx->id);
-        if (empty($promo_preview['promo_tersedia'])) {
-            $promo_preview = $this->hitung_promo_sepatu_pembayaran($trx->id);
-        }
-        $snapshot_result = $this->siapkan_snapshot_tagihan($trx, null, $reward_preview, $promo_preview, true);
-
-        $data_update = [
-            'dibayar' => $this->allowed_payment_statuses[1],
-            'tgl_bayar' => $tgl_bayar,
-            'id_metode_bayar' => $id_metode_bayar
-        ];
-
-        if (!empty($snapshot_result['snapshot'])) {
-            $data_update = array_merge($data_update, $snapshot_result['snapshot']);
+        // Nota lama yang belum punya snapshot dikunci sekali di sini sebelum divalidasi.
+        if (empty($trx->snapshot_tagihan_at)) {
+            $this->simpan_snapshot_tagihan($trx->id);
+            $trx = $this->Transaksi_model->get_detail_transaction_by_invoice($kode_invoice);
         }
 
-        $payment_result = $this->Transaksi_model->record_payment(
-            $trx->id,
-            $data_update,
-            $reward_preview,
-            $promo_preview,
-            $this->batas_poin_member
-        );
+        $ringkasan = $this->laundry_benefit_calculator->hitung($trx, $this->get_active_transaction_details($trx->id));
+        $total_hitung = (int) round((float) $ringkasan['total_akhir']);
+        $total_snapshot = (int) ($trx->total_akhir ?? 0);
 
-        if (!$payment_result['success'] && $payment_result['reason'] === 'status_changed') {
-            $this->session->set_flashdata('error', 'Pembayaran gagal dicatat karena status transaksi sudah berubah. Silakan muat ulang halaman ini.');
+        if ($total_hitung !== $total_snapshot) {
+            $this->session->set_flashdata('error', 'Pembayaran TIDAK dicatat: total tersimpan di nota (Rp ' . number_format($total_snapshot, 0, ',', '.') . ') berbeda dengan hitungan sistem (Rp ' . number_format($total_hitung, 0, ',', '.') . '). Hubungi admin untuk pengecekan.');
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
+        if ($expected_total === null || $expected_total === '' || (int) $expected_total !== $total_snapshot) {
+            $this->session->set_flashdata('error', 'Pembayaran TIDAK dicatat karena total tagihan sudah berubah sejak halaman dibuka. Muat ulang halaman lalu cek total terbaru.');
+            redirect('transaksi/detail/' . $kode_invoice);
+        }
+
+        $data_update = array_merge([
+            'dibayar' => $this->allowed_payment_statuses[1],
+            'tgl_bayar' => date('Y-m-d H:i:s'),
+            'id_metode_bayar' => $id_metode_bayar,
+        ], $this->laundry_benefit_calculator->snapshot_fields($ringkasan));
+
+        $payment_result = $this->Transaksi_model->record_payment($trx->id, $data_update, $total_snapshot);
+
         if (!$payment_result['success']) {
-            $this->session->set_flashdata('error', 'Pembayaran gagal dicatat. Silakan coba lagi.');
+            $this->session->set_flashdata('error', 'Pembayaran gagal dicatat karena data transaksi sudah berubah. Silakan muat ulang halaman ini.');
             redirect('transaksi/detail/' . $kode_invoice);
         }
 
         $this->sinkron_poin_member($trx->id);
 
-        $this->session->set_flashdata('success', 'Pembayaran berhasil dicatat. Status pengambilan tetap terpisah.');
+        $this->session->set_flashdata('success', 'Pembayaran Rp ' . number_format($total_snapshot, 0, ',', '.') . ' berhasil dicatat. Status pengambilan tetap terpisah.');
         redirect('transaksi/detail/' . $kode_invoice);
     }
 
@@ -1988,13 +1437,12 @@ class Transaksi extends MY_Controller
         }
 
         $this->Transaksi_model->mark_taken_by_invoice($kode_invoice, $data_update);
+        $this->sinkron_poin_member($trx->id);
 
         $trx = $this->Transaksi_model->get_detail_transaction_by_invoice($kode_invoice);
-
         $details = $this->get_active_transaction_details($trx->id);
-        $detail_flags = $this->get_detail_benefit_flags($details);
 
-        $wa_link = "";
+        $wa_link = '';
 
         if ($trx && !empty($trx->no_hp)) {
             $nama_kasir = $this->session->userdata('username');
@@ -2002,44 +1450,23 @@ class Transaksi extends MY_Controller
                 $nama_kasir = 'Admin';
             }
 
-            $total_bayar = 0;
-            foreach ($details as $d) {
-                $total_bayar += (float) ($d->subtotal ?? 0);
-            }
+            $ringkasan = $this->laundry_benefit_calculator->ringkasan_dari_snapshot($trx, $details);
+            $member = $this->get_member_settings();
 
             $wa_link = $this->laundry_notification_builder->build_confirmation_wa_link(
                 $this->company,
-                $this->batas_poin_member,
+                $member['batas_poin'],
                 $trx->no_hp,
                 $trx->kode_invoice,
                 $trx->nama_pelanggan,
                 $trx->tgl_masuk,
                 $trx->batas_waktu,
                 $details,
-                $total_bayar,
-                [
-                    'mode' => 'pengambilan',
-                    'status' => $trx->status ?? '',
-                    'dibayar' => $trx->dibayar ?? '',
-                    'tgl_bayar' => $trx->tgl_bayar ?? '',
-                    'tgl_diambil' => $trx->tgl_diambil ?? '',
-                    'nama_metode_bayar' => $trx->nama_metode_bayar ?? '',
+                $ringkasan['total_normal'],
+                $this->build_wa_meta($trx, $ringkasan, $details, 'pengambilan', [
                     'nama_kasir' => $nama_kasir,
-                    'reward_member_dipakai' => $trx->reward_member_dipakai ?? 0,
-                    'reward_gratis_qty' => $trx->reward_gratis_qty ?? 0,
-                    'reward_potongan' => $trx->reward_potongan ?? 0,
-                    'promo_gratis_dipakai' => $trx->promo_gratis_dipakai ?? 0,
-                    'promo_gratis_qty' => $trx->promo_gratis_qty ?? 0,
-                    'promo_gratis_potongan' => $trx->promo_gratis_potongan ?? 0,
-                    'promo_gratis_keterangan' => $trx->promo_gratis_keterangan ?? '',
-                    'benefit_tipe' => $trx->benefit_tipe ?? '',
-                    'promo_gratis_unit' => (string) ($trx->benefit_tipe ?? '') === 'promo_sepatu' ? 'pasang' : 'kg',
-                    'poin_member_pelanggan' => $trx->poin_member_pelanggan ?? 0,
-                    'poin_diberikan_pada' => $trx->poin_diberikan_pada ?? null,
-                    'punya_cuci_komplit' => $detail_flags['punya_cuci_komplit'],
-                    'punya_layanan_reward' => $detail_flags['punya_layanan_reward'],
                     'show_potential_poin' => false,
-                ]
+                ])
             );
         }
 
@@ -2058,12 +1485,8 @@ class Transaksi extends MY_Controller
         }
 
         $data['detail'] = $this->get_active_transaction_details($data['transaksi']->id);
-        $total_tagihan = 0;
-        foreach ($data['detail'] as $detail_row) {
-            $total_tagihan += (float) ($detail_row->subtotal ?? 0);
-        }
-        $snapshot_result = $this->sync_snapshot_tagihan($data['transaksi'], $total_tagihan, null, null, true);
-        $data['ringkasan_pembayaran'] = $snapshot_result['ringkasan'];
+        // Cetak hanya membaca; snapshot tidak ditulis di sini.
+        $data['ringkasan_pembayaran'] = $this->hitung_ringkasan_transaksi($data['transaksi'], $data['detail']);
 
         $data['company'] = $this->company;
         $this->load->view('transaksi/cetak', $data);

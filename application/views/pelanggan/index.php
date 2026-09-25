@@ -92,7 +92,7 @@
                                 <?php else : ?>
                                     <?php $no = 1;
                                     foreach ($pelanggan as $row) : ?>
-                                        <?php $poin_member = (int) ($row->poin_member ?? 0); ?>
+                                        <?php $poin_member = (int) ($row->poin_member ?? 0); $batas_poin_reward = max(1, (int) ($company['reward_member_batas_poin'] ?? 8)); ?>
                                         <tr>
                                             <td><?= $no++; ?></td>
                                             <td><?= $row->nama; ?></td>
@@ -102,7 +102,7 @@
                                                 </a>
                                             </td>
                                             <td>
-                                                <?php if ($poin_member >= 8) : ?>
+                                                <?php if ($poin_member >= $batas_poin_reward) : ?>
                                                     <div class="d-inline-flex align-items-center gap-2 flex-wrap">
                                                         <span class="member-point-chip member-point-chip--reward">
                                                             <span><?= $poin_member; ?></span>
@@ -250,7 +250,7 @@
         function buildRowHtml(row, number) {
             var poinMember = parseInt(row.poin_member || 0, 10);
             var poinHtml = '';
-            if (poinMember >= 8) {
+            if (poinMember >= <?= max(1, (int) ($company['reward_member_batas_poin'] ?? 8)); ?>) {
                 poinHtml =
                     '<div class="d-inline-flex align-items-center gap-2 flex-wrap">' +
                     '<span class="member-point-chip member-point-chip--reward">' +

@@ -17,7 +17,8 @@
                 <div class="card-body">
                     <div class="alert alert-warning border-0 shadow-sm small mb-4">
                         <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-2"></i>Aturan promo aktif</div>
-                        <div>Promo Opening dipakai khusus masa opening cabang. Saat Promo Opening aktif, Promo Daily harus nonaktif. Reward Member tetap berjalan mengikuti poin member.</div>
+                        <div>Satu nota hanya mendapat satu benefit dengan prioritas: Reward Member &gt; Promo Opening &gt; Promo Daily &gt; Promo Sepatu. Saat Promo Opening aktif, Promo Daily harus nonaktif.</div>
+                        <div class="mt-1">Perubahan di halaman ini hanya berlaku untuk nota yang dibuat setelah disimpan. Nota yang sudah ada tetap memakai aturan yang terkunci saat nota dibuat.</div>
                     </div>
 
                     <form action="<?= base_url('pengaturan/update_promo'); ?>" method="post" id="form-promo">
@@ -26,7 +27,7 @@
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                                 <div>
                                     <h6 class="fw-bold mb-1">Promo Opening Laundry</h6>
-                                    <small class="text-muted">Promo sementara saat masa opening laundry.</small>
+                                    <small class="text-muted">Promo sementara saat masa opening. Otomatis per nota: jika total Cuci Komplit kg LEBIH dari jumlah gratis, potong sejumlah gratis dari harga termurah (tanpa pembulatan). Contoh gratis 3 kg: 3 kg tidak dapat, 3,5 kg bayar 0,5 kg.</small>
                                 </div>
                                 <div class="form-check form-switch">
                                     <input
@@ -137,7 +138,7 @@
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                                 <div>
                                     <h6 class="fw-bold mb-1">Promo Cuci Sepatu</h6>
-                                    <small class="text-muted">Promo untuk paket sepatu satuan khusus. Nota sepatu tetap dibuat terpisah secara manual oleh kasir.</small>
+                                    <small class="text-muted">Promo untuk paket sepatu satuan khusus. Sistem menolak nota yang mencampur sepatu/sandal dengan cucian, jadi nota sepatu selalu terpisah.</small>
                                 </div>
                                 <div class="form-check form-switch">
                                     <input
@@ -192,6 +193,49 @@
                                         name="promo_sepatu_label"
                                         value="<?= html_escape($promo['promo_sepatu_label']); ?>"
                                         required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-3 p-3 mb-4">
+                            <div class="mb-3">
+                                <h6 class="fw-bold mb-1">Reward Member</h6>
+                                <small class="text-muted">
+                                    Selalu aktif. Poin +1 untuk setiap nota Cuci Komplit / Cuci Lipat (termasuk Express &amp; barang satuan) yang selesai dan lunas; setrika saja dan sepatu tidak dapat poin.
+                                    Jika poin sudah mencapai batas saat nota dibuat dan nota berisi Cuci Komplit Reguler / Satu Hari (kg), reward otomatis dipakai dan poin berkurang sebesar batas (sisa poin tetap tersimpan).
+                                </small>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="reward_member_batas_poin" class="form-label fw-bold">Batas Poin</label>
+                                    <div class="input-group">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            class="form-control"
+                                            id="reward_member_batas_poin"
+                                            name="reward_member_batas_poin"
+                                            value="<?= html_escape($promo['reward_member_batas_poin']); ?>"
+                                            required>
+                                        <span class="input-group-text">Poin</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="reward_member_gratis_qty" class="form-label fw-bold">Gratis Cuci</label>
+                                    <div class="input-group">
+                                        <input
+                                            type="number"
+                                            min="0.1"
+                                            step="0.1"
+                                            class="form-control"
+                                            id="reward_member_gratis_qty"
+                                            name="reward_member_gratis_qty"
+                                            value="<?= html_escape($promo['reward_member_gratis_qty']); ?>"
+                                            required>
+                                        <span class="input-group-text">Kg</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

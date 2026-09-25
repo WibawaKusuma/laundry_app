@@ -62,6 +62,16 @@
                                     <option value="0" <?= (isset($pelanggan->aktif) && (int) $pelanggan->aktif === 0) ? 'selected' : ''; ?>>Non Aktif</option>
                                 </select>
                             </div>
+
+                            <?php $jenis_pelanggan = (string) ($pelanggan->jenis_pelanggan ?? 'umum'); ?>
+                            <div class="col-md-6">
+                                <label for="jenis_pelanggan" class="form-label fw-bold">Jenis Pelanggan</label>
+                                <select class="form-select" id="jenis_pelanggan" name="jenis_pelanggan" required>
+                                    <option value="umum" <?= $jenis_pelanggan !== 'mitra' ? 'selected' : ''; ?>>Umum</option>
+                                    <option value="mitra" <?= $jenis_pelanggan === 'mitra' ? 'selected' : ''; ?>>Mitra (villa / kerja sama)</option>
+                                </select>
+                                <small class="text-muted">Mitra tidak mendapat promo, reward, maupun poin member. Berlaku untuk nota yang dibuat setelah disimpan.</small>
+                            </div>
                         </div>
 
                         <hr>

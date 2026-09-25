@@ -127,7 +127,6 @@
     document.addEventListener("DOMContentLoaded", function() {
         const sidebarMenu = document.getElementById('sidebarMenu');
         const overlay = document.getElementById('sidebar-overlay');
-        const togglerBtn = document.querySelector('.navbar-toggler');
 
         if (sidebarMenu && overlay) {
 
@@ -150,17 +149,6 @@
                 bsCollapse.hide();
             });
 
-            // 4. Fix Tombol Navbar (Breadcrumb)
-            // Memaksa tombol sinkron jika diklik
-            if (togglerBtn) {
-                togglerBtn.addEventListener('click', function(e) {
-                    if (sidebarMenu.classList.contains('show')) {
-                        bsCollapse.hide();
-                    } else {
-                        bsCollapse.show();
-                    }
-                });
-            }
         }
     });
 </script>

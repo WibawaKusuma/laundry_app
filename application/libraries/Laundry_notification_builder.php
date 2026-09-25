@@ -36,32 +36,42 @@ class Laundry_notification_builder
         return max(0, (float) $total_tagihan - (int) $reward_potongan - (int) $promo_gratis_potongan);
     }
 
+    /**
+     * Baris diskon & poin di nota WhatsApp. Semua angka berasal dari snapshot tagihan nota
+     * (lihat Laundry_benefit_calculator), bukan dari perhitungan ulang.
+     */
     public function build_benefit_customer_message_lines($meta = [], $batas_poin_member = 8)
     {
         $lines = [
             'discount' => [],
             'points' => [],
         ];
-        $batas_poin_member = (int) $batas_poin_member;
-        $poin_pelanggan = max(0, min($batas_poin_member, (int) ($meta['poin_member_pelanggan'] ?? 0)));
-        $benefit_preview = !empty($meta['benefit_preview']);
-        $reward_dipakai = (!empty($meta['reward_member_dipakai']) || ($benefit_preview && (string) ($meta['benefit_tipe'] ?? '') === 'reward_member')) && (float) ($meta['reward_gratis_qty'] ?? 0) > 0;
-        $benefit_tipe = (string) ($meta['benefit_tipe'] ?? '');
-        $promo_dipakai = (!empty($meta['promo_gratis_dipakai']) || ($benefit_preview && in_array($benefit_tipe, ['promo_daily', 'promo_sepatu'], true))) && (float) ($meta['promo_gratis_qty'] ?? 0) > 0;
+        $rules = $this->CI->laundry_service_rules;
+        $batas_poin_member = max(1, (int) ($meta['batas_poin'] ?? $batas_poin_member));
+        $poin_pelanggan = max(0, (int) ($meta['poin_member_pelanggan'] ?? 0));
+        $reward_dipakai = !empty($meta['reward_member_dipakai']) && (float) ($meta['reward_gratis_qty'] ?? 0) > 0;
+        $promo_dipakai = !empty($meta['promo_gratis_dipakai']) && (float) ($meta['promo_gratis_qty'] ?? 0) > 0;
         $poin_sudah_masuk = !empty($meta['poin_diberikan_pada']);
-        $punya_cuci_komplit = !empty($meta['punya_cuci_komplit']);
+        $dapat_poin = !empty($meta['dapat_poin']);
         $show_potential_poin = !empty($meta['show_potential_poin']);
 
+        // Nota pelanggan mitra: tanpa diskon dan tanpa informasi poin member.
+        if (!empty($meta['is_mitra'])) {
+            return $lines;
+        }
+
         if ($reward_dipakai) {
-            $lines['discount'][] = 'Reward Member ' . $this->CI->laundry_service_rules->format_qty((float) ($meta['reward_gratis_qty'] ?? 0)) . ' kg: - Rp ' . number_format((int) ($meta['reward_potongan'] ?? 0), 0, ',', '.');
-            $lines['points'][] = $benefit_preview ? 'Poin saat ini: ' . $poin_pelanggan : 'Total poin sekarang: 0';
+            $lines['discount'][] = 'Reward Member ' . $rules->format_qty((float) ($meta['reward_gratis_qty'] ?? 0)) . ' kg: - Rp ' . number_format((int) ($meta['reward_potongan'] ?? 0), 0, ',', '.');
+            $poin_dipakai = (int) ($meta['reward_poin_dipakai'] ?? 0);
+            $lines['points'][] = 'Reward member dipakai di nota ini' . ($poin_dipakai > 0 ? ' (' . $poin_dipakai . ' poin)' : '') . '.';
+            $lines['points'][] = 'Sisa poin: ' . $poin_pelanggan;
 
             return $lines;
         }
 
         if ($promo_dipakai) {
             $unit = trim((string) ($meta['promo_gratis_unit'] ?? 'kg'));
-            $lines['discount'][] = 'Promo gratis ' . $this->CI->laundry_service_rules->format_qty((float) ($meta['promo_gratis_qty'] ?? 0)) . ' ' . $unit . ': - Rp ' . number_format((int) ($meta['promo_gratis_potongan'] ?? 0), 0, ',', '.');
+            $lines['discount'][] = 'Promo gratis ' . $rules->format_qty((float) ($meta['promo_gratis_qty'] ?? 0)) . ' ' . $unit . ': - Rp ' . number_format((int) ($meta['promo_gratis_potongan'] ?? 0), 0, ',', '.');
         }
 
         if ($poin_sudah_masuk) {
@@ -73,18 +83,18 @@ class Laundry_notification_builder
 
         if ($poin_pelanggan >= $batas_poin_member) {
             $lines['points'][] = 'Poin saat ini: ' . $poin_pelanggan;
-            $lines['points'][] = 'Reward member tersedia untuk transaksi berikutnya.';
+            $lines['points'][] = 'Reward member (' . $batas_poin_member . ' poin) otomatis dipakai di nota cucian Cuci Komplit Reguler / Satu Hari berikutnya.';
 
             return $lines;
         }
 
-        if ($show_potential_poin && $punya_cuci_komplit) {
+        if ($show_potential_poin && $dapat_poin) {
             $lines['points'][] = 'Poin saat ini: ' . $poin_pelanggan;
 
-            if ($poin_pelanggan === ($batas_poin_member - 1)) {
-                $lines['points'][] = 'Setelah cucian selesai dan lunas, poin menjadi 8 dan bisa digunakan untuk reward member.';
+            if ($poin_pelanggan + 1 >= $batas_poin_member) {
+                $lines['points'][] = 'Setelah cucian ini selesai dan lunas, poin menjadi ' . ($poin_pelanggan + 1) . ' dan reward member bisa dipakai di nota berikutnya.';
             } else {
-                $lines['points'][] = 'Poin akan otomatis bertambah setelah cucian selesai dan lunas.';
+                $lines['points'][] = 'Poin +1 otomatis setelah cucian selesai dan lunas.';
             }
         }
 
@@ -129,15 +139,10 @@ class Laundry_notification_builder
         if (!in_array($mode, ['awal', 'detail', 'pengambilan'], true)) {
             $mode = 'detail';
         }
-        $benefit_preview = !empty($payment_meta['benefit_preview']);
-        $reward_dipakai = (!empty($payment_meta['reward_member_dipakai']) || ($benefit_preview && (string) ($payment_meta['benefit_tipe'] ?? '') === 'reward_member')) && (float) ($payment_meta['reward_gratis_qty'] ?? 0) > 0;
-        $reward_gratis_qty = (float) ($payment_meta['reward_gratis_qty'] ?? 0);
-        $reward_potongan = (int) ($payment_meta['reward_potongan'] ?? 0);
-        $benefit_tipe = (string) ($payment_meta['benefit_tipe'] ?? '');
-        $promo_dipakai = (!empty($payment_meta['promo_gratis_dipakai']) || ($benefit_preview && in_array($benefit_tipe, ['promo_daily', 'promo_sepatu'], true))) && (float) ($payment_meta['promo_gratis_qty'] ?? 0) > 0;
-        $promo_gratis_qty = (float) ($payment_meta['promo_gratis_qty'] ?? 0);
-        $promo_gratis_potongan = (int) ($payment_meta['promo_gratis_potongan'] ?? 0);
-        $promo_gratis_keterangan = trim((string) ($payment_meta['promo_gratis_keterangan'] ?? ''));
+        $reward_dipakai = !empty($payment_meta['reward_member_dipakai']) && (float) ($payment_meta['reward_gratis_qty'] ?? 0) > 0;
+        $reward_potongan = $reward_dipakai ? (int) ($payment_meta['reward_potongan'] ?? 0) : 0;
+        $promo_dipakai = !$reward_dipakai && !empty($payment_meta['promo_gratis_dipakai']) && (float) ($payment_meta['promo_gratis_qty'] ?? 0) > 0;
+        $promo_gratis_potongan = $promo_dipakai ? (int) ($payment_meta['promo_gratis_potongan'] ?? 0) : 0;
         $total_akhir = $this->hitung_total_akhir_wa($total_tagihan, $reward_potongan, $promo_gratis_potongan);
         if (array_key_exists('total_akhir', $payment_meta)) {
             $total_akhir = max(0, (float) $payment_meta['total_akhir']);
@@ -151,23 +156,10 @@ class Laundry_notification_builder
         $paid_at = !empty($payment_meta['tgl_bayar']) ? date('d/m/Y H:i', strtotime($payment_meta['tgl_bayar'])) : '';
         $diambil_at = !empty($payment_meta['tgl_diambil']) ? date('d/m/Y H:i', strtotime($payment_meta['tgl_diambil'])) : '';
         $nama_kasir = trim((string) ($payment_meta['nama_kasir'] ?? 'Admin'));
-        $benefit_lines = $this->build_benefit_customer_message_lines([
+        $benefit_lines = $this->build_benefit_customer_message_lines(array_merge($payment_meta, [
             'reward_member_dipakai' => $reward_dipakai,
-            'reward_gratis_qty' => $reward_gratis_qty,
-            'reward_potongan' => $reward_potongan,
             'promo_gratis_dipakai' => $promo_dipakai,
-            'promo_gratis_qty' => $promo_gratis_qty,
-            'promo_gratis_potongan' => $promo_gratis_potongan,
-            'promo_gratis_keterangan' => $promo_gratis_keterangan,
-            'promo_gratis_unit' => $payment_meta['promo_gratis_unit'] ?? 'kg',
-            'benefit_preview' => $benefit_preview,
-            'benefit_tipe' => $payment_meta['benefit_tipe'] ?? '',
-            'poin_member_pelanggan' => $payment_meta['poin_member_pelanggan'] ?? 0,
-            'poin_diberikan_pada' => $payment_meta['poin_diberikan_pada'] ?? null,
-            'punya_cuci_komplit' => !empty($payment_meta['punya_cuci_komplit']),
-            'punya_layanan_reward' => !empty($payment_meta['punya_layanan_reward']),
-            'show_potential_poin' => !empty($payment_meta['show_potential_poin']),
-        ], $batas_poin_member);
+        ]), $batas_poin_member);
 
         $company_name = $company['company_name'] ?? 'APP Laundry';
         $company_address = $company['company_address'] ?? 'Jalan';

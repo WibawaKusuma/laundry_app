@@ -105,7 +105,8 @@ class Pelanggan extends MY_Controller
             'nama' => '',
             'no_hp' => '',
             'alamat' => '',
-            'aktif' => 1
+            'aktif' => 1,
+            'jenis_pelanggan' => 'umum',
         ];
 
         $this->load->view('templates/header');
@@ -119,6 +120,7 @@ class Pelanggan extends MY_Controller
         $this->form_validation->set_rules('nama', 'Nama', 'required|trim|callback_unique_nama_check');
         $this->form_validation->set_rules('no_hp', 'No HP', 'numeric|callback_unique_no_hp_check');
         $this->form_validation->set_rules('alamat', 'Alamat', 'required|trim');
+        $this->form_validation->set_rules('jenis_pelanggan', 'Jenis pelanggan', 'required|in_list[umum,mitra]');
 
         if ($this->form_validation->run() == FALSE) {
             $this->tambah();
@@ -127,7 +129,8 @@ class Pelanggan extends MY_Controller
                 'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
                 'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
                 'alamat' => $this->input->post('alamat', true),
-                'aktif' => (int) $this->input->post('aktif')
+                'aktif' => (int) $this->input->post('aktif'),
+                'jenis_pelanggan' => $this->input->post('jenis_pelanggan') === 'mitra' ? 'mitra' : 'umum',
             );
 
             $this->Pelanggan_model->insert($data);
@@ -154,6 +157,7 @@ class Pelanggan extends MY_Controller
         $this->form_validation->set_rules('nama', 'Nama', 'required|trim|callback_unique_nama_check[' . $id . ']');
         $this->form_validation->set_rules('no_hp', 'No HP', 'numeric|callback_unique_no_hp_check[' . $id . ']');
         $this->form_validation->set_rules('alamat', 'Alamat', 'required|trim');
+        $this->form_validation->set_rules('jenis_pelanggan', 'Jenis pelanggan', 'required|in_list[umum,mitra]');
         $this->form_validation->set_rules('aktif', 'Status pelanggan', 'required|in_list[0,1]');
 
         if ($this->form_validation->run() == FALSE) {
@@ -163,7 +167,8 @@ class Pelanggan extends MY_Controller
                 'nama' => $this->normalize_customer_name($this->input->post('nama', true)),
                 'no_hp' => $this->normalize_phone_number($this->input->post('no_hp', true)),
                 'alamat' => $this->input->post('alamat', true),
-                'aktif' => (int) $this->input->post('aktif')
+                'aktif' => (int) $this->input->post('aktif'),
+                'jenis_pelanggan' => $this->input->post('jenis_pelanggan') === 'mitra' ? 'mitra' : 'umum',
             );
 
             $this->Pelanggan_model->update($id, $data);

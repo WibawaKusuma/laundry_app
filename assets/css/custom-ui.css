@@ -146,7 +146,8 @@ p, h1, h2, h3, h4, h5 {
     color: #dc3545 !important;
 }
 
-@media (min-width: 768px) {
+/* Sidebar tetap terbuka hanya pada desktop yang cukup lebar. */
+@media (min-width: 1200px) {
     #sidebarMenu {
         flex: 0 0 240px;
         max-width: 240px;
@@ -156,32 +157,56 @@ p, h1, h2, h3, h4, h5 {
         flex: 1 1 0%;
         max-width: calc(100% - 240px);
     }
+
+    .sidebar-inner {
+        padding: 0.45rem 0.9rem 1.25rem;
+    }
 }
 
-@media (min-width: 768px) and (max-width: 991.98px) {
-    .sidebar {
-        min-height: calc(100vh - 60px);
+/* Tablet dan ponsel menggunakan sidebar off-canvas agar konten tetap lega. */
+@media (max-width: 1199.98px) {
+    main.col-md-9 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        width: 100%;
+        margin-left: 0 !important;
+    }
+
+    #sidebarMenu {
+        position: fixed;
+        top: 60px;
+        bottom: 0;
+        left: 0;
+        z-index: 1025;
+        width: 280px;
+        max-width: 86vw;
+        padding-top: 16px;
+        overflow-y: auto;
+        background-color: #ffffff;
+        box-shadow: 8px 0 24px rgba(31, 41, 122, 0.14);
+        overscroll-behavior: contain;
     }
 
     .sidebar-inner {
+        min-height: auto;
         padding: 0.35rem 0.85rem 1rem;
+        position: static !important;
     }
 
     .sidebar .nav-link {
-        align-items: flex-start;
         white-space: normal;
-        font-size: 0.82rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .sidebar .nav-link {
+        align-items: flex-start;
+        font-size: 0.85rem;
         padding: 0.72rem 0.85rem;
     }
 
     .sidebar .nav-link i {
         margin-top: 0.1rem;
-    }
-}
-
-@media (min-width: 992px) {
-    .sidebar-inner {
-        padding: 0.45rem 0.9rem 1.25rem;
     }
 }
 
@@ -191,22 +216,12 @@ p, h1, h2, h3, h4, h5 {
         font-size: 1rem;
         width: auto;
     }
+
     #sidebarMenu {
-        position: fixed;
-        top: 56px;
-        bottom: 0;
-        left: 0;
-        z-index: 100;
         width: 250px;
-        padding-top: 20px;
-        overflow-y: auto;
-        background-color: #ffffff;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease-in-out;
     }
 
     .sidebar-inner {
-        min-height: auto;
         padding: 0.25rem 0.85rem 1rem;
     }
 
@@ -323,7 +338,7 @@ p, h1, h2, h3, h4, h5 {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(4px);
-    z-index: 99;
+    z-index: 1020;
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;

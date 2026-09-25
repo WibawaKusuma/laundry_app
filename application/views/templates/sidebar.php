@@ -7,7 +7,7 @@
     }
 </style> -->
 <!-- <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"> -->
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-white sidebar collapse shadow-sm">
+<nav id="sidebarMenu" class="col-xl-2 d-xl-block bg-white sidebar collapse shadow-sm">
     <div class="position-sticky pt-3 sidebar-inner">
         <ul class="nav flex-column nav-pills mb-4 sidebar-nav">
 

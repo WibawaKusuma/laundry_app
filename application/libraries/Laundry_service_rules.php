@@ -20,18 +20,6 @@ class Laundry_service_rules
         return $qty > 0 ? $qty : 0;
     }
 
-    public function is_promo_service_eligible($nama_tipe, $nama_paket = '')
-    {
-        $service_name = strtolower(trim((string) $nama_tipe . ' ' . $nama_paket));
-        $service_name = preg_replace('/\s+/', ' ', $service_name);
-
-        if (strpos($service_name, 'setrika') !== false && strpos($service_name, 'cuci') === false) {
-            return false;
-        }
-
-        return strpos($service_name, 'cuci komplit') !== false || strpos($service_name, 'cuci setrika') !== false;
-    }
-
     public function is_layanan_cuci_komplit($nama_tipe, $nama_paket = '')
     {
         $service_name = strtolower(trim((string) $nama_tipe . ' ' . $nama_paket));
@@ -82,64 +70,63 @@ class Laundry_service_rules
             && strpos($paket, 'sepatu') !== false;
     }
 
-    public function build_promo_gratis_keterangan($promo_preview)
+    /**
+     * Alas kaki (sepatu/sandal, satuan pasang) wajib dibuat di nota terpisah dan tidak mendapat poin member.
+     */
+    public function is_item_alas_kaki($nama_satuan, $nama_paket = '')
     {
-        $label = trim((string) ($promo_preview['promo_gratis_label'] ?? 'Promo Gratis'));
-        $total_qty = $this->format_qty((float) ($promo_preview['total_qty_eligible'] ?? $promo_preview['total_kg_cuci_komplit'] ?? 0));
-        $gratis_qty = $this->format_qty((float) ($promo_preview['promo_gratis_qty'] ?? 0));
-        $unit = trim((string) ($promo_preview['promo_gratis_unit'] ?? 'kg'));
-        $scope = trim((string) ($promo_preview['promo_gratis_scope_label'] ?? 'Cuci Komplit'));
+        $paket = strtolower(trim((string) $nama_paket));
 
-        if ($label === '') {
-            $label = 'Promo Gratis';
-        }
-
-        return $label . ' | Berlaku kelipatan | Total ' . $scope . ' ' . $total_qty . ' ' . $unit . ' | Gratis ' . $gratis_qty . ' ' . $unit;
+        return $this->is_pair_unit($nama_satuan) || strpos($paket, 'sepatu') !== false;
     }
 
-    public function calculate_cart_pricing(array $settings, $harga, $qty, $nama_satuan, $promo_requested = false, $nama_tipe = '', $nama_paket = '')
+    /**
+     * Item yang membuat nota mendapat +1 poin member setelah selesai dan lunas:
+     * tipe Cuci Komplit atau Cuci Lipat (kiloan maupun satuan, termasuk Express), kecuali alas kaki.
+     * Setrika saja tidak mendapat poin.
+     */
+    public function is_item_dapat_poin($nama_satuan, $nama_tipe, $nama_paket = '')
+    {
+        if ($this->is_item_alas_kaki($nama_satuan, $nama_paket)) {
+            return false;
+        }
+
+        $tipe = strtolower(trim((string) $nama_tipe));
+        $tipe = preg_replace('/\s+/', ' ', $tipe);
+
+        return strpos($tipe, 'cuci komplit') !== false || strpos($tipe, 'cuci lipat') !== false;
+    }
+
+    /**
+     * Harga item selalu qty asli x harga. Promo tidak lagi memotong qty item,
+     * potongan dicatat di level nota (diskon_total).
+     */
+    public function calculate_item_pricing($harga, $qty)
     {
         $actual_qty = $this->sanitize_qty($qty);
-        $promo_applied = $promo_requested
-            && !empty($settings['is_enabled'])
-            && $this->is_kg_unit($nama_satuan)
-            && $this->is_promo_service_eligible($nama_tipe, $nama_paket)
-            && $actual_qty > 0;
-
-        $free_qty_setting = (float) ($settings['free_qty'] ?? 0);
-        $rounded_qty = $promo_applied ? (float) ceil($actual_qty) : $actual_qty;
-        $charged_qty = $promo_applied ? max(0, $rounded_qty - $free_qty_setting) : $actual_qty;
-        $free_qty = $promo_applied ? min($free_qty_setting, $rounded_qty) : 0;
 
         return [
             'actual_qty' => $actual_qty,
-            'rounded_qty' => $rounded_qty,
-            'charged_qty' => $charged_qty,
-            'free_qty' => $free_qty,
-            'subtotal' => (float) $harga * $charged_qty,
-            'promo_requested' => (bool) $promo_requested,
-            'promo_applied' => $promo_applied,
-            'promo_label' => $settings['label'] ?? 'Promo Gratis Cuci 3 Kg',
+            'charged_qty' => $actual_qty,
+            'subtotal' => (float) $harga * $actual_qty,
         ];
     }
 
-    public function build_promo_keterangan($item)
+    /**
+     * Keterangan item hanya berisi catatan customer (JSON). Format promo per item (free_3kg)
+     * hanya ada di data lama Promo Opening dan tetap bisa dibaca oleh enrich_detail_rows().
+     */
+    public function build_item_keterangan($customer_notes)
     {
-        $catatan = trim((string) ($item['customer_notes'] ?? ''));
+        $catatan = trim((string) $customer_notes);
 
-        if (empty($item['promo_applied']) && $catatan === '') {
+        if ($catatan === '') {
             return '';
         }
 
         return json_encode([
-            'promo_type' => !empty($item['promo_applied']) ? 'free_3kg' : null,
-            'promo_label' => !empty($item['promo_applied']) ? ($item['promo_label'] ?? 'Promo Gratis Cuci 3 Kg') : null,
-            'actual_qty' => !empty($item['promo_applied']) ? (float) ($item['qty'] ?? 0) : null,
-            'rounded_qty' => !empty($item['promo_applied']) ? (float) ($item['rounded_qty'] ?? 0) : null,
-            'charged_qty' => !empty($item['promo_applied']) ? (float) ($item['charged_qty'] ?? 0) : null,
-            'free_qty' => !empty($item['promo_applied']) ? (float) ($item['promo_free_qty'] ?? 0) : null,
-            'unit' => !empty($item['promo_applied']) ? strtolower((string) ($item['nama_satuan'] ?? 'kg')) : null,
-            'customer_notes' => $catatan !== '' ? $catatan : null,
+            'promo_type' => null,
+            'customer_notes' => $catatan,
         ]);
     }
 

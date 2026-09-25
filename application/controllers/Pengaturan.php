@@ -15,6 +15,8 @@ class Pengaturan extends Admin_Controller
         'promo_sepatu_min_pasang' => '5',
         'promo_sepatu_gratis_qty' => '1',
         'promo_sepatu_label' => 'Promo Sepatu 5 Pasang Gratis 1 Pasang',
+        'reward_member_batas_poin' => '8',
+        'reward_member_gratis_qty' => '3',
     ];
 
     public function __construct()
@@ -61,6 +63,8 @@ class Pengaturan extends Admin_Controller
             'promo_sepatu_min_pasang' => $this->normalize_number($this->input->post('promo_sepatu_min_pasang')),
             'promo_sepatu_gratis_qty' => $this->normalize_number($this->input->post('promo_sepatu_gratis_qty')),
             'promo_sepatu_label' => trim($this->input->post('promo_sepatu_label', true)),
+            'reward_member_batas_poin' => (string) max(1, (int) $this->input->post('reward_member_batas_poin')),
+            'reward_member_gratis_qty' => $this->normalize_number($this->input->post('reward_member_gratis_qty')),
         ];
 
         if ($items['promo_opening_aktif'] === '1' && $items['promo_daily_aktif'] === '1') {
@@ -98,6 +102,8 @@ class Pengaturan extends Admin_Controller
         $this->form_validation->set_rules('promo_sepatu_min_pasang', 'Minimal pasang promo sepatu', 'required|numeric|greater_than[0]');
         $this->form_validation->set_rules('promo_sepatu_gratis_qty', 'Gratis pasang promo sepatu', 'required|numeric|greater_than[0]');
         $this->form_validation->set_rules('promo_sepatu_label', 'Label promo sepatu', 'required|trim');
+        $this->form_validation->set_rules('reward_member_batas_poin', 'Batas poin reward member', 'required|integer|greater_than[0]');
+        $this->form_validation->set_rules('reward_member_gratis_qty', 'Gratis kg reward member', 'required|numeric|greater_than[0]');
     }
 
     private function normalize_number($value)

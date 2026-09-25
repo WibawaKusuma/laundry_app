@@ -56,7 +56,7 @@ class Transaksi_model extends CI_Model
     private function get_report_promo_expr($transaksi_alias)
     {
         return "(CASE
-            WHEN {$transaksi_alias}.snapshot_tagihan_at IS NOT NULL AND {$transaksi_alias}.benefit_tipe IN ('promo_daily', 'promo_sepatu') THEN COALESCE({$transaksi_alias}.diskon_total, 0)
+            WHEN {$transaksi_alias}.snapshot_tagihan_at IS NOT NULL AND {$transaksi_alias}.benefit_tipe IN ('promo_opening', 'promo_daily', 'promo_sepatu') THEN COALESCE({$transaksi_alias}.diskon_total, 0)
             ELSE COALESCE({$transaksi_alias}.promo_gratis_potongan, 0)
         END)";
     }
@@ -169,25 +169,54 @@ class Transaksi_model extends CI_Model
         return $this->db->get()->row();
     }
 
-    public function get_payment_transaction_by_invoice($kode_invoice)
+    public function get_transaction_by_id($id_transaksi)
     {
-        $this->db->select('id, kode_invoice, status, dibayar, tgl_bayar, id_pelanggan, reward_member_dipakai, promo_gratis_dipakai, aturan_promo_tipe, aturan_promo_min_qty, aturan_promo_gratis_qty, aturan_promo_unit, aturan_promo_label');
+        $this->db->select('transaksi.*, m_pelanggan.nama as nama_pelanggan, m_pelanggan.no_hp, m_pelanggan.poin_member as poin_member_pelanggan');
         $this->db->from('transaksi');
-        $this->db->where('kode_invoice', $kode_invoice);
+        $this->db->join('m_pelanggan', 'm_pelanggan.id = transaksi.id_pelanggan', 'left');
+        $this->db->where('transaksi.id', (int) $id_transaksi);
         return $this->db->get()->row();
     }
 
     public function get_point_sync_transaction($id_transaksi)
     {
-        $this->db->select('id, id_pelanggan, status, dibayar, poin_diberikan_pada, reward_member_dipakai');
+        $this->db->select('id, id_pelanggan, jenis_pelanggan, status, dibayar, poin_diberikan_pada, reward_member_dipakai, reward_poin_dipakai');
         $this->db->from('transaksi');
         $this->db->where('id', (int) $id_transaksi);
         return $this->db->get()->row();
     }
 
-    public function sync_member_point($id_transaksi, $id_pelanggan, $batas_poin_member)
+    /**
+     * Catat perubahan poin ke poin_member_log. Dipanggil di dalam DB transaction yang sama
+     * dengan update m_pelanggan.poin_member supaya saldo_setelah selalu akurat.
+     */
+    private function insert_poin_log($id_pelanggan, $id_transaksi, $jenis, $delta, $keterangan, $user_id = null)
     {
-        $this->db->trans_start();
+        $pelanggan = $this->db
+            ->select('poin_member')
+            ->where('id', (int) $id_pelanggan)
+            ->get('m_pelanggan')
+            ->row();
+
+        return $this->db->insert('poin_member_log', [
+            'id_pelanggan' => (int) $id_pelanggan,
+            'id_transaksi' => $id_transaksi !== null ? (int) $id_transaksi : null,
+            'jenis' => $jenis,
+            'delta' => (int) $delta,
+            'saldo_setelah' => (int) ($pelanggan->poin_member ?? 0),
+            'keterangan' => $keterangan,
+            'id_user' => $user_id !== null ? (int) $user_id : null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * +1 poin untuk nota yang sudah selesai & lunas. Poin tidak dibatasi (boleh lebih dari batas reward),
+     * kelebihan tetap tersimpan untuk reward berikutnya.
+     */
+    public function sync_member_point($id_transaksi, $id_pelanggan, $user_id = null)
+    {
+        $this->db->trans_begin();
 
         $this->db->set('poin_diberikan_pada', date('Y-m-d H:i:s'));
         $this->db->where('id', (int) $id_transaksi);
@@ -195,35 +224,87 @@ class Transaksi_model extends CI_Model
         $this->db->where_in('status', ['Selesai', 'Diambil']);
         $this->db->where('dibayar', 'Sudah Dibayar');
         $this->db->where('COALESCE(reward_member_dipakai, 0) = 0', null, false);
+        $this->db->where('COALESCE(reward_poin_dipakai, 0) = 0', null, false);
+        $this->db->where('jenis_pelanggan <>', 'mitra');
         $this->db->update('transaksi');
 
-        $poin_berhasil_dikunci = $this->db->affected_rows() > 0;
-
-        if ($poin_berhasil_dikunci) {
-            $this->db->set('poin_member', 'LEAST(COALESCE(poin_member, 0) + 1, ' . (int) $batas_poin_member . ')', false);
-            $this->db->where('id', (int) $id_pelanggan);
-            $this->db->update('m_pelanggan');
+        if ($this->db->affected_rows() <= 0) {
+            $this->db->trans_rollback();
+            return false;
         }
 
-        $this->db->trans_complete();
+        $this->db->set('poin_member', 'COALESCE(poin_member, 0) + 1', false);
+        $this->db->where('id', (int) $id_pelanggan);
+        $this->db->update('m_pelanggan');
 
-        return $poin_berhasil_dikunci && $this->db->trans_status();
+        $this->insert_poin_log($id_pelanggan, $id_transaksi, 'earn', 1, 'Poin nota selesai & lunas', $user_id);
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        $this->db->trans_commit();
+
+        return true;
     }
 
-    public function get_reward_payment_transaction($id_transaksi)
+    /**
+     * Kembalikan poin yang di-reserve untuk reward jika nota belum lunas dan reward batal dipakai
+     * (nota dibatalkan atau semua item Cuci Komplit Reguler/Satu hari dihapus).
+     * Harus dipanggil di dalam DB transaction.
+     */
+    private function release_reward_in_transaction($id_transaksi, $user_id, $keterangan)
     {
-        $this->db->select('id, id_pelanggan, status, dibayar, reward_member_dipakai');
-        $this->db->from('transaksi');
+        $trx = $this->db
+            ->select('id, id_pelanggan, reward_poin_dipakai')
+            ->where('id', (int) $id_transaksi)
+            ->get('transaksi')
+            ->row();
+
+        $poin = (int) ($trx->reward_poin_dipakai ?? 0);
+        if (!$trx || $poin <= 0) {
+            return false;
+        }
+
         $this->db->where('id', (int) $id_transaksi);
-        return $this->db->get()->row();
+        $this->db->where('reward_poin_dipakai', $poin);
+        $this->db->where('dibayar', 'Belum Dibayar');
+        $this->db->update('transaksi', [
+            'reward_poin_dipakai' => 0,
+            'aturan_reward_gratis_qty' => 0,
+            'reward_member_dipakai' => 0,
+            'reward_gratis_qty' => 0,
+            'reward_potongan' => 0,
+        ]);
+
+        if ($this->db->affected_rows() <= 0) {
+            return false;
+        }
+
+        $this->db->set('poin_member', 'COALESCE(poin_member, 0) + ' . $poin, false);
+        $this->db->where('id', (int) $trx->id_pelanggan);
+        $this->db->update('m_pelanggan');
+
+        $this->insert_poin_log($trx->id_pelanggan, $id_transaksi, 'release', $poin, $keterangan, $user_id);
+
+        return true;
     }
 
-    public function get_promo_payment_transaction($id_transaksi)
+    public function release_reward_reservation($id_transaksi, $user_id, $keterangan)
     {
-        $this->db->select('id, status, dibayar, reward_member_dipakai, promo_gratis_dipakai, aturan_promo_tipe, aturan_promo_min_qty, aturan_promo_gratis_qty, aturan_promo_unit, aturan_promo_label');
-        $this->db->from('transaksi');
-        $this->db->where('id', (int) $id_transaksi);
-        return $this->db->get()->row();
+        $this->db->trans_begin();
+
+        $released = $this->release_reward_in_transaction($id_transaksi, $user_id, $keterangan);
+
+        if (!$released || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        $this->db->trans_commit();
+
+        return true;
     }
 
     public function get_detail_item($detail_id, $transaksi_id)
@@ -252,6 +333,10 @@ class Transaksi_model extends CI_Model
         ]);
     }
 
+    /**
+     * Simpan snapshot tagihan. Hanya untuk nota yang belum lunas dan belum dibatalkan,
+     * snapshot nota lunas tidak boleh berubah lagi.
+     */
     public function update_billing_snapshot($transaksi_id, array $snapshot)
     {
         $allowed_fields = [
@@ -261,11 +346,13 @@ class Transaksi_model extends CI_Model
             'benefit_tipe',
             'benefit_keterangan',
             'snapshot_tagihan_at',
-            'aturan_promo_tipe',
-            'aturan_promo_min_qty',
-            'aturan_promo_gratis_qty',
-            'aturan_promo_unit',
-            'aturan_promo_label',
+            'reward_member_dipakai',
+            'reward_gratis_qty',
+            'reward_potongan',
+            'promo_gratis_dipakai',
+            'promo_gratis_qty',
+            'promo_gratis_potongan',
+            'promo_gratis_keterangan',
         ];
         $data_update = [];
 
@@ -280,6 +367,8 @@ class Transaksi_model extends CI_Model
         }
 
         $this->db->where('id', (int) $transaksi_id);
+        $this->db->where('dibayar', 'Belum Dibayar');
+        $this->apply_not_cancelled(null);
         return $this->db->update('transaksi', $data_update);
     }
 
@@ -299,6 +388,9 @@ class Transaksi_model extends CI_Model
 
         $now = date('Y-m-d H:i:s');
         $alasan_batal = trim((string) $alasan_batal);
+
+        // Poin reward yang sudah di-reserve untuk nota ini dikembalikan ke pelanggan.
+        $this->release_reward_in_transaction($transaksi_id, $user_id, 'Nota dibatalkan: ' . $alasan_batal);
 
         $this->db->where('id', (int) $transaksi_id);
         $this->db->where('status', 'Baru');
@@ -357,12 +449,18 @@ class Transaksi_model extends CI_Model
         return $this->db->insert('transaksi_detail', $item);
     }
 
-    public function create_transaction_with_details(array $data_transaksi, array $data_detail)
+    /**
+     * Simpan nota baru + item. Jika $reward_request diisi (poin pelanggan sudah mencapai batas dan
+     * nota punya item Cuci Komplit Reguler/Satu hari), poin langsung di-reserve secara atomik:
+     * poin_member dikurangi batas HANYA jika saldo masih >= batas, sehingga dua nota tidak mungkin
+     * memakai poin yang sama.
+     */
+    public function create_transaction_with_details(array $data_transaksi, array $data_detail, $reward_request = null)
     {
-        $this->db->trans_start();
+        $this->db->trans_begin();
 
         $this->db->insert('transaksi', $data_transaksi);
-        $id_transaksi = $this->db->insert_id();
+        $id_transaksi = (int) $this->db->insert_id();
 
         foreach ($data_detail as &$detail) {
             $detail['id_transaksi'] = $id_transaksi;
@@ -373,11 +471,53 @@ class Transaksi_model extends CI_Model
             $this->db->insert_batch('transaksi_detail', $data_detail);
         }
 
-        $this->db->trans_complete();
+        $reward_reserved = false;
+
+        if (is_array($reward_request) && (int) ($reward_request['batas_poin'] ?? 0) > 0) {
+            $batas = (int) $reward_request['batas_poin'];
+            $id_pelanggan = (int) $data_transaksi['id_pelanggan'];
+
+            $this->db->set('poin_member', 'poin_member - ' . $batas, false);
+            $this->db->where('id', $id_pelanggan);
+            $this->db->where('poin_member >=', $batas);
+            $this->db->update('m_pelanggan');
+
+            if ($this->db->affected_rows() > 0) {
+                $reward_reserved = true;
+
+                $this->db->where('id', $id_transaksi);
+                $this->db->update('transaksi', [
+                    'reward_poin_dipakai' => $batas,
+                    'aturan_reward_gratis_qty' => (float) $reward_request['gratis_qty'],
+                ]);
+
+                $this->insert_poin_log(
+                    $id_pelanggan,
+                    $id_transaksi,
+                    'reserve',
+                    -$batas,
+                    'Reward member dipakai di nota ' . ($data_transaksi['kode_invoice'] ?? ''),
+                    $reward_request['user_id'] ?? null
+                );
+            }
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+
+            return [
+                'success' => false,
+                'id_transaksi' => 0,
+                'reward_reserved' => false,
+            ];
+        }
+
+        $this->db->trans_commit();
 
         return [
-            'success' => $this->db->trans_status(),
+            'success' => true,
             'id_transaksi' => $id_transaksi,
+            'reward_reserved' => $reward_reserved,
         ];
     }
 
@@ -393,87 +533,29 @@ class Transaksi_model extends CI_Model
         return $this->db->update('transaksi', $data_update);
     }
 
-    public function record_payment($transaksi_id, array $base_update, array $reward_preview, array $promo_preview, $batas_poin_member)
+    /**
+     * Catat pelunasan. Tidak ada perhitungan benefit atau perubahan poin reward di sini:
+     * nilai tagihan sudah dihitung dari data terkunci oleh controller dan hanya disalin ke snapshot final.
+     * Guard total_akhir memastikan snapshot tidak berubah di antara validasi dan penyimpanan.
+     */
+    public function record_payment($transaksi_id, array $data_update, $total_akhir_tervalidasi)
     {
-        $this->db->trans_begin();
-
-        $reward_dikunci = false;
-        $promo_dikunci = false;
-        if (!empty($reward_preview['reward_tersedia']) && (int) ($reward_preview['id_pelanggan'] ?? 0) > 0) {
-            $this->db->set('poin_member', 0);
-            $this->db->where('id', (int) $reward_preview['id_pelanggan']);
-            $this->db->where('COALESCE(poin_member, 0) >= ' . (int) $batas_poin_member, null, false);
-            $this->db->update('m_pelanggan');
-
-            $reward_dikunci = $this->db->affected_rows() > 0;
-        }
-
-        $data_update = $base_update;
-
-        if ($reward_dikunci) {
-            $data_update['reward_member_dipakai'] = 1;
-            $data_update['reward_gratis_qty'] = (float) ($reward_preview['reward_gratis_qty'] ?? 0);
-            $data_update['reward_potongan'] = (int) ($reward_preview['reward_potongan'] ?? 0);
-        } elseif (!empty($promo_preview['promo_tersedia'])) {
-            $promo_dikunci = true;
-            $data_update['promo_gratis_dipakai'] = 1;
-            $data_update['promo_gratis_qty'] = (float) ($promo_preview['promo_gratis_qty'] ?? 0);
-            $data_update['promo_gratis_potongan'] = (int) ($promo_preview['promo_gratis_potongan'] ?? 0);
-            $data_update['promo_gratis_keterangan'] = trim((string) ($promo_preview['promo_gratis_keterangan'] ?? ''));
-        }
-
-        if (array_key_exists('subtotal_normal', $data_update)) {
-            $subtotal_normal = (int) ($data_update['subtotal_normal'] ?? 0);
-
-            if ($reward_dikunci) {
-                $data_update['diskon_total'] = (int) ($data_update['reward_potongan'] ?? 0);
-                $data_update['total_akhir'] = max(0, $subtotal_normal - (int) $data_update['diskon_total']);
-                $data_update['benefit_tipe'] = 'reward_member';
-                $data_update['benefit_keterangan'] = 'Reward Member gratis ' . (float) ($data_update['reward_gratis_qty'] ?? 0) . ' kg';
-            } elseif ($promo_dikunci) {
-                $data_update['diskon_total'] = (int) ($data_update['promo_gratis_potongan'] ?? 0);
-                $data_update['total_akhir'] = max(0, $subtotal_normal - (int) $data_update['diskon_total']);
-                $data_update['benefit_tipe'] = (string) ($promo_preview['benefit_tipe'] ?? 'promo_daily');
-                $data_update['benefit_keterangan'] = trim((string) ($data_update['promo_gratis_keterangan'] ?? ''));
-            } else {
-                $data_update['diskon_total'] = 0;
-                $data_update['total_akhir'] = $subtotal_normal;
-                $data_update['benefit_tipe'] = null;
-                $data_update['benefit_keterangan'] = null;
-            }
-        }
-
         $this->db->where('id', (int) $transaksi_id);
         $this->db->where('dibayar', 'Belum Dibayar');
+        $this->db->where('total_akhir', (int) $total_akhir_tervalidasi);
+        $this->apply_not_cancelled(null);
         $this->db->update('transaksi', $data_update);
 
         if ($this->db->affected_rows() <= 0) {
-            $this->db->trans_rollback();
             return [
                 'success' => false,
                 'reason' => 'status_changed',
-                'reward_dikunci' => $reward_dikunci,
-                'promo_dikunci' => $promo_dikunci,
             ];
         }
-
-        if ($this->db->trans_status() === false) {
-            $this->db->trans_rollback();
-            return [
-                'success' => false,
-                'reason' => 'transaction_failed',
-                'reward_dikunci' => $reward_dikunci,
-                'promo_dikunci' => $promo_dikunci,
-            ];
-        }
-
-        $this->db->trans_commit();
 
         return [
             'success' => true,
             'reason' => null,
-            'reward_dikunci' => $reward_dikunci,
-            'promo_dikunci' => $promo_dikunci,
         ];
     }
 
